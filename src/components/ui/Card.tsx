@@ -11,7 +11,7 @@ type CardHeaderProps = {
 export function Card({ className = '', children, ...props }: CardProps) {
   return (
     <section
-      className={`rounded-2xl border border-white/[0.07] bg-[#20232A] shadow-[0_16px_50px_rgba(0,0,0,0.16)] ${className}`}
+      className={`rounded-2xl border border-[var(--border)] bg-[var(--surface)] shadow-[0_16px_45px_rgba(23,32,51,0.08)] transition-colors duration-300 ${className}`}
       {...props}
     >
       {children}
@@ -21,10 +21,10 @@ export function Card({ className = '', children, ...props }: CardProps) {
 
 export function CardHeader({ title, description, action }: CardHeaderProps) {
   return (
-    <div className="flex items-start justify-between gap-4 border-b border-white/[0.06] px-5 py-5 sm:px-6">
+    <div className="flex items-start justify-between gap-4 border-b border-[var(--border)] px-5 py-5 sm:px-6">
       <div>
-        <h2 className="text-sm font-semibold tracking-[-0.01em] text-white">{title}</h2>
-        {description ? <p className="mt-1 text-xs text-[#646873]">{description}</p> : null}
+        <h2 className="text-sm font-semibold tracking-[-0.01em] text-[var(--foreground)]">{title}</h2>
+        {description ? <p className="mt-1 text-xs text-[var(--subtle)]">{description}</p> : null}
       </div>
       {action}
     </div>
