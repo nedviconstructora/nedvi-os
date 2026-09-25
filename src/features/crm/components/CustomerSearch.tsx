@@ -20,7 +20,7 @@ export function CustomerSearch({ value, onChange }: CustomerSearchProps) {
         type="search"
         value={value}
         onChange={(event) => onChange(event.target.value)}
-        placeholder="Buscar por empresa, contacto, correo o RFC..."
+        placeholder="Buscar por folio, empresa, contacto, correo o RFC..."
         className="h-11 w-full rounded-xl border border-white/[0.08] bg-[#17181C] pl-10 pr-10 text-xs text-white outline-none transition placeholder:text-[#646873] hover:border-white/[0.15] focus:border-[#163DFF] focus:ring-4 focus:ring-[#163DFF]/10"
         aria-label="Buscar clientes"
       />
