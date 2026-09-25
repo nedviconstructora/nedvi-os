@@ -26,7 +26,7 @@ function BrandMark() {
 
 export function Header({ onOpenMenu, isDark, onToggleTheme }: HeaderProps) {
   return (
-    <header className="flex h-[88px] shrink-0 items-center justify-between border-b border-[var(--border)] bg-[color:var(--surface)]/95 px-5 backdrop-blur-xl transition-colors duration-300 sm:px-8">
+    <header className="flex h-[88px] shrink-0 items-center justify-between border-b border-[var(--border)] bg-[var(--surface)] px-5 backdrop-blur-xl transition-colors duration-300 sm:px-8">
       <div className="flex min-w-0 items-center gap-4">
         <button
           type="button"
