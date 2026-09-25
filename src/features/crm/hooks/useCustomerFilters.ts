@@ -31,19 +31,46 @@ export function useCustomerFilters(customers: Customer[]) {
 
   const filteredCustomers = useMemo(() => {
     const normalizedQuery = query.trim().toLowerCase()
-    const result = customers.filter((customer) => {
-      const matchesQuery = !normalizedQuery || [customer.company, customer.contact, customer.email, customer.rfc].some((value) => value.toLowerCase().includes(normalizedQuery))
-      const matchesStatus = filters.status === 'all' || customer.status === filters.status
-      const matchesProjectType = filters.projectType === 'all' || customer.projectType === filters.projectType
-      const matchesLeadSource = filters.leadSource === 'all' || customer.leadSource === filters.leadSource
 
-      return matchesQuery && matchesStatus && matchesProjectType && matchesLeadSource
+    const result = customers.filter((customer) => {
+      const searchableValues = [
+        customer.folio ?? '',
+        customer.company,
+        customer.contact,
+        customer.email,
+        customer.rfc,
+      ]
+
+      const matchesQuery =
+        !normalizedQuery ||
+        searchableValues.some((value) =>
+          value.toLowerCase().includes(normalizedQuery)
+        )
+
+      const matchesStatus =
+        filters.status === 'all' || customer.status === filters.status
+      const matchesProjectType =
+        filters.projectType === 'all' ||
+        customer.projectType === filters.projectType
+      const matchesLeadSource =
+        filters.leadSource === 'all' || customer.leadSource === filters.leadSource
+
+      return (
+        matchesQuery &&
+        matchesStatus &&
+        matchesProjectType &&
+        matchesLeadSource
+      )
     })
 
     return result.sort((first, second) => {
       const firstValue = first[sortKey]
       const secondValue = second[sortKey]
-      const comparison = String(firstValue).localeCompare(String(secondValue), 'es-MX')
+      const comparison = String(firstValue).localeCompare(
+        String(secondValue),
+        'es-MX'
+      )
+
       return sortDirection === 'asc' ? comparison : -comparison
     })
   }, [customers, filters, query, sortDirection, sortKey])
@@ -60,7 +87,9 @@ export function useCustomerFilters(customers: Customer[]) {
 
   const toggleSort = (nextSortKey: CustomerSortKey) => {
     if (nextSortKey === sortKey) {
-      setSortDirection((direction) => direction === 'asc' ? 'desc' : 'asc')
+      setSortDirection((direction) =>
+        direction === 'asc' ? 'desc' : 'asc'
+      )
       return
     }
 
