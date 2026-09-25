@@ -1,6 +1,7 @@
 'use client'
 
 import Link from 'next/link'
+import { usePathname } from 'next/navigation'
 import type { LucideIcon } from 'lucide-react'
 import {
   BarChart3,
@@ -29,7 +30,6 @@ type SidebarProps = {
 type NavigationItem = {
   label: string
   icon: LucideIcon
-  active?: boolean
   href?: string
 }
 
@@ -43,7 +43,7 @@ const navigationItems: NavigationItem[] = [
   { label: 'Personal', icon: UserRound },
   { label: 'Inventario', icon: Package },
   { label: 'Reportes', icon: BarChart3 },
-  { label: 'Agenda', icon: CalendarDays },
+  { label: 'Agenda', icon: CalendarDays, href: '/agenda' },
   { label: 'Configuración', icon: Settings2 },
 ]
 
@@ -62,6 +62,8 @@ export function Sidebar({
   onToggleCollapse,
   onCloseMobile,
 }: SidebarProps) {
+  const pathname = usePathname()
+
   return (
     <>
       <aside
@@ -123,7 +125,13 @@ export function Sidebar({
           </p>
 
           {navigationItems.map(
-            ({ label, icon: Icon, active, href }) => {
+            ({ label, icon: Icon, href }) => {
+              const active = Boolean(
+                href &&
+                  (pathname === href ||
+                    (href !== '/dashboard' && pathname.startsWith(`${href}/`)))
+              )
+
               const classes = `group relative flex h-11 w-full items-center gap-3 rounded-xl px-3 text-left text-[13px] font-medium transition duration-200 ${
                 active
                   ? 'bg-[#343A40] text-white'
