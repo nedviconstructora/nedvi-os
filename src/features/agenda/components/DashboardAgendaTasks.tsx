@@ -36,29 +36,25 @@ function formatActivityDate(activity: AgendaItem) {
 export function DashboardAgendaTasks() {
   const [activities, setActivities] = useState<AgendaItem[]>([])
 
-  const refreshActivities = () => {
-    setActivities(readAgendaActivities())
-  }
-
   useEffect(() => {
-    refreshActivities()
+    const loadActivities = () => {
+      setActivities(readAgendaActivities())
+    }
+
+    loadActivities()
 
     const handleStorage = (event: StorageEvent) => {
       if (event.key === AGENDA_STORAGE_KEY) {
-        refreshActivities()
+        loadActivities()
       }
     }
 
-    const handleFocus = () => {
-      refreshActivities()
-    }
-
     window.addEventListener('storage', handleStorage)
-    window.addEventListener('focus', handleFocus)
+    window.addEventListener('focus', loadActivities)
 
     return () => {
       window.removeEventListener('storage', handleStorage)
-      window.removeEventListener('focus', handleFocus)
+      window.removeEventListener('focus', loadActivities)
     }
   }, [])
 
