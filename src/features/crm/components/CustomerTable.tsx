@@ -144,8 +144,8 @@ export function CustomerTable({
                       >
                         {customer.company}
                       </Link>
-                      <p className="mt-1 text-[10px] text-[#646873]">
-                        {customer.rfc}
+                      <p className="mt-1 text-[10px] font-semibold text-[#7187ff]">
+                        {customer.folio ?? 'Sin folio'}
                       </p>
                     </div>
                   </div>
