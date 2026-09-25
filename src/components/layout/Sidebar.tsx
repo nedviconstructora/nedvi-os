@@ -271,7 +271,7 @@ export function Sidebar({
                   title={collapsed ? group.label : undefined}
                   className={`group flex h-11 w-full items-center gap-3 rounded-xl px-3 text-left text-[13px] font-medium transition duration-200 ${
                     groupActive
-                      ? 'bg-white/[0.055] text-white'
+                      ? 'bg-[#343A40] text-white'
                       : isOpen
                         ? 'bg-white/[0.025] text-[#d5d7df]'
                         : 'text-[#9CA3AF] hover:bg-white/5 hover:text-white'
@@ -326,7 +326,7 @@ export function Sidebar({
                               aria-current={active ? 'page' : undefined}
                               className={`group/sub relative flex min-h-9 items-center gap-2.5 rounded-lg px-3 py-2 text-[12px] font-medium transition ${
                                 active
-                                  ? 'bg-[#163DFF]/[0.12] text-white'
+                                  ? 'bg-[#343A40] text-white'
                                   : 'text-[#858A96] hover:bg-white/[0.04] hover:text-white'
                               }`}
                             >
