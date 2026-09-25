@@ -1,8 +1,10 @@
 'use client'
 
+import Image from 'next/image'
 import Link from 'next/link'
 import { useEffect, useState } from 'react'
 import { usePathname } from 'next/navigation'
+import nedviLogo from '@/app/icon.png'
 import type { LucideIcon } from 'lucide-react'
 import {
   BarChart3,
@@ -120,9 +122,13 @@ const navigationGroups: NavigationGroup[] = [
 
 function BrandMark() {
   return (
-    <span className="relative flex h-9 w-9 shrink-0 items-center justify-center overflow-hidden rounded-[10px] bg-[#163DFF] shadow-[0_8px_24px_rgba(22,61,255,0.28)]">
-      <span className="absolute h-4 w-1.5 -rotate-45 rounded-full bg-white" />
-      <span className="absolute h-4 w-1.5 rotate-45 rounded-full bg-white" />
+    <span className="relative flex h-11 w-11 shrink-0 items-center justify-center overflow-hidden rounded-xl bg-white/90 p-1 shadow-[0_8px_24px_rgba(16,32,51,0.16)] ring-1 ring-white/40">
+      <Image
+        src={nedviLogo}
+        alt="Logo de NEDVI Constructora"
+        className="h-full w-full object-contain"
+        priority
+      />
     </span>
   )
 }
@@ -189,7 +195,7 @@ export function Sidebar({
       >
         <div
           className={`flex items-center gap-3 overflow-hidden ${
-            collapsed ? 'lg:w-9' : ''
+            collapsed ? 'lg:w-11' : ''
           }`}
         >
           <BrandMark />
