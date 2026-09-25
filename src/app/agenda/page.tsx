@@ -82,6 +82,24 @@ export default function AgendaPage() {
     }
   }, [])
 
+  useEffect(() => {
+    if (!modalOpen) {
+      return
+    }
+
+    const handleEscape = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') {
+        closeModal()
+      }
+    }
+
+    window.addEventListener('keydown', handleEscape)
+
+    return () => {
+      window.removeEventListener('keydown', handleEscape)
+    }
+  }, [modalOpen])
+
   const saveActivities = (
     updatedActivities: AgendaItem[]
   ) => {
@@ -198,6 +216,13 @@ export default function AgendaPage() {
     })
   }
 
+  const sortedActivities = [...activities].sort((first, second) => {
+    const firstDateTime = `${first.date}T${first.time}`
+    const secondDateTime = `${second.date}T${second.time}`
+
+    return firstDateTime.localeCompare(secondDateTime)
+  })
+
   return (
     <AppShell>
       <div className="mx-auto w-full max-w-[1600px] space-y-8">
@@ -219,7 +244,7 @@ export default function AgendaPage() {
           <button
             type="button"
             onClick={openCreateModal}
-            className="inline-flex h-11 items-center justify-center gap-2 rounded-xl bg-[#163DFF] px-4 text-xs font-semibold text-white shadow-[0_10px_25px_rgba(22,61,255,0.2)] transition hover:bg-[#3155ff]"
+            className="inline-flex h-11 items-center justify-center gap-2 rounded-xl bg-[#163DFF] px-4 text-xs font-semibold text-white shadow-[0_10px_25px_rgba(22,61,255,0.2)] transition hover:bg-[#3155ff] focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-[#163DFF]/30"
           >
             <Plus
               size={16}
@@ -251,9 +276,9 @@ export default function AgendaPage() {
             />
           </div>
 
-          {activities.length > 0 ? (
+          {sortedActivities.length > 0 ? (
             <div className="divide-y divide-white/[0.05]">
-              {activities.map((activity) => (
+              {sortedActivities.map((activity) => (
                 <div
                   key={activity.id}
                   className="flex flex-col gap-4 px-6 py-5 transition hover:bg-white/[0.02] sm:flex-row sm:items-center"
@@ -290,7 +315,7 @@ export default function AgendaPage() {
                       onClick={() =>
                         openEditModal(activity)
                       }
-                      className="flex h-9 w-9 items-center justify-center rounded-lg text-[#646873] transition hover:bg-[#163DFF]/10 hover:text-[#7187ff]"
+                      className="flex h-9 w-9 items-center justify-center rounded-lg text-[#646873] transition hover:bg-[#163DFF]/10 hover:text-[#7187ff] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#163DFF]/40"
                       aria-label={`Editar ${activity.title}`}
                       title="Editar actividad"
                     >
@@ -308,7 +333,7 @@ export default function AgendaPage() {
                           activity.title
                         )
                       }
-                      className="flex h-9 w-9 items-center justify-center rounded-lg text-[#646873] transition hover:bg-red-500/10 hover:text-red-400"
+                      className="flex h-9 w-9 items-center justify-center rounded-lg text-[#646873] transition hover:bg-red-500/10 hover:text-red-400 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-500/30"
                       aria-label={`Eliminar ${activity.title}`}
                       title="Eliminar actividad"
                     >
@@ -341,10 +366,18 @@ export default function AgendaPage() {
 
       {modalOpen && (
         <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/70 p-4 backdrop-blur-sm">
-          <div className="w-full max-w-lg overflow-hidden rounded-2xl border border-white/[0.08] bg-[#20232A] shadow-2xl">
+          <div
+            className="w-full max-w-lg overflow-hidden rounded-2xl border border-white/[0.08] bg-[#20232A] shadow-2xl"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="agenda-modal-title"
+          >
             <div className="flex items-center justify-between border-b border-white/[0.06] px-6 py-5">
               <div>
-                <h2 className="text-lg font-semibold text-white">
+                <h2
+                  id="agenda-modal-title"
+                  className="text-lg font-semibold text-white"
+                >
                   {editingActivityId !== null
                     ? 'Editar actividad'
                     : 'Nueva actividad'}
@@ -360,7 +393,7 @@ export default function AgendaPage() {
               <button
                 type="button"
                 onClick={closeModal}
-                className="flex h-9 w-9 items-center justify-center rounded-lg text-[#9CA3AF] transition hover:bg-white/[0.06] hover:text-white"
+                className="flex h-9 w-9 items-center justify-center rounded-lg text-[#9CA3AF] transition hover:bg-white/[0.06] hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#163DFF]/40"
                 aria-label="Cerrar ventana"
               >
                 <X size={18} />
@@ -389,7 +422,7 @@ export default function AgendaPage() {
                   placeholder="Ej. Visita de obra"
                   required
                   autoFocus
-                  className="h-11 w-full rounded-xl border border-white/[0.08] bg-[#17181C] px-4 text-sm text-white outline-none transition placeholder:text-[#646873] focus:border-[#163DFF]"
+                  className="h-11 w-full rounded-xl border border-white/[0.08] bg-[#17181C] px-4 text-sm text-white outline-none transition placeholder:text-[#646873] focus:border-[#163DFF] focus:ring-2 focus:ring-[#163DFF]/20"
                 />
               </div>
 
@@ -407,7 +440,7 @@ export default function AgendaPage() {
                   onChange={(event) =>
                     setType(event.target.value)
                   }
-                  className="h-11 w-full rounded-xl border border-white/[0.08] bg-[#17181C] px-4 text-sm text-white outline-none transition focus:border-[#163DFF]"
+                  className="h-11 w-full rounded-xl border border-white/[0.08] bg-[#17181C] px-4 text-sm text-white outline-none transition focus:border-[#163DFF] focus:ring-2 focus:ring-[#163DFF]/20"
                 >
                   <option value="Tarea">
                     Tarea
@@ -452,7 +485,7 @@ export default function AgendaPage() {
                       setDate(event.target.value)
                     }
                     required
-                    className="h-11 w-full rounded-xl border border-white/[0.08] bg-[#17181C] px-4 text-sm text-white outline-none transition focus:border-[#163DFF]"
+                    className="h-11 w-full rounded-xl border border-white/[0.08] bg-[#17181C] px-4 text-sm text-white outline-none transition focus:border-[#163DFF] focus:ring-2 focus:ring-[#163DFF]/20"
                   />
                 </div>
 
@@ -472,7 +505,7 @@ export default function AgendaPage() {
                       setTime(event.target.value)
                     }
                     required
-                    className="h-11 w-full rounded-xl border border-white/[0.08] bg-[#17181C] px-4 text-sm text-white outline-none transition focus:border-[#163DFF]"
+                    className="h-11 w-full rounded-xl border border-white/[0.08] bg-[#17181C] px-4 text-sm text-white outline-none transition focus:border-[#163DFF] focus:ring-2 focus:ring-[#163DFF]/20"
                   />
                 </div>
               </div>
@@ -481,14 +514,14 @@ export default function AgendaPage() {
                 <button
                   type="button"
                   onClick={closeModal}
-                  className="h-10 rounded-xl border border-white/[0.08] px-4 text-xs font-medium text-[#9CA3AF] transition hover:bg-white/[0.05] hover:text-white"
+                  className="h-10 rounded-xl border border-white/[0.08] px-4 text-xs font-medium text-[#9CA3AF] transition hover:bg-white/[0.05] hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/20"
                 >
                   Cancelar
                 </button>
 
                 <button
                   type="submit"
-                  className="inline-flex h-10 items-center justify-center gap-2 rounded-xl bg-[#163DFF] px-4 text-xs font-semibold text-white transition hover:bg-[#3155ff]"
+                  className="inline-flex h-10 items-center justify-center gap-2 rounded-xl bg-[#163DFF] px-4 text-xs font-semibold text-white transition hover:bg-[#3155ff] focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-[#163DFF]/30"
                 >
                   {editingActivityId !== null ? (
                     <>
