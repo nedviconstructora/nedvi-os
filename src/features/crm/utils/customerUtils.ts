@@ -8,7 +8,9 @@ export function formatCustomerDate(value: string): string {
   }).format(new Date(`${value}T12:00:00`))
 }
 
-export function getCustomerInitials(customer: Pick<Customer, 'company'>): string {
+export function getCustomerInitials(
+  customer: Pick<Customer, 'company'>
+): string {
   return customer.company
     .split(' ')
     .filter(Boolean)
@@ -18,9 +20,11 @@ export function getCustomerInitials(customer: Pick<Customer, 'company'>): string
     .toUpperCase()
 }
 
-export function getCustomerStatusLabel(status: Customer['status']): string {
+export function getCustomerStatusLabel(
+  status: Customer['status']
+): string {
   const labels: Record<Customer['status'], string> = {
-    Lead: 'Lead',
+    Lead: 'Prospecto',
     Qualified: 'Calificado',
     Proposal: 'Propuesta',
     Active: 'Activo',
