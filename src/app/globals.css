@@ -1,12 +1,44 @@
 @import 'tailwindcss';
 
 :root {
-  --background: #0b0b0d;
-  --foreground: #ffffff;
-  --muted: #9ca3af;
-  --sidebar: #17181c;
-  --card: #20232a;
-  --primary: #163dff;
+  --nedvi-blue: #7baee3;
+  --nedvi-blue-strong: #5f96d0;
+  --background: #f3f7fb;
+  --foreground: #172033;
+  --muted: #64748b;
+  --subtle: #7a8799;
+  --surface: #ffffff;
+  --surface-soft: #f8fafc;
+  --border: #dce6f0;
+  --sidebar: #7baee3;
+  --sidebar-foreground: #102033;
+  --primary: #7baee3;
+}
+
+.theme-light {
+  --background: #f3f7fb;
+  --foreground: #172033;
+  --muted: #64748b;
+  --subtle: #7a8799;
+  --surface: #ffffff;
+  --surface-soft: #f8fafc;
+  --border: #dce6f0;
+  --sidebar: #7baee3;
+  --sidebar-foreground: #102033;
+  --primary: #7baee3;
+}
+
+.theme-dark {
+  --background: #121820;
+  --foreground: #f7f9fc;
+  --muted: #a8b3c2;
+  --subtle: #7f8b9d;
+  --surface: #1c2530;
+  --surface-soft: #18212b;
+  --border: #2b3948;
+  --sidebar: #7baee3;
+  --sidebar-foreground: #102033;
+  --primary: #7baee3;
 }
 
 * {
@@ -27,8 +59,124 @@ body {
 }
 
 ::selection {
-  background: rgba(22, 61, 255, 0.45);
-  color: #ffffff;
+  background: rgba(123, 174, 227, 0.45);
+  color: #102033;
+}
+
+/* NEDVI brand accent migration */
+.theme-light [class~="bg-[#163DFF]"],
+.theme-dark [class~="bg-[#163DFF]"] {
+  background-color: #7baee3 !important;
+  color: #102033 !important;
+}
+
+.theme-light [class*="bg-[#163DFF]/"],
+.theme-dark [class*="bg-[#163DFF]/"] {
+  background-color: rgba(123, 174, 227, 0.16) !important;
+}
+
+.theme-light [class~="text-[#7187ff]"],
+.theme-light [class~="text-[#6F88FF]"],
+.theme-light [class~="text-[#6f88ff]"],
+.theme-light [class~="text-[#91a2ff]"],
+.theme-dark [class~="text-[#7187ff]"],
+.theme-dark [class~="text-[#6F88FF]"],
+.theme-dark [class~="text-[#6f88ff]"],
+.theme-dark [class~="text-[#91a2ff]"] {
+  color: #7baee3 !important;
+}
+
+.theme-light [class~="border-[#163DFF]"],
+.theme-dark [class~="border-[#163DFF]"] {
+  border-color: #7baee3 !important;
+}
+
+/* Light theme compatibility for existing dark utility classes */
+.theme-light [class~="bg-[#0B0B0D]"],
+.theme-light [class~="bg-[#0b0b0d]"] {
+  background-color: #f3f7fb !important;
+}
+
+.theme-light [class~="bg-[#0B0B0D]/90"] {
+  background-color: rgba(243, 247, 251, 0.92) !important;
+}
+
+.theme-light [class~="bg-[#20232A]"],
+.theme-light [class~="bg-[#20232a]"] {
+  background-color: #ffffff !important;
+}
+
+.theme-light [class~="bg-[#17181C]"],
+.theme-light [class~="bg-[#17181c]"] {
+  background-color: #f8fafc !important;
+}
+
+.theme-light [class~="text-white"] {
+  color: #172033 !important;
+}
+
+.theme-light [class~="text-[#d5d7df]"] {
+  color: #334155 !important;
+}
+
+.theme-light [class~="text-[#9CA3AF]"] {
+  color: #64748b !important;
+}
+
+.theme-light [class~="text-[#646873]"] {
+  color: #7a8799 !important;
+}
+
+.theme-light [class~="border-white/[0.05]"],
+.theme-light [class~="border-white/[0.06]"],
+.theme-light [class~="border-white/[0.07]"],
+.theme-light [class~="border-white/[0.08]"],
+.theme-light [class~="border-white/[0.09]"],
+.theme-light [class~="border-white/[0.1]"],
+.theme-light [class~="border-white/[0.12]"] {
+  border-color: #dce6f0 !important;
+}
+
+.theme-light [class~="divide-white/[0.05]"] > :not([hidden]) ~ :not([hidden]),
+.theme-light [class~="divide-white/[0.06]"] > :not([hidden]) ~ :not([hidden]) {
+  border-color: #e3ebf3 !important;
+}
+
+/* Sidebar is intentionally NEDVI blue in both themes */
+.theme-light aside[aria-label="Navegación principal"],
+.theme-dark aside[aria-label="Navegación principal"] {
+  background: #7baee3 !important;
+  border-right-color: rgba(16, 32, 51, 0.12) !important;
+  color: #102033;
+}
+
+.theme-light aside[aria-label="Navegación principal"] [class~="text-white"],
+.theme-dark aside[aria-label="Navegación principal"] [class~="text-white"] {
+  color: #102033 !important;
+}
+
+.theme-light aside[aria-label="Navegación principal"] [class~="text-[#9CA3AF]"],
+.theme-light aside[aria-label="Navegación principal"] [class~="text-[#646873]"],
+.theme-light aside[aria-label="Navegación principal"] [class~="text-[#7D81D8]"],
+.theme-dark aside[aria-label="Navegación principal"] [class~="text-[#9CA3AF]"],
+.theme-dark aside[aria-label="Navegación principal"] [class~="text-[#646873]"],
+.theme-dark aside[aria-label="Navegación principal"] [class~="text-[#7D81D8]"] {
+  color: rgba(16, 32, 51, 0.72) !important;
+}
+
+.theme-light aside[aria-label="Navegación principal"] [class~="bg-[#343A40]"],
+.theme-dark aside[aria-label="Navegación principal"] [class~="bg-[#343A40]"] {
+  background-color: rgba(255, 255, 255, 0.5) !important;
+}
+
+.theme-light aside[aria-label="Navegación principal"] [class*="bg-white/"],
+.theme-dark aside[aria-label="Navegación principal"] [class*="bg-white/"] {
+  background-color: rgba(255, 255, 255, 0.18) !important;
+}
+
+.theme-light aside[aria-label="Navegación principal"] [class*="border-white/"],
+.theme-dark aside[aria-label="Navegación principal"] [class*="border-white/"] {
+  border-color: rgba(16, 32, 51, 0.12) !important;
 }
 
 @keyframes fade-up {
@@ -58,38 +206,15 @@ body {
 .animate-fade-up-delay {
   animation: fade-up 700ms 120ms cubic-bezier(0.22, 1, 0.36, 1) both;
 }
-.nedvi-splash {
-  animation: nedviSplash 1.8s ease forwards;
-}
 
-@keyframes nedviSplash {
-  0% {
-    opacity: 1;
-    visibility: visible;
-  }
-
-  75% {
-    opacity: 1;
-    visibility: visible;
-  }
-
-  100% {
-    opacity: 0;
-    visibility: hidden;
-    pointer-events: none;
-  }
-}
 .nedvi-splash {
   position: fixed;
   inset: 0;
   z-index: 9999;
-
   display: flex;
   align-items: center;
   justify-content: center;
-
-  background: #09090b;
-
+  background: #121820;
   animation: nedviSplash 1.8s ease forwards;
 }
 
@@ -116,7 +241,7 @@ body {
 
 .nedvi-splash p {
   margin-top: 8px;
-  color: #9ca3af;
+  color: #a8b3c2;
   font-size: 14px;
 }
 
@@ -125,12 +250,10 @@ body {
     opacity: 1;
     visibility: visible;
   }
-
   75% {
     opacity: 1;
     visibility: visible;
   }
-
   100% {
     opacity: 0;
     visibility: hidden;
@@ -144,7 +267,6 @@ body {
     transform: scale(1);
     opacity: 0.85;
   }
-
   50% {
     transform: scale(1.05);
     opacity: 1;
