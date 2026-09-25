@@ -10,6 +10,8 @@ import { getCustomers } from '@/features/crm/services/customerService'
 export const CRM_STORAGE_KEY = 'nedvi-crm-customers'
 export const CRM_UPDATED_EVENT = 'nedvi-crm-updated'
 
+const CUSTOMER_FOLIO_PREFIX = 'NEDVI-CLI-'
+
 const customerStatuses: CustomerStatus[] = [
   'Lead',
   'Qualified',
@@ -34,9 +36,24 @@ const leadSources: LeadSource[] = [
   'Prospección',
 ]
 
+function formatCustomerFolio(number: number) {
+  return `${CUSTOMER_FOLIO_PREFIX}${String(number).padStart(4, '0')}`
+}
+
+function getFolioNumber(folio?: string): number | null {
+  if (!folio) return null
+
+  const match = folio.match(/^NEDVI-CLI-(\d{4,})$/)
+  if (!match) return null
+
+  const value = Number(match[1])
+  return Number.isFinite(value) ? value : null
+}
+
 function cloneSeedCustomers(): Customer[] {
-  return getCustomers().map((customer) => ({
+  return getCustomers().map((customer, index) => ({
     ...customer,
+    folio: formatCustomerFolio(index + 1),
     timeline: customer.timeline.map((event) => ({ ...event })),
   }))
 }
@@ -63,6 +80,67 @@ function isCustomer(value: unknown): value is Customer {
     typeof customer.lastContact === 'string' &&
     Array.isArray(customer.timeline)
   )
+}
+
+function normalizeCustomerFolios(
+  customers: Customer[],
+  seedCustomers: Customer[]
+): Customer[] {
+  const seedFoliosById = new Map(
+    seedCustomers.map((customer) => [customer.id, customer.folio as string])
+  )
+
+  const reservedNumbers = new Set(
+    seedCustomers
+      .map((customer) => getFolioNumber(customer.folio))
+      .filter((value): value is number => value !== null)
+  )
+
+  const assignedNumbers = new Set<number>(reservedNumbers)
+
+  for (const customer of customers) {
+    if (seedFoliosById.has(customer.id)) continue
+
+    const folioNumber = getFolioNumber(customer.folio)
+    if (folioNumber !== null && !assignedNumbers.has(folioNumber)) {
+      assignedNumbers.add(folioNumber)
+    }
+  }
+
+  let nextNumber = Math.max(0, ...assignedNumbers) + 1
+
+  return customers.map((customer) => {
+    const seedFolio = seedFoliosById.get(customer.id)
+
+    if (seedFolio) {
+      return { ...customer, folio: seedFolio }
+    }
+
+    const existingNumber = getFolioNumber(customer.folio)
+
+    if (existingNumber !== null && existingNumber > seedCustomers.length) {
+      return customer
+    }
+
+    while (assignedNumbers.has(nextNumber)) {
+      nextNumber += 1
+    }
+
+    const folio = formatCustomerFolio(nextNumber)
+    assignedNumbers.add(nextNumber)
+    nextNumber += 1
+
+    return { ...customer, folio }
+  })
+}
+
+function getNextCustomerFolio(customers: Customer[]) {
+  const highestNumber = customers.reduce((highest, customer) => {
+    const folioNumber = getFolioNumber(customer.folio)
+    return folioNumber === null ? highest : Math.max(highest, folioNumber)
+  }, 0)
+
+  return formatCustomerFolio(highestNumber + 1)
 }
 
 function notifyCustomerChange() {
@@ -99,11 +177,21 @@ export function readCustomers(): Customer[] {
 
     const validCustomers = parsed.filter(isCustomer)
 
-    if (validCustomers.length !== parsed.length) {
-      writeCustomers(validCustomers.length ? validCustomers : fallback)
+    if (!validCustomers.length) {
+      writeCustomers(fallback)
+      return fallback
     }
 
-    return validCustomers.length ? validCustomers : fallback
+    const normalizedCustomers = normalizeCustomerFolios(validCustomers, fallback)
+
+    if (
+      validCustomers.length !== parsed.length ||
+      JSON.stringify(normalizedCustomers) !== JSON.stringify(validCustomers)
+    ) {
+      writeCustomers(normalizedCustomers)
+    }
+
+    return normalizedCustomers
   } catch (error) {
     console.error('Error al cargar los clientes del CRM:', error)
     writeCustomers(fallback)
@@ -136,6 +224,7 @@ export function createCustomer(values: CustomerFormValues): Customer {
 
   const customer: Customer = {
     id: `${baseId}-${Date.now()}`,
+    folio: getNextCustomerFolio(customers),
     ...values,
     createdAt: date,
     lastContact: date,
