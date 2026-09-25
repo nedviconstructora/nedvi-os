@@ -30,7 +30,7 @@ export type CustomerTimelineEvent = {
 
 export type Customer = {
   id: string
-  folio: string
+  folio?: string
   company: string
   contact: string
   phone: string
