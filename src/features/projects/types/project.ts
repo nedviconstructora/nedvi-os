@@ -72,6 +72,7 @@ export type ProjectProgressPoint = {
 export type Project = {
   id: string
   name: string
+  clientId?: string
   client: string
   clientContact: string
   projectType: ProjectType
@@ -99,7 +100,23 @@ export type Project = {
   progressHistory: ProjectProgressPoint[]
 }
 
-export type ProjectFormValues = Pick<Project, 'name' | 'client' | 'clientContact' | 'projectType' | 'address' | 'latitude' | 'longitude' | 'budget' | 'startDate' | 'estimatedCompletion' | 'manager' | 'status' | 'description'>
+export type ProjectFormValues = Pick<
+  Project,
+  | 'name'
+  | 'clientId'
+  | 'client'
+  | 'clientContact'
+  | 'projectType'
+  | 'address'
+  | 'latitude'
+  | 'longitude'
+  | 'budget'
+  | 'startDate'
+  | 'estimatedCompletion'
+  | 'manager'
+  | 'status'
+  | 'description'
+>
 
 export type ProjectSortKey = 'name' | 'client' | 'status' | 'progress' | 'estimatedCompletion'
 export type SortDirection = 'asc' | 'desc'
