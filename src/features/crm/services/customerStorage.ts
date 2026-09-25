@@ -90,24 +90,13 @@ function normalizeCustomerFolios(
     seedCustomers.map((customer) => [customer.id, customer.folio as string])
   )
 
-  const reservedNumbers = new Set(
+  const usedNumbers = new Set(
     seedCustomers
       .map((customer) => getFolioNumber(customer.folio))
       .filter((value): value is number => value !== null)
   )
 
-  const assignedNumbers = new Set<number>(reservedNumbers)
-
-  for (const customer of customers) {
-    if (seedFoliosById.has(customer.id)) continue
-
-    const folioNumber = getFolioNumber(customer.folio)
-    if (folioNumber !== null && !assignedNumbers.has(folioNumber)) {
-      assignedNumbers.add(folioNumber)
-    }
-  }
-
-  let nextNumber = Math.max(0, ...assignedNumbers) + 1
+  let nextNumber = Math.max(0, ...usedNumbers) + 1
 
   return customers.map((customer) => {
     const seedFolio = seedFoliosById.get(customer.id)
@@ -118,16 +107,22 @@ function normalizeCustomerFolios(
 
     const existingNumber = getFolioNumber(customer.folio)
 
-    if (existingNumber !== null && existingNumber > seedCustomers.length) {
+    if (
+      existingNumber !== null &&
+      existingNumber > seedCustomers.length &&
+      !usedNumbers.has(existingNumber)
+    ) {
+      usedNumbers.add(existingNumber)
+      nextNumber = Math.max(nextNumber, existingNumber + 1)
       return customer
     }
 
-    while (assignedNumbers.has(nextNumber)) {
+    while (usedNumbers.has(nextNumber)) {
       nextNumber += 1
     }
 
     const folio = formatCustomerFolio(nextNumber)
-    assignedNumbers.add(nextNumber)
+    usedNumbers.add(nextNumber)
     nextNumber += 1
 
     return { ...customer, folio }
