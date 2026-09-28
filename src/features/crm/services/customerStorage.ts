@@ -170,6 +170,8 @@ export function readCustomers(): Customer[] {
       return fallback
     }
 
+    if (parsed.length === 0) return []
+
     const validCustomers = parsed.filter(isCustomer)
 
     if (!validCustomers.length) {
@@ -253,4 +255,14 @@ export function updateCustomer(
 
   writeCustomers(updatedCustomers)
   return updatedCustomer
+}
+
+export function deleteCustomer(id: string): boolean {
+  const customers = readCustomers()
+  const nextCustomers = customers.filter((customer) => customer.id !== id)
+
+  if (nextCustomers.length === customers.length) return false
+
+  writeCustomers(nextCustomers)
+  return true
 }
