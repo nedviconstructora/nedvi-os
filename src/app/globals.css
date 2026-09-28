@@ -8,7 +8,7 @@
   --card: #20232a;
   --primary: #163dff;
   --nedvi-logo-dark: url('https://drive.google.com/thumbnail?id=1mYaFCSdeEc75o5qI3uR15U6GzfInsxvH&sz=w1200');
-  --nedvi-logo-light: url('https://drive.google.com/thumbnail?id=159KiPWa9Lk3XsVo81vWcRQQdCkQuIZJh&sz=w1200');
+  --nedvi-logo-light: url('/logo-blanco.svg');
 }
 
 * {
