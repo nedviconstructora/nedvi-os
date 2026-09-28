@@ -516,6 +516,12 @@ export default function QuotesPage() {
                     <button type="button" onClick={addItem} className="rounded-lg border border-slate-200 px-3 py-2 text-xs font-semibold dark:border-slate-700">+ Agregar partida</button>
                   </div>
                   <div className="space-y-3">
+                    <div className="hidden gap-2 px-3 text-xs font-semibold text-slate-500 md:grid md:grid-cols-[1fr_110px_150px_auto] dark:text-slate-400">
+                      <span aria-hidden="true" />
+                      <span>Cantidad</span>
+                      <span>Precio por unidad</span>
+                      <span aria-hidden="true" />
+                    </div>
                     {items.map((item, index) => (
                       <div key={item.id} className="grid gap-2 rounded-xl border border-slate-200 p-3 dark:border-slate-700 md:grid-cols-[1fr_110px_150px_auto]">
                         <input value={item.description} onChange={(e) => updateItem(item.id, 'description', e.target.value)} placeholder={`Concepto ${index + 1}`} className="rounded-lg border border-slate-200 bg-transparent px-3 py-2 dark:border-slate-700" />
