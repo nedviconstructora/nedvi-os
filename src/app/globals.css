@@ -192,7 +192,7 @@ select option:checked {
 @media print {
   @page {
     size: A4;
-    margin: 12mm;
+    margin: 0;
   }
 
   html,
