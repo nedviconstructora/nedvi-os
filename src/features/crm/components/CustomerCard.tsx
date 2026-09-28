@@ -1,5 +1,5 @@
 import Link from 'next/link'
-import { ArrowUpRight, Mail, MapPin, Phone } from 'lucide-react'
+import { ArrowUpRight, Edit3, Mail, MapPin, Phone, Trash2 } from 'lucide-react'
 import type { Customer } from '@/features/crm/types/customer'
 import {
   formatCustomerDate,
@@ -10,9 +10,10 @@ import { CustomerStatusBadge } from '@/features/crm/components/CustomerStatusBad
 
 type CustomerCardProps = {
   customer: Customer
+  onDelete: (customer: Customer) => void
 }
 
-export function CustomerCard({ customer }: CustomerCardProps) {
+export function CustomerCard({ customer, onDelete }: CustomerCardProps) {
   return (
     <Card className="p-5 transition duration-200 hover:border-white/[0.14]">
       <div className="flex items-start justify-between gap-4">
@@ -53,16 +54,31 @@ export function CustomerCard({ customer }: CustomerCardProps) {
         </p>
       </div>
 
-      <div className="mt-5 flex items-center justify-between border-t border-white/[0.06] pt-4">
+      <div className="mt-5 border-t border-white/[0.06] pt-4">
         <span className="text-[11px] text-[#646873]">
           Último contacto {formatCustomerDate(customer.lastContact)}
         </span>
-        <Link
-          href={`/crm/${customer.id}`}
-          className="inline-flex items-center gap-1 text-xs font-semibold text-[#7187ff] transition hover:text-white"
-        >
-          Ver <ArrowUpRight size={13} />
-        </Link>
+        <div className="mt-3 flex flex-wrap items-center gap-2">
+          <Link
+            href={`/crm/${customer.id}`}
+            className="inline-flex items-center gap-1 text-xs font-semibold text-[#7187ff] transition hover:text-white"
+          >
+            Ver <ArrowUpRight size={13} />
+          </Link>
+          <Link
+            href={`/crm/${customer.id}/edit`}
+            className="inline-flex items-center gap-1 rounded-lg border border-white/[0.08] px-2.5 py-1.5 text-xs font-semibold text-white/85 transition hover:bg-white/[0.06] hover:text-white"
+          >
+            <Edit3 size={12} /> Editar
+          </Link>
+          <button
+            type="button"
+            onClick={() => onDelete(customer)}
+            className="inline-flex items-center gap-1 rounded-lg border border-red-400/25 px-2.5 py-1.5 text-xs font-semibold text-red-300 transition hover:bg-red-400/10"
+          >
+            <Trash2 size={12} /> Eliminar
+          </button>
+        </div>
       </div>
     </Card>
   )
