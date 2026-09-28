@@ -7,6 +7,8 @@
   --sidebar: #17181c;
   --card: #20232a;
   --primary: #163dff;
+  --nedvi-logo-dark: url('https://drive.google.com/thumbnail?id=1mYaFCSdeEc75o5qI3uR15U6GzfInsxvH&sz=w1200');
+  --nedvi-logo-light: url('https://drive.google.com/thumbnail?id=159KiPWa9Lk3XsVo81vWcRQQdCkQuIZJh&sz=w1200');
 }
 
 * {
@@ -41,6 +43,24 @@ select optgroup {
 select option:checked {
   background-color: #2563eb;
   color: #ffffff;
+}
+
+/* Reusable NEDVI brand logo helpers.
+   Use the white logo on dark surfaces and the black logo on light surfaces. */
+.nedvi-logo-on-dark,
+.nedvi-logo-on-light {
+  display: block;
+  background-position: center;
+  background-repeat: no-repeat;
+  background-size: contain;
+}
+
+.nedvi-logo-on-dark {
+  background-image: var(--nedvi-logo-light);
+}
+
+.nedvi-logo-on-light {
+  background-image: var(--nedvi-logo-dark);
 }
 
 ::selection {
@@ -196,7 +216,7 @@ select option:checked {
     position: relative;
     min-height: 112px;
     margin: 0 0 30px !important;
-    padding: 24px 28px 24px 122px !important;
+    padding: 24px 28px 24px 154px !important;
     border: 0 !important;
     border-radius: 14px;
     background: #1f2329 !important;
@@ -209,12 +229,13 @@ select option:checked {
     position: absolute;
     left: 28px;
     top: 50%;
-    width: 72px;
-    height: 72px;
+    width: 102px;
+    height: 64px;
     transform: translateY(-50%);
-    border-radius: 12px;
-    background: #ffffff url('/icon.png') center / contain no-repeat;
-    box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.18);
+    background-image: var(--nedvi-logo-light);
+    background-position: center;
+    background-repeat: no-repeat;
+    background-size: contain;
   }
 
   section.print\:block > div > div:first-child h1,
