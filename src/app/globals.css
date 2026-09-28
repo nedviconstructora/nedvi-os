@@ -26,6 +26,23 @@ body {
   -webkit-font-smoothing: antialiased;
 }
 
+/* Native select menus need explicit option colors on Windows/Chrome.
+   Without this, the browser can render white text on a white dropdown. */
+select {
+  color-scheme: dark;
+}
+
+select option,
+select optgroup {
+  background-color: #0f172a;
+  color: #f8fafc;
+}
+
+select option:checked {
+  background-color: #2563eb;
+  color: #ffffff;
+}
+
 ::selection {
   background: rgba(22, 61, 255, 0.45);
   color: #ffffff;
