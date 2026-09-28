@@ -62,8 +62,8 @@ const navigationGroups: NavigationGroup[] = [
     icon: FolderKanban,
     items: [
       { label: 'Proyectos', href: '/projects', icon: HardHat },
-      { label: 'Presupuesto', icon: CircleDollarSign, comingSoon: true },
-      { label: 'Documentos', icon: FileText, comingSoon: true },
+      { label: 'Presupuesto', href: '/budgets', icon: CircleDollarSign },
+      { label: 'Documentos', href: '/documents', icon: FileText },
     ],
   },
   {
