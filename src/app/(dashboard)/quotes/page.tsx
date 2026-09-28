@@ -231,7 +231,7 @@ export default function QuotesPage() {
     try {
       const parsed = JSON.parse(raw) as Quote[]
       if (Array.isArray(parsed)) {
-        const normalized = parsed.map((quote) => {
+        const normalized: Quote[] = parsed.map((quote): Quote => {
           const legacyItems = Array.isArray(quote.items) ? quote.items.map(normalizeItem) : []
           const savedConcepts = Array.isArray(quote.concepts) ? quote.concepts.map(normalizeItem) : []
           const mergedConcepts = [...legacyItems, ...savedConcepts]
