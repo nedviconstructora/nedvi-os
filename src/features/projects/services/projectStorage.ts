@@ -1,4 +1,5 @@
 import { getProjects } from '@/features/projects/services/projectService'
+import { readCustomers } from '@/features/crm/services/customerStorage'
 import type {
   Project,
   ProjectFormValues,
@@ -86,8 +87,11 @@ type QuoteProjectIntake = {
   customerId?: string
   client: string
   name: string
+  quoteId?: string
   quoteTotal: number
+  quoteCurrency?: string
   createdAt: string
+  source?: string
 }
 
 function readQuoteProjects(): Project[] {
@@ -99,6 +103,8 @@ function readQuoteProjects(): Project[] {
   try {
     const parsed = JSON.parse(raw) as unknown
     if (!Array.isArray(parsed)) return []
+
+    const customers = readCustomers()
 
     return parsed
       .filter((item): item is QuoteProjectIntake => {
@@ -113,37 +119,45 @@ function readQuoteProjects(): Project[] {
           typeof value.createdAt === 'string'
         )
       })
-      .map((item) => ({
-        id: item.id,
-        folio: item.folio,
-        name: item.name,
-        clientId: item.customerId,
-        client: item.client,
-        clientContact: '',
-        projectType: 'Commercial' as ProjectType,
-        address: '',
-        latitude: 0,
-        longitude: 0,
-        budget: item.quoteTotal,
-        spent: 0,
-        startDate: item.createdAt,
-        estimatedCompletion: '',
-        progress: 0,
-        manager: '',
-        assignedEmployees: [],
-        materials: [],
-        equipment: [],
-        status: 'Planning' as ProjectStatus,
-        description: `Proyecto creado desde la cotización ${item.folio}.`,
-        timeline: [],
-        photos: [],
-        documents: [],
-        dailyLogs: [],
-        tasks: [],
-        inspections: [],
-        safetyIncidents: [],
-        progressHistory: [],
-      }))
+      .map((item) => {
+        const customer = customers.find(
+          (candidate) =>
+            candidate.id === item.customerId || candidate.company === item.client,
+        )
+        const currency = item.quoteCurrency === 'USD' ? 'USD' : 'MXN'
+
+        return {
+          id: item.id,
+          folio: item.folio,
+          name: item.name,
+          clientId: item.customerId ?? customer?.id,
+          client: item.client,
+          clientContact: customer?.contact ?? '',
+          projectType: 'Commercial' as ProjectType,
+          address: customer?.address ?? '',
+          latitude: 0,
+          longitude: 0,
+          budget: item.quoteTotal,
+          spent: 0,
+          startDate: item.createdAt,
+          estimatedCompletion: '',
+          progress: 0,
+          manager: customer?.assignedSalesperson ?? '',
+          assignedEmployees: [],
+          materials: [],
+          equipment: [],
+          status: 'Planning' as ProjectStatus,
+          description: `Proyecto creado desde la cotización ${item.folio}. Presupuesto aprobado: ${currency} $${item.quoteTotal.toLocaleString('es-MX', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}.`,
+          timeline: [],
+          photos: [],
+          documents: [],
+          dailyLogs: [],
+          tasks: [],
+          inspections: [],
+          safetyIncidents: [],
+          progressHistory: [],
+        }
+      })
   } catch (error) {
     console.error('Error al cargar proyectos creados desde cotizaciones:', error)
     return []
@@ -154,9 +168,30 @@ function mergeQuoteProjects(projects: Project[]) {
   const quoteProjects = readQuoteProjects()
   if (!quoteProjects.length) return projects
 
-  const knownIds = new Set(projects.map((project) => project.id))
-  const missing = quoteProjects.filter((project) => !knownIds.has(project.id))
-  return missing.length ? [...missing, ...projects] : projects
+  const quoteProjectsById = new Map(
+    quoteProjects.map((project) => [project.id, project]),
+  )
+
+  const syncedProjects = projects.map((project) => {
+    const quoteProject = quoteProjectsById.get(project.id)
+    if (!quoteProject) return project
+
+    quoteProjectsById.delete(project.id)
+
+    return {
+      ...project,
+      folio: project.folio || quoteProject.folio,
+      clientId: project.clientId || quoteProject.clientId,
+      client: project.client || quoteProject.client,
+      clientContact: project.clientContact || quoteProject.clientContact,
+      address: project.address || quoteProject.address,
+      manager: project.manager || quoteProject.manager,
+      description: project.description || quoteProject.description,
+    }
+  })
+
+  const missing = Array.from(quoteProjectsById.values())
+  return missing.length ? [...missing, ...syncedProjects] : syncedProjects
 }
 
 export function readProjects(): Project[] {
@@ -187,7 +222,7 @@ export function readProjects(): Project[] {
 
     if (
       validProjects.length !== parsed.length ||
-      mergedProjects.length !== baseProjects.length
+      JSON.stringify(mergedProjects) !== JSON.stringify(baseProjects)
     ) {
       writeProjects(mergedProjects)
     }
