@@ -2,25 +2,46 @@
 
 import { FormEvent, useEffect, useMemo, useState } from 'react'
 import { AppShell } from '@/components/layout/AppShell'
+import { getCustomers } from '@/features/crm/services/customerService'
 
 type QuoteStatus = 'Borrador' | 'Enviada' | 'Aprobada' | 'Rechazada' | 'Vencida'
+
+type QuoteItem = {
+  id: string
+  description: string
+  quantity: number
+  unitPrice: number
+}
 
 type Quote = {
   id: string
   folio: string
+  customerId: string
   client: string
   project: string
   createdAt: string
   validUntil: string
+  items: QuoteItem[]
+  taxRate: number
   subtotal: number
   tax: number
   total: number
   status: QuoteStatus
   owner: string
+  notes: string
+  convertedToProject?: boolean
 }
 
 const STORAGE_KEY = 'nedvi_quotes'
 const SEQUENCE_KEY = 'nedvi_quotes_sequence'
+const PROJECT_INTAKE_KEY = 'nedvi_projects_from_quotes'
+
+const emptyItem = (): QuoteItem => ({
+  id: crypto.randomUUID(),
+  description: '',
+  quantity: 1,
+  unitPrice: 0,
+})
 
 function currency(value: number) {
   return new Intl.NumberFormat('es-MX', {
@@ -47,26 +68,76 @@ function nextFolio() {
   return `NV-${year}-${String(sequence).padStart(4, '0')}`
 }
 
+function quoteTotals(items: QuoteItem[], taxRate: number) {
+  const subtotal = items.reduce(
+    (sum, item) => sum + Number(item.quantity || 0) * Number(item.unitPrice || 0),
+    0,
+  )
+  const tax = subtotal * (taxRate / 100)
+  return { subtotal, tax, total: subtotal + tax }
+}
+
+function statusClass(status: QuoteStatus) {
+  const classes: Record<QuoteStatus, string> = {
+    Borrador: 'bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-200',
+    Enviada: 'bg-blue-100 text-blue-700 dark:bg-blue-950/50 dark:text-blue-300',
+    Aprobada: 'bg-emerald-100 text-emerald-700 dark:bg-emerald-950/50 dark:text-emerald-300',
+    Rechazada: 'bg-red-100 text-red-700 dark:bg-red-950/50 dark:text-red-300',
+    Vencida: 'bg-amber-100 text-amber-700 dark:bg-amber-950/50 dark:text-amber-300',
+  }
+  return classes[status]
+}
+
 export default function QuotesPage() {
+  const customers = getCustomers()
   const [quotes, setQuotes] = useState<Quote[]>([])
   const [open, setOpen] = useState(false)
+  const [editingId, setEditingId] = useState<string | null>(null)
   const [search, setSearch] = useState('')
-  const [client, setClient] = useState('')
+  const [statusFilter, setStatusFilter] = useState<'Todas' | QuoteStatus>('Todas')
+  const [customerId, setCustomerId] = useState('')
   const [project, setProject] = useState('')
   const [validUntil, setValidUntil] = useState('')
-  const [subtotal, setSubtotal] = useState('')
   const [taxRate, setTaxRate] = useState('16')
   const [owner, setOwner] = useState('')
+  const [notes, setNotes] = useState('')
+  const [status, setStatus] = useState<QuoteStatus>('Borrador')
+  const [items, setItems] = useState<QuoteItem[]>([emptyItem()])
+  const [printQuote, setPrintQuote] = useState<Quote | null>(null)
 
   useEffect(() => {
     const raw = localStorage.getItem(STORAGE_KEY)
     if (!raw) return
 
     try {
-      const parsed = JSON.parse(raw)
-      if (Array.isArray(parsed)) setQuotes(parsed)
+      const parsed = JSON.parse(raw) as Quote[]
+      if (Array.isArray(parsed)) {
+        const normalized = parsed.map((quote) => ({
+          ...quote,
+          customerId: quote.customerId ?? '',
+          items:
+            Array.isArray(quote.items) && quote.items.length > 0
+              ? quote.items
+              : [
+                  {
+                    id: crypto.randomUUID(),
+                    description: quote.project || 'Servicio',
+                    quantity: 1,
+                    unitPrice: quote.subtotal || 0,
+                  },
+                ],
+          taxRate:
+            typeof quote.taxRate === 'number'
+              ? quote.taxRate
+              : quote.subtotal > 0
+                ? Number(((quote.tax / quote.subtotal) * 100).toFixed(2))
+                : 16,
+          notes: quote.notes ?? '',
+        }))
+        setQuotes(normalized)
+      }
     } catch {
-      console.warn('No se pudieron cargar las cotizaciones guardadas.')
+      console.warn('No se pudieron leer las cotizaciones guardadas.')
     }
   }, [])
 
@@ -74,80 +145,249 @@ export default function QuotesPage() {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(quotes))
   }, [quotes])
 
+  const totals = useMemo(
+    () => quoteTotals(items, Number(taxRate || 0)),
+    [items, taxRate],
+  )
+
   const filtered = useMemo(() => {
     const value = search.trim().toLowerCase()
 
-    return quotes.filter((quote) =>
-      [quote.folio, quote.client, quote.project, quote.owner]
+    return quotes.filter((quote) => {
+      const matchesText = [quote.folio, quote.client, quote.project, quote.owner]
         .join(' ')
         .toLowerCase()
-        .includes(value),
+        .includes(value)
+      const matchesStatus = statusFilter === 'Todas' || quote.status === statusFilter
+      return matchesText && matchesStatus
+    })
+  }, [quotes, search, statusFilter])
+
+  function resetForm() {
+    setCustomerId('')
+    setProject('')
+    setValidUntil('')
+    setTaxRate('16')
+    setOwner('')
+    setNotes('')
+    setStatus('Borrador')
+    setItems([emptyItem()])
+    setEditingId(null)
+  }
+
+  function closeForm() {
+    setOpen(false)
+    resetForm()
+  }
+
+  function openNew() {
+    resetForm()
+    setOpen(true)
+  }
+
+  function openEdit(quote: Quote) {
+    setEditingId(quote.id)
+    setCustomerId(quote.customerId || '')
+    setProject(quote.project)
+    setValidUntil(quote.validUntil)
+    setTaxRate(String(quote.taxRate))
+    setOwner(quote.owner)
+    setNotes(quote.notes)
+    setStatus(quote.status)
+    setItems(quote.items.map((item) => ({ ...item })))
+    setOpen(true)
+  }
+
+  function updateItem(id: string, field: keyof QuoteItem, value: string) {
+    setItems((current) =>
+      current.map((item) => {
+        if (item.id !== id) return item
+        if (field === 'description') return { ...item, description: value }
+        return { ...item, [field]: Number(value || 0) }
+      }),
     )
-  }, [quotes, search])
+  }
+
+  function addItem() {
+    setItems((current) => [...current, emptyItem()])
+  }
+
+  function removeItem(id: string) {
+    setItems((current) =>
+      current.length === 1 ? current : current.filter((item) => item.id !== id),
+    )
+  }
 
   function saveQuote(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
 
-    if (!client.trim() || !project.trim()) {
+    const customer = customers.find((item) => item.id === customerId)
+    if (!customer || !project.trim()) {
       alert('Cliente y proyecto son obligatorios.')
       return
     }
 
-    const subtotalValue = Number(subtotal || 0)
-    const taxValue = subtotalValue * (Number(taxRate || 0) / 100)
+    const validItems = items.filter(
+      (item) => item.description.trim() && item.quantity > 0 && item.unitPrice >= 0,
+    )
 
-    const quote: Quote = {
-      id: crypto.randomUUID(),
-      folio: nextFolio(),
-      client: client.trim(),
-      project: project.trim(),
-      createdAt: new Date().toISOString().slice(0, 10),
-      validUntil,
-      subtotal: subtotalValue,
-      tax: taxValue,
-      total: subtotalValue + taxValue,
-      status: 'Borrador',
-      owner: owner.trim(),
+    if (validItems.length === 0) {
+      alert('Agrega al menos una partida válida a la cotización.')
+      return
     }
 
-    setQuotes((current) => [quote, ...current])
-    setClient('')
-    setProject('')
-    setValidUntil('')
-    setSubtotal('')
-    setTaxRate('16')
-    setOwner('')
-    setOpen(false)
+    const calculated = quoteTotals(validItems, Number(taxRate || 0))
+
+    if (editingId) {
+      setQuotes((current) =>
+        current.map((quote) =>
+          quote.id === editingId
+            ? {
+                ...quote,
+                customerId: customer.id,
+                client: customer.company,
+                project: project.trim(),
+                validUntil,
+                items: validItems,
+                taxRate: Number(taxRate || 0),
+                ...calculated,
+                status,
+                owner: owner.trim(),
+                notes: notes.trim(),
+              }
+            : quote,
+        ),
+      )
+    } else {
+      const quote: Quote = {
+        id: crypto.randomUUID(),
+        folio: nextFolio(),
+        customerId: customer.id,
+        client: customer.company,
+        project: project.trim(),
+        createdAt: new Date().toISOString().slice(0, 10),
+        validUntil,
+        items: validItems,
+        taxRate: Number(taxRate || 0),
+        ...calculated,
+        status,
+        owner: owner.trim(),
+        notes: notes.trim(),
+      }
+
+      setQuotes((current) => [quote, ...current])
+    }
+
+    closeForm()
+  }
+
+  function duplicateQuote(quote: Quote) {
+    const duplicated: Quote = {
+      ...quote,
+      id: crypto.randomUUID(),
+      folio: nextFolio(),
+      createdAt: new Date().toISOString().slice(0, 10),
+      status: 'Borrador',
+      convertedToProject: false,
+      items: quote.items.map((item) => ({ ...item, id: crypto.randomUUID() })),
+    }
+    setQuotes((current) => [duplicated, ...current])
+  }
+
+  function deleteQuote(quote: Quote) {
+    if (!window.confirm(`¿Eliminar la cotización ${quote.folio}?`)) return
+    setQuotes((current) => current.filter((item) => item.id !== quote.id))
+  }
+
+  function changeStatus(id: string, nextStatus: QuoteStatus) {
+    setQuotes((current) =>
+      current.map((quote) =>
+        quote.id === id ? { ...quote, status: nextStatus } : quote,
+      ),
+    )
+  }
+
+  function convertToProject(quote: Quote) {
+    if (quote.status !== 'Aprobada') {
+      alert('Primero cambia la cotización a estado Aprobada.')
+      return
+    }
+
+    const raw = localStorage.getItem(PROJECT_INTAKE_KEY)
+    let projects: unknown[] = []
+
+    try {
+      projects = raw ? JSON.parse(raw) : []
+      if (!Array.isArray(projects)) projects = []
+    } catch {
+      projects = []
+    }
+
+    const projectRecord = {
+      id: crypto.randomUUID(),
+      folio: quote.folio,
+      customerId: quote.customerId,
+      client: quote.client,
+      name: quote.project,
+      quoteId: quote.id,
+      quoteTotal: quote.total,
+      createdAt: new Date().toISOString().slice(0, 10),
+      source: 'Cotización aprobada',
+    }
+
+    localStorage.setItem(PROJECT_INTAKE_KEY, JSON.stringify([projectRecord, ...projects]))
+    setQuotes((current) =>
+      current.map((item) =>
+        item.id === quote.id ? { ...item, convertedToProject: true } : item,
+      ),
+    )
+    alert(`Proyecto creado desde ${quote.folio}. El mismo folio continuará en el proceso.`)
+  }
+
+  function printPdf(quote: Quote) {
+    setPrintQuote(quote)
+    window.setTimeout(() => window.print(), 50)
   }
 
   return (
     <AppShell>
-      <div className="mx-auto max-w-7xl space-y-6 p-4 md:p-6">
+      <div className="mx-auto max-w-7xl space-y-6 p-4 md:p-6 print:hidden">
         <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
           <div>
             <p className="text-sm text-slate-500 dark:text-slate-400">Comercial y Ventas</p>
             <h1 className="text-3xl font-bold tracking-tight">Cotizaciones</h1>
             <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
-              Cada nueva cotización genera automáticamente un folio NV-AÑO-####.
+              El folio NV-AÑO-#### identifica el expediente durante todo el proceso.
             </p>
           </div>
 
           <button
-            type="button"
-            onClick={() => setOpen(true)}
+            onClick={openNew}
             className="rounded-xl bg-[#7BAEE3] px-5 py-3 font-semibold text-slate-950 transition hover:brightness-95"
           >
             + Nueva cotización
           </button>
         </div>
 
-        <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm dark:border-slate-800 dark:bg-slate-900">
+        <div className="grid gap-3 rounded-2xl border border-slate-200 bg-white p-4 shadow-sm dark:border-slate-800 dark:bg-slate-900 md:grid-cols-[1fr_220px]">
           <input
             value={search}
             onChange={(event) => setSearch(event.target.value)}
             placeholder="Buscar por folio, cliente, proyecto o responsable..."
             className="w-full rounded-xl border border-slate-200 bg-transparent px-4 py-3 outline-none focus:border-[#7BAEE3] dark:border-slate-700"
           />
+          <select
+            value={statusFilter}
+            onChange={(event) => setStatusFilter(event.target.value as 'Todas' | QuoteStatus)}
+            className="rounded-xl border border-slate-200 bg-transparent px-4 py-3 outline-none focus:border-[#7BAEE3] dark:border-slate-700"
+          >
+            <option>Todas</option>
+            <option>Borrador</option>
+            <option>Enviada</option>
+            <option>Aprobada</option>
+            <option>Rechazada</option>
+            <option>Vencida</option>
+          </select>
         </div>
 
         <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm dark:border-slate-800 dark:bg-slate-900">
@@ -158,30 +398,56 @@ export default function QuotesPage() {
                   <th className="px-4 py-3">Folio</th>
                   <th className="px-4 py-3">Cliente</th>
                   <th className="px-4 py-3">Proyecto</th>
-                  <th className="px-4 py-3">Fecha</th>
                   <th className="px-4 py-3">Total</th>
                   <th className="px-4 py-3">Estado</th>
-                  <th className="px-4 py-3">Responsable</th>
+                  <th className="px-4 py-3">Acciones</th>
                 </tr>
               </thead>
-
               <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
                 {filtered.length === 0 ? (
                   <tr>
-                    <td colSpan={7} className="px-4 py-12 text-center text-slate-500">
+                    <td colSpan={6} className="px-4 py-12 text-center text-slate-500">
                       Todavía no hay cotizaciones.
                     </td>
                   </tr>
                 ) : (
                   filtered.map((quote) => (
-                    <tr key={quote.id} className="hover:bg-slate-50 dark:hover:bg-slate-800/40">
+                    <tr key={quote.id} className="align-top hover:bg-slate-50 dark:hover:bg-slate-800/40">
                       <td className="px-4 py-4 font-semibold text-[#5B93C9]">{quote.folio}</td>
                       <td className="px-4 py-4">{quote.client}</td>
-                      <td className="px-4 py-4">{quote.project}</td>
-                      <td className="px-4 py-4">{quote.createdAt}</td>
+                      <td className="px-4 py-4">
+                        <div className="font-medium">{quote.project}</div>
+                        <div className="mt-1 text-xs text-slate-500">{quote.owner || 'Sin responsable'}</div>
+                      </td>
                       <td className="px-4 py-4 font-semibold">{currency(quote.total)}</td>
-                      <td className="px-4 py-4">{quote.status}</td>
-                      <td className="px-4 py-4">{quote.owner || 'Sin asignar'}</td>
+                      <td className="px-4 py-4">
+                        <select
+                          value={quote.status}
+                          onChange={(event) => changeStatus(quote.id, event.target.value as QuoteStatus)}
+                          className={`rounded-full border-0 px-3 py-1.5 text-xs font-semibold outline-none ${statusClass(quote.status)}`}
+                        >
+                          <option>Borrador</option>
+                          <option>Enviada</option>
+                          <option>Aprobada</option>
+                          <option>Rechazada</option>
+                          <option>Vencida</option>
+                        </select>
+                      </td>
+                      <td className="px-4 py-4">
+                        <div className="flex max-w-[360px] flex-wrap gap-2">
+                          <button onClick={() => openEdit(quote)} className="rounded-lg border border-slate-200 px-3 py-1.5 text-xs font-semibold dark:border-slate-700">Editar</button>
+                          <button onClick={() => duplicateQuote(quote)} className="rounded-lg border border-slate-200 px-3 py-1.5 text-xs font-semibold dark:border-slate-700">Duplicar</button>
+                          <button onClick={() => printPdf(quote)} className="rounded-lg border border-slate-200 px-3 py-1.5 text-xs font-semibold dark:border-slate-700">PDF</button>
+                          <button
+                            onClick={() => convertToProject(quote)}
+                            disabled={quote.convertedToProject}
+                            className="rounded-lg border border-emerald-200 px-3 py-1.5 text-xs font-semibold text-emerald-700 disabled:cursor-not-allowed disabled:opacity-50 dark:border-emerald-900 dark:text-emerald-300"
+                          >
+                            {quote.convertedToProject ? 'Proyecto creado' : 'Crear proyecto'}
+                          </button>
+                          <button onClick={() => deleteQuote(quote)} className="rounded-lg border border-red-200 px-3 py-1.5 text-xs font-semibold text-red-600 dark:border-red-900 dark:text-red-400">Eliminar</button>
+                        </div>
+                      </td>
                     </tr>
                   ))
                 )}
@@ -192,92 +458,151 @@ export default function QuotesPage() {
 
         {open && (
           <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
-            <div className="w-full max-w-2xl rounded-2xl bg-white p-6 shadow-2xl dark:bg-slate-900">
+            <div className="max-h-[92vh] w-full max-w-4xl overflow-y-auto rounded-2xl bg-white p-6 shadow-2xl dark:bg-slate-900">
               <div className="mb-5 flex items-start justify-between gap-4">
                 <div>
-                  <h2 className="text-xl font-bold">Nueva cotización</h2>
-                  <p className="mt-1 text-xs text-slate-500">El folio se asignará al guardar.</p>
+                  <h2 className="text-xl font-bold">{editingId ? 'Editar cotización' : 'Nueva cotización'}</h2>
+                  <p className="mt-1 text-xs text-slate-500">
+                    {editingId ? 'El folio existente se conserva.' : 'El folio se asignará automáticamente al guardar.'}
+                  </p>
                 </div>
-
-                <button
-                  type="button"
-                  onClick={() => setOpen(false)}
-                  className="text-sm text-slate-500"
-                >
-                  Cerrar
-                </button>
+                <button onClick={closeForm} className="text-sm text-slate-500">Cerrar</button>
               </div>
 
-              <form onSubmit={saveQuote} className="grid gap-4 md:grid-cols-2">
-                <input
-                  value={client}
-                  onChange={(event) => setClient(event.target.value)}
-                  placeholder="Cliente *"
-                  className="rounded-xl border border-slate-200 bg-transparent px-4 py-3 dark:border-slate-700"
-                />
+              <form onSubmit={saveQuote} className="space-y-6">
+                <div className="grid gap-4 md:grid-cols-2">
+                  <label className="space-y-2">
+                    <span className="text-sm font-semibold">Cliente *</span>
+                    <select
+                      value={customerId}
+                      onChange={(event) => setCustomerId(event.target.value)}
+                      className="w-full rounded-xl border border-slate-200 bg-transparent px-4 py-3 dark:border-slate-700"
+                    >
+                      <option value="">Seleccionar cliente</option>
+                      {customers.map((customer) => (
+                        <option key={customer.id} value={customer.id}>{customer.company}</option>
+                      ))}
+                    </select>
+                  </label>
 
-                <input
-                  value={project}
-                  onChange={(event) => setProject(event.target.value)}
-                  placeholder="Proyecto / servicio *"
-                  className="rounded-xl border border-slate-200 bg-transparent px-4 py-3 dark:border-slate-700"
-                />
+                  <label className="space-y-2">
+                    <span className="text-sm font-semibold">Proyecto / servicio *</span>
+                    <input value={project} onChange={(e) => setProject(e.target.value)} placeholder="Ej. Remodelación de oficinas" className="w-full rounded-xl border border-slate-200 bg-transparent px-4 py-3 dark:border-slate-700" />
+                  </label>
 
-                <input
-                  type="date"
-                  value={validUntil}
-                  onChange={(event) => setValidUntil(event.target.value)}
-                  className="rounded-xl border border-slate-200 bg-transparent px-4 py-3 dark:border-slate-700"
-                />
+                  <label className="space-y-2">
+                    <span className="text-sm font-semibold">Vigencia</span>
+                    <input type="date" value={validUntil} onChange={(e) => setValidUntil(e.target.value)} className="w-full rounded-xl border border-slate-200 bg-transparent px-4 py-3 dark:border-slate-700" />
+                  </label>
 
-                <input
-                  value={owner}
-                  onChange={(event) => setOwner(event.target.value)}
-                  placeholder="Responsable"
-                  className="rounded-xl border border-slate-200 bg-transparent px-4 py-3 dark:border-slate-700"
-                />
+                  <label className="space-y-2">
+                    <span className="text-sm font-semibold">Responsable</span>
+                    <input value={owner} onChange={(e) => setOwner(e.target.value)} placeholder="Responsable comercial" className="w-full rounded-xl border border-slate-200 bg-transparent px-4 py-3 dark:border-slate-700" />
+                  </label>
 
-                <input
-                  type="number"
-                  min="0"
-                  step="0.01"
-                  value={subtotal}
-                  onChange={(event) => setSubtotal(event.target.value)}
-                  placeholder="Subtotal"
-                  className="rounded-xl border border-slate-200 bg-transparent px-4 py-3 dark:border-slate-700"
-                />
+                  <label className="space-y-2">
+                    <span className="text-sm font-semibold">Estado</span>
+                    <select value={status} onChange={(e) => setStatus(e.target.value as QuoteStatus)} className="w-full rounded-xl border border-slate-200 bg-transparent px-4 py-3 dark:border-slate-700">
+                      <option>Borrador</option>
+                      <option>Enviada</option>
+                      <option>Aprobada</option>
+                      <option>Rechazada</option>
+                      <option>Vencida</option>
+                    </select>
+                  </label>
 
-                <input
-                  type="number"
-                  min="0"
-                  step="0.01"
-                  value={taxRate}
-                  onChange={(event) => setTaxRate(event.target.value)}
-                  placeholder="IVA %"
-                  className="rounded-xl border border-slate-200 bg-transparent px-4 py-3 dark:border-slate-700"
-                />
+                  <label className="space-y-2">
+                    <span className="text-sm font-semibold">IVA (%)</span>
+                    <input type="number" min="0" step="0.01" value={taxRate} onChange={(e) => setTaxRate(e.target.value)} className="w-full rounded-xl border border-slate-200 bg-transparent px-4 py-3 dark:border-slate-700" />
+                  </label>
+                </div>
 
-                <div className="flex justify-end gap-3 pt-2 md:col-span-2">
-                  <button
-                    type="button"
-                    onClick={() => setOpen(false)}
-                    className="rounded-xl border border-slate-200 px-5 py-3 font-semibold dark:border-slate-700"
-                  >
-                    Cancelar
-                  </button>
+                <section>
+                  <div className="mb-3 flex items-center justify-between">
+                    <div>
+                      <h3 className="font-semibold">Conceptos / partidas</h3>
+                      <p className="text-xs text-slate-500">El subtotal se calcula automáticamente.</p>
+                    </div>
+                    <button type="button" onClick={addItem} className="rounded-lg border border-slate-200 px-3 py-2 text-xs font-semibold dark:border-slate-700">+ Agregar partida</button>
+                  </div>
 
-                  <button
-                    type="submit"
-                    className="rounded-xl bg-[#7BAEE3] px-5 py-3 font-semibold text-slate-950"
-                  >
-                    Crear cotización
-                  </button>
+                  <div className="space-y-3">
+                    {items.map((item, index) => (
+                      <div key={item.id} className="grid gap-2 rounded-xl border border-slate-200 p-3 dark:border-slate-700 md:grid-cols-[1fr_110px_150px_auto]">
+                        <input value={item.description} onChange={(e) => updateItem(item.id, 'description', e.target.value)} placeholder={`Concepto ${index + 1}`} className="rounded-lg border border-slate-200 bg-transparent px-3 py-2 dark:border-slate-700" />
+                        <input type="number" min="0.01" step="0.01" value={item.quantity} onChange={(e) => updateItem(item.id, 'quantity', e.target.value)} placeholder="Cantidad" className="rounded-lg border border-slate-200 bg-transparent px-3 py-2 dark:border-slate-700" />
+                        <input type="number" min="0" step="0.01" value={item.unitPrice} onChange={(e) => updateItem(item.id, 'unitPrice', e.target.value)} placeholder="Precio unitario" className="rounded-lg border border-slate-200 bg-transparent px-3 py-2 dark:border-slate-700" />
+                        <button type="button" onClick={() => removeItem(item.id)} disabled={items.length === 1} className="rounded-lg px-3 py-2 text-sm text-red-500 disabled:opacity-30">Quitar</button>
+                      </div>
+                    ))}
+                  </div>
+                </section>
+
+                <label className="block space-y-2">
+                  <span className="text-sm font-semibold">Notas / condiciones</span>
+                  <textarea rows={3} value={notes} onChange={(e) => setNotes(e.target.value)} placeholder="Condiciones de pago, alcance, vigencia, exclusiones..." className="w-full rounded-xl border border-slate-200 bg-transparent px-4 py-3 dark:border-slate-700" />
+                </label>
+
+                <div className="grid gap-3 rounded-2xl bg-slate-50 p-4 dark:bg-slate-950 md:grid-cols-3">
+                  <div><p className="text-xs uppercase text-slate-500">Subtotal</p><p className="mt-1 text-lg font-bold">{currency(totals.subtotal)}</p></div>
+                  <div><p className="text-xs uppercase text-slate-500">IVA</p><p className="mt-1 text-lg font-bold">{currency(totals.tax)}</p></div>
+                  <div><p className="text-xs uppercase text-slate-500">Total</p><p className="mt-1 text-lg font-bold text-[#5B93C9]">{currency(totals.total)}</p></div>
+                </div>
+
+                <div className="flex justify-end gap-3">
+                  <button type="button" onClick={closeForm} className="rounded-xl border border-slate-200 px-5 py-3 font-semibold dark:border-slate-700">Cancelar</button>
+                  <button type="submit" className="rounded-xl bg-[#7BAEE3] px-5 py-3 font-semibold text-slate-950">{editingId ? 'Guardar cambios' : 'Crear cotización'}</button>
                 </div>
               </form>
             </div>
           </div>
         )}
       </div>
+
+      {printQuote && (
+        <section className="hidden bg-white p-10 text-black print:block">
+          <div className="mx-auto max-w-4xl">
+            <div className="mb-8 flex items-start justify-between border-b border-slate-300 pb-6">
+              <div>
+                <h1 className="text-3xl font-bold">NEDVI CONSTRUCTORA</h1>
+                <p className="mt-1 text-sm">Cotización comercial</p>
+              </div>
+              <div className="text-right">
+                <p className="text-xl font-bold">{printQuote.folio}</p>
+                <p className="text-sm">Fecha: {printQuote.createdAt}</p>
+                {printQuote.validUntil ? <p className="text-sm">Vigencia: {printQuote.validUntil}</p> : null}
+              </div>
+            </div>
+
+            <div className="mb-6 grid grid-cols-2 gap-6">
+              <div><p className="text-xs uppercase text-slate-500">Cliente</p><p className="font-semibold">{printQuote.client}</p></div>
+              <div><p className="text-xs uppercase text-slate-500">Proyecto / servicio</p><p className="font-semibold">{printQuote.project}</p></div>
+            </div>
+
+            <table className="w-full border-collapse text-sm">
+              <thead><tr className="border-b border-slate-400"><th className="py-2 text-left">Concepto</th><th className="py-2 text-right">Cant.</th><th className="py-2 text-right">P. unitario</th><th className="py-2 text-right">Importe</th></tr></thead>
+              <tbody>
+                {printQuote.items.map((item) => (
+                  <tr key={item.id} className="border-b border-slate-200">
+                    <td className="py-3">{item.description}</td>
+                    <td className="py-3 text-right">{item.quantity}</td>
+                    <td className="py-3 text-right">{currency(item.unitPrice)}</td>
+                    <td className="py-3 text-right">{currency(item.quantity * item.unitPrice)}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+
+            <div className="ml-auto mt-6 w-72 space-y-2 text-sm">
+              <div className="flex justify-between"><span>Subtotal</span><strong>{currency(printQuote.subtotal)}</strong></div>
+              <div className="flex justify-between"><span>IVA ({printQuote.taxRate}%)</span><strong>{currency(printQuote.tax)}</strong></div>
+              <div className="flex justify-between border-t border-slate-400 pt-2 text-lg"><span>Total</span><strong>{currency(printQuote.total)}</strong></div>
+            </div>
+
+            {printQuote.notes ? <div className="mt-8"><p className="text-xs uppercase text-slate-500">Notas / condiciones</p><p className="mt-2 whitespace-pre-wrap text-sm">{printQuote.notes}</p></div> : null}
+          </div>
+        </section>
+      )}
     </AppShell>
   )
 }
