@@ -2,6 +2,7 @@
 
 import type { ReactNode } from 'react'
 import { useEffect, useState } from 'react'
+import { usePathname } from 'next/navigation'
 import { Header } from '@/components/layout/Header'
 import { Sidebar } from '@/components/layout/Sidebar'
 import { syncQuoteProjectsIntoProjectStorage } from '@/features/projects/services/quoteProjectSync'
@@ -26,6 +27,7 @@ function applyTheme(theme: Theme) {
 }
 
 export function AppShell({ children }: AppShellProps) {
+  const pathname = usePathname()
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false)
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
   const [theme, setTheme] = useState<Theme>('light')
@@ -47,6 +49,9 @@ export function AppShell({ children }: AppShellProps) {
       if (event.key === QUOTE_PROJECTS_STORAGE_KEY) syncProjects()
     }
 
+    // Important: localStorage "storage" events do not fire in the same tab.
+    // Sync on every route change so a project created in Cotizaciones is
+    // materialized before/while the user enters Proyectos.
     syncProjects()
     window.addEventListener('focus', syncProjects)
     window.addEventListener('storage', handleStorage)
@@ -55,7 +60,7 @@ export function AppShell({ children }: AppShellProps) {
       window.removeEventListener('focus', syncProjects)
       window.removeEventListener('storage', handleStorage)
     }
-  }, [])
+  }, [pathname])
 
   function toggleTheme() {
     setTheme((currentTheme) => {
