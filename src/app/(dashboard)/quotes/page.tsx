@@ -277,7 +277,7 @@ export default function QuotesPage() {
     )
 
     if (validItems.length === 0) {
-      alert('Agrega al menos una partida válida a la cotización.')
+      alert('Agrega al menos un material válido a la cotización.')
       return
     }
 
@@ -512,19 +512,19 @@ export default function QuotesPage() {
 
                 <section>
                   <div className="mb-3 flex items-center justify-between">
-                    <div><h3 className="font-semibold">Conceptos / partidas</h3><p className="text-xs text-slate-500">El subtotal se calcula automáticamente.</p></div>
-                    <button type="button" onClick={addItem} className="rounded-lg border border-slate-200 px-3 py-2 text-xs font-semibold dark:border-slate-700">+ Agregar partida</button>
+                    <div><h3 className="font-semibold">Materiales</h3><p className="text-xs text-slate-500">El subtotal se calcula automáticamente.</p></div>
+                    <button type="button" onClick={addItem} className="rounded-lg border border-slate-200 px-3 py-2 text-xs font-semibold dark:border-slate-700">+ Agregar material</button>
                   </div>
                   <div className="space-y-3">
                     <div className="hidden gap-2 px-3 text-xs font-semibold text-slate-500 md:grid md:grid-cols-[1fr_110px_150px_auto] dark:text-slate-400">
-                      <span aria-hidden="true" />
+                      <span>Material</span>
                       <span>Cantidad</span>
                       <span>Precio por unidad</span>
                       <span aria-hidden="true" />
                     </div>
                     {items.map((item, index) => (
                       <div key={item.id} className="grid gap-2 rounded-xl border border-slate-200 p-3 dark:border-slate-700 md:grid-cols-[1fr_110px_150px_auto]">
-                        <input value={item.description} onChange={(e) => updateItem(item.id, 'description', e.target.value)} placeholder={`Concepto ${index + 1}`} className="rounded-lg border border-slate-200 bg-transparent px-3 py-2 dark:border-slate-700" />
+                        <input value={item.description} onChange={(e) => updateItem(item.id, 'description', e.target.value)} placeholder={`Material ${index + 1}`} className="rounded-lg border border-slate-200 bg-transparent px-3 py-2 dark:border-slate-700" />
                         <input type="number" min="0.01" step="0.01" value={item.quantity} onChange={(e) => updateItem(item.id, 'quantity', e.target.value)} placeholder="Cantidad" className="rounded-lg border border-slate-200 bg-transparent px-3 py-2 dark:border-slate-700" />
                         <input type="number" min="0" step="0.01" value={item.unitPrice} onChange={(e) => updateItem(item.id, 'unitPrice', e.target.value)} placeholder="Precio unitario" className="rounded-lg border border-slate-200 bg-transparent px-3 py-2 dark:border-slate-700" />
                         <button type="button" onClick={() => removeItem(item.id)} disabled={items.length === 1} className="rounded-lg px-3 py-2 text-sm text-red-500 disabled:opacity-30">Quitar</button>
@@ -560,7 +560,7 @@ export default function QuotesPage() {
             </div>
             <div className="mb-6 grid grid-cols-2 gap-6"><div><p className="text-xs uppercase text-slate-500">Cliente</p><p className="font-semibold">{printQuote.client}</p></div><div><p className="text-xs uppercase text-slate-500">Proyecto / servicio</p><p className="font-semibold">{printQuote.project}</p></div></div>
             <table className="w-full border-collapse text-sm">
-              <thead><tr className="border-b border-slate-400"><th className="py-2 text-left">Concepto</th><th className="py-2 text-right">Cant.</th><th className="py-2 text-right">P. unitario</th><th className="py-2 text-right">Importe</th></tr></thead>
+              <thead><tr className="border-b border-slate-400"><th className="py-2 text-left">Material</th><th className="py-2 text-right">Cant.</th><th className="py-2 text-right">P. unitario</th><th className="py-2 text-right">Importe</th></tr></thead>
               <tbody>{printQuote.items.map((item) => <tr key={item.id} className="border-b border-slate-200"><td className="py-3">{item.description}</td><td className="py-3 text-right">{item.quantity}</td><td className="py-3 text-right">{currency(item.unitPrice)}</td><td className="py-3 text-right">{currency(item.quantity * item.unitPrice)}</td></tr>)}</tbody>
             </table>
             <div className="ml-auto mt-6 w-72 space-y-2 text-sm"><div className="flex justify-between"><span>Subtotal</span><strong>{currency(printQuote.subtotal)}</strong></div><div className="flex justify-between"><span>IVA ({printQuote.taxRate}%)</span><strong>{currency(printQuote.tax)}</strong></div><div className="flex justify-between border-t border-slate-400 pt-2 text-lg"><span>Total</span><strong>{currency(printQuote.total)}</strong></div></div>
