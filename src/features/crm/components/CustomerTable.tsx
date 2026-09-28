@@ -3,9 +3,11 @@ import {
   ArrowDown,
   ArrowUp,
   ArrowUpDown,
+  Edit3,
+  Eye,
   Mail,
-  MoreHorizontal,
   Phone,
+  Trash2,
 } from 'lucide-react'
 import { CustomerStatusBadge } from '@/features/crm/components/CustomerStatusBadge'
 import type {
@@ -23,6 +25,7 @@ type CustomerTableProps = {
   sortKey: CustomerSortKey
   sortDirection: SortDirection
   onSort: (key: CustomerSortKey) => void
+  onDelete: (customer: Customer) => void
 }
 
 type SortableColumnProps = {
@@ -67,11 +70,12 @@ export function CustomerTable({
   sortKey,
   sortDirection,
   onSort,
+  onDelete,
 }: CustomerTableProps) {
   return (
     <div className="hidden overflow-hidden rounded-2xl border border-white/[0.07] bg-[#20232A] shadow-[0_16px_50px_rgba(0,0,0,0.16)] lg:block">
       <div className="overflow-x-auto">
-        <table className="w-full min-w-[850px] border-collapse text-left">
+        <table className="w-full min-w-[980px] border-collapse text-left">
           <thead className="border-b border-white/[0.06] bg-white/[0.015]">
             <tr>
               <th className="px-6 py-4">
@@ -119,8 +123,8 @@ export function CustomerTable({
                   onSort={onSort}
                 />
               </th>
-              <th className="w-12 px-4 py-4">
-                <span className="sr-only">Acciones</span>
+              <th className="px-4 py-4 text-[10px] font-semibold uppercase tracking-[0.1em] text-[#646873]">
+                Acciones
               </th>
             </tr>
           </thead>
@@ -180,14 +184,30 @@ export function CustomerTable({
                 </td>
 
                 <td className="px-4 py-4">
-                  <Link
-                    href={`/crm/${customer.id}`}
-                    className="flex rounded-lg p-2 text-[#646873] transition hover:bg-white/[0.06] hover:text-white"
-                    aria-label={`Abrir ${customer.company}`}
-                    title="Abrir cliente"
-                  >
-                    <MoreHorizontal size={17} />
-                  </Link>
+                  <div className="flex items-center gap-2">
+                    <Link
+                      href={`/crm/${customer.id}`}
+                      className="inline-flex items-center gap-1.5 rounded-lg border border-white/[0.08] px-2.5 py-2 text-[11px] font-semibold text-white/85 transition hover:bg-white/[0.06] hover:text-white"
+                      title="Ver cliente"
+                    >
+                      <Eye size={13} /> Ver
+                    </Link>
+                    <Link
+                      href={`/crm/${customer.id}/edit`}
+                      className="inline-flex items-center gap-1.5 rounded-lg border border-white/[0.08] px-2.5 py-2 text-[11px] font-semibold text-white/85 transition hover:bg-white/[0.06] hover:text-white"
+                      title="Editar cliente"
+                    >
+                      <Edit3 size={13} /> Editar
+                    </Link>
+                    <button
+                      type="button"
+                      onClick={() => onDelete(customer)}
+                      className="inline-flex items-center gap-1.5 rounded-lg border border-red-400/25 px-2.5 py-2 text-[11px] font-semibold text-red-300 transition hover:bg-red-400/10 hover:text-red-200"
+                      title="Eliminar cliente"
+                    >
+                      <Trash2 size={13} /> Eliminar
+                    </button>
+                  </div>
                 </td>
               </tr>
             ))}
