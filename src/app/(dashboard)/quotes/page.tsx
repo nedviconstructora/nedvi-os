@@ -47,6 +47,7 @@ type Quote = {
   createdAt: string
   validUntil: string
   items: QuoteItem[]
+  concepts: QuoteItem[]
   currency: QuoteCurrency
   taxRate: number
   subtotal: number
@@ -84,6 +85,15 @@ const emptyItem = (): QuoteItem => ({
   quantity: '',
   unitPrice: '',
 })
+
+function normalizeItem(item: QuoteItem): QuoteItem {
+  return {
+    ...item,
+    unit: unitOptions.includes(item.unit as UnitMeasure) ? item.unit : 'Piezas',
+    quantity: item.quantity ?? '',
+    unitPrice: item.unitPrice ?? '',
+  }
+}
 
 function customerSnapshot(customer?: Customer): QuoteCustomerInfo | undefined {
   if (!customer) return undefined
@@ -124,8 +134,8 @@ function nextFolio() {
   return `NV-${year}-${String(sequence).padStart(4, '0')}`
 }
 
-function quoteTotals(items: QuoteItem[], taxRate: number) {
-  const subtotal = items.reduce(
+function quoteTotals(items: QuoteItem[], concepts: QuoteItem[], taxRate: number) {
+  const subtotal = [...items, ...concepts].reduce(
     (sum, item) => sum + Number(item.quantity || 0) * Number(item.unitPrice || 0),
     0,
   )
@@ -154,6 +164,24 @@ function daysInMonth(year: number, month: number) {
   return new Date(year, month, 0).getDate()
 }
 
+function isValidQuoteItem(item: QuoteItem) {
+  return (
+    item.description.trim() &&
+    item.quantity !== '' &&
+    Number(item.quantity) > 0 &&
+    item.unitPrice !== '' &&
+    Number(item.unitPrice) >= 0
+  )
+}
+
+function normalizeSavedItems(items: QuoteItem[]) {
+  return items.filter(isValidQuoteItem).map((item) => ({
+    ...item,
+    quantity: Number(item.quantity),
+    unitPrice: Number(item.unitPrice),
+  }))
+}
+
 export default function QuotesPage() {
   const [customers, setCustomers] = useState<Customer[]>([])
   const [quotes, setQuotes] = useState<Quote[]>([])
@@ -172,6 +200,7 @@ export default function QuotesPage() {
   const [notes, setNotes] = useState('')
   const [status, setStatus] = useState<QuoteStatus>('Borrador')
   const [items, setItems] = useState<QuoteItem[]>([emptyItem()])
+  const [concepts, setConcepts] = useState<QuoteItem[]>([emptyItem()])
   const [printQuote, setPrintQuote] = useState<Quote | null>(null)
 
   useEffect(() => {
@@ -210,14 +239,7 @@ export default function QuotesPage() {
           currency: quote.currency === 'USD' ? 'USD' : 'MXN',
           items:
             Array.isArray(quote.items) && quote.items.length > 0
-              ? quote.items.map((item) => ({
-                  ...item,
-                  unit: unitOptions.includes(item.unit as UnitMeasure)
-                    ? item.unit
-                    : 'Piezas',
-                  quantity: item.quantity ?? '',
-                  unitPrice: item.unitPrice ?? '',
-                }))
+              ? quote.items.map(normalizeItem)
               : [{
                   id: crypto.randomUUID(),
                   description: quote.project || 'Servicio',
@@ -225,6 +247,9 @@ export default function QuotesPage() {
                   quantity: 1,
                   unitPrice: quote.subtotal || 0,
                 }],
+          concepts: Array.isArray(quote.concepts)
+            ? quote.concepts.map(normalizeItem)
+            : [],
           taxRate:
             typeof quote.taxRate === 'number'
               ? quote.taxRate
@@ -249,8 +274,8 @@ export default function QuotesPage() {
   }, [quotes, quotesLoaded])
 
   const totals = useMemo(
-    () => quoteTotals(items, Number(taxRate || 0)),
-    [items, taxRate],
+    () => quoteTotals(items, concepts, Number(taxRate || 0)),
+    [items, concepts, taxRate],
   )
 
   const filtered = useMemo(() => {
@@ -295,9 +320,7 @@ export default function QuotesPage() {
 
   function handleClientChange(value: string) {
     setClientName(value)
-    const matchedCustomer = customers.find(
-      (customer) => customer.company.trim().toLowerCase() === value.trim().toLowerCase(),
-    )
+    const matchedCustomer = customers.find((customer) => customer.company === value)
 
     if (!matchedCustomer) {
       setSelectedCustomerInfo(undefined)
@@ -305,7 +328,7 @@ export default function QuotesPage() {
     }
 
     setSelectedCustomerInfo(customerSnapshot(matchedCustomer))
-    if (!owner.trim() && matchedCustomer.assignedSalesperson) {
+    if (matchedCustomer.assignedSalesperson) {
       setOwner(matchedCustomer.assignedSalesperson)
     }
   }
@@ -321,6 +344,7 @@ export default function QuotesPage() {
     setNotes('')
     setStatus('Borrador')
     setItems([emptyItem()])
+    setConcepts([emptyItem()])
     setEditingId(null)
   }
 
@@ -349,12 +373,27 @@ export default function QuotesPage() {
     setOwner(quote.owner)
     setNotes(quote.notes)
     setStatus(quote.status)
-    setItems(quote.items.map((item) => ({ ...item, unit: item.unit || 'Piezas' })))
+    setItems(quote.items.length ? quote.items.map(normalizeItem) : [emptyItem()])
+    setConcepts(quote.concepts?.length ? quote.concepts.map(normalizeItem) : [emptyItem()])
     setOpen(true)
   }
 
   function updateItem(id: string, field: keyof QuoteItem, value: string) {
     setItems((current) =>
+      current.map((item) => {
+        if (item.id !== id) return item
+        if (field === 'description') return { ...item, description: value }
+        if (field === 'unit') return { ...item, unit: value as UnitMeasure }
+
+        const numericValue: number | '' = value === '' ? '' : Number(value)
+        if (field === 'quantity') return { ...item, quantity: numericValue }
+        return { ...item, unitPrice: numericValue }
+      }),
+    )
+  }
+
+  function updateConcept(id: string, field: keyof QuoteItem, value: string) {
+    setConcepts((current) =>
       current.map((item) => {
         if (item.id !== id) return item
         if (field === 'description') return { ...item, description: value }
@@ -377,12 +416,29 @@ export default function QuotesPage() {
     )
   }
 
+  function addConcept() {
+    setConcepts((current) => [...current, emptyItem()])
+  }
+
+  function removeConcept(id: string) {
+    setConcepts((current) =>
+      current.length === 1 ? current : current.filter((item) => item.id !== id),
+    )
+  }
+
   function saveQuote(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
 
     const cleanClientName = clientName.trim()
-    if (!cleanClientName || !project.trim()) {
-      alert('Cliente y proyecto son obligatorios.')
+    const matchedCustomer = customers.find((customer) => customer.company === cleanClientName)
+
+    if (!matchedCustomer) {
+      alert('Selecciona un cliente registrado.')
+      return
+    }
+
+    if (!project.trim()) {
+      alert('El proyecto o servicio es obligatorio.')
       return
     }
 
@@ -391,31 +447,16 @@ export default function QuotesPage() {
       return
     }
 
-    const validItems = items.filter(
-      (item) =>
-        item.description.trim() &&
-        item.quantity !== '' &&
-        Number(item.quantity) > 0 &&
-        item.unitPrice !== '' &&
-        Number(item.unitPrice) >= 0,
-    )
+    const normalizedItems = normalizeSavedItems(items)
+    const normalizedConcepts = normalizeSavedItems(concepts)
 
-    if (validItems.length === 0) {
-      alert('Agrega al menos un material válido a la cotización.')
+    if (normalizedItems.length === 0 && normalizedConcepts.length === 0) {
+      alert('Agrega al menos un material o concepto válido a la cotización.')
       return
     }
 
-    const normalizedItems: QuoteItem[] = validItems.map((item) => ({
-      ...item,
-      quantity: Number(item.quantity),
-      unitPrice: Number(item.unitPrice),
-    }))
-
-    const matchedCustomer = customers.find(
-      (customer) => customer.company.trim().toLowerCase() === cleanClientName.toLowerCase(),
-    )
-    const savedCustomerInfo = customerSnapshot(matchedCustomer) ?? selectedCustomerInfo
-    const calculated = quoteTotals(normalizedItems, Number(taxRate || 0))
+    const savedCustomerInfo = customerSnapshot(matchedCustomer)
+    const calculated = quoteTotals(normalizedItems, normalizedConcepts, Number(taxRate || 0))
 
     if (editingId) {
       setQuotes((current) =>
@@ -423,12 +464,13 @@ export default function QuotesPage() {
           quote.id === editingId
             ? {
                 ...quote,
-                customerId: matchedCustomer?.id ?? quote.customerId,
-                client: cleanClientName,
+                customerId: matchedCustomer.id,
+                client: matchedCustomer.company,
                 customerInfo: savedCustomerInfo,
                 project: project.trim(),
                 validUntil,
                 items: normalizedItems,
+                concepts: normalizedConcepts,
                 currency: quoteCurrency,
                 taxRate: Number(taxRate || 0),
                 ...calculated,
@@ -443,13 +485,14 @@ export default function QuotesPage() {
       const quote: Quote = {
         id: crypto.randomUUID(),
         folio: nextFolio(),
-        customerId: matchedCustomer?.id ?? '',
-        client: cleanClientName,
+        customerId: matchedCustomer.id,
+        client: matchedCustomer.company,
         customerInfo: savedCustomerInfo,
         project: project.trim(),
         createdAt: new Date().toISOString().slice(0, 10),
         validUntil,
         items: normalizedItems,
+        concepts: normalizedConcepts,
         currency: quoteCurrency,
         taxRate: Number(taxRate || 0),
         ...calculated,
@@ -473,6 +516,7 @@ export default function QuotesPage() {
       status: 'Borrador',
       convertedToProject: false,
       items: quote.items.map((item) => ({ ...item, id: crypto.randomUUID() })),
+      concepts: (quote.concepts ?? []).map((item) => ({ ...item, id: crypto.randomUUID() })),
     }
     setQuotes((current) => [duplicated, ...current])
   }
@@ -607,9 +651,11 @@ export default function QuotesPage() {
                 <div className="grid gap-4 md:grid-cols-2">
                   <label className="space-y-2">
                     <span className="text-sm font-semibold">Cliente *</span>
-                    <input value={clientName} onChange={(event) => handleClientChange(event.target.value)} list="nedvi-clientes" placeholder="Escribe o selecciona el cliente" autoComplete="off" className="w-full rounded-xl border border-slate-200 bg-transparent px-4 py-3 outline-none focus:border-[#7BAEE3] dark:border-slate-700" />
-                    <datalist id="nedvi-clientes">{customers.map((customer) => <option key={customer.id} value={customer.company}>{customer.contact}</option>)}</datalist>
-                    <p className="text-[11px] text-slate-500">Al seleccionar un cliente registrado, sus datos se agregan automáticamente a la cotización.</p>
+                    <select value={clientName} onChange={(event) => handleClientChange(event.target.value)} required className="w-full rounded-xl border border-slate-200 bg-transparent px-4 py-3 outline-none focus:border-[#7BAEE3] dark:border-slate-700">
+                      <option value="">Seleccionar cliente</option>
+                      {customers.map((customer) => <option key={customer.id} value={customer.company}>{customer.company} — {customer.contact}</option>)}
+                    </select>
+                    <p className="text-[11px] text-slate-500">Solo aparecen clientes registrados en el apartado Clientes.</p>
                   </label>
 
                   <label className="space-y-2"><span className="text-sm font-semibold">Proyecto / servicio *</span><input value={project} onChange={(e) => setProject(e.target.value)} placeholder="Ej. Remodelación de oficinas" className="w-full rounded-xl border border-slate-200 bg-transparent px-4 py-3 dark:border-slate-700" /></label>
@@ -661,6 +707,27 @@ export default function QuotesPage() {
                         <input type="number" min="0.01" step="0.01" value={item.quantity} onChange={(e) => updateItem(item.id, 'quantity', e.target.value)} placeholder="Cantidad" className="rounded-lg border border-slate-200 bg-transparent px-3 py-2 dark:border-slate-700" />
                         <input type="number" min="0" step="0.01" value={item.unitPrice} onChange={(e) => updateItem(item.id, 'unitPrice', e.target.value)} placeholder={`Precio ${quoteCurrency}`} className="rounded-lg border border-slate-200 bg-transparent px-3 py-2 dark:border-slate-700" />
                         <button type="button" onClick={() => removeItem(item.id)} disabled={items.length === 1} className="rounded-lg px-3 py-2 text-sm text-red-500 disabled:opacity-30">Quitar</button>
+                      </div>
+                    ))}
+                  </div>
+                </section>
+
+                <section>
+                  <div className="mb-3 flex items-center justify-between">
+                    <div><h3 className="font-semibold">Conceptos</h3><p className="text-xs text-slate-500">Los conceptos también se suman automáticamente al subtotal.</p></div>
+                    <button type="button" onClick={addConcept} className="rounded-lg border border-slate-200 px-3 py-2 text-xs font-semibold dark:border-slate-700">+ Agregar conceptos</button>
+                  </div>
+                  <div className="space-y-3">
+                    <div className="hidden gap-2 px-3 text-xs font-semibold text-slate-500 md:grid md:grid-cols-[minmax(220px,1fr)_150px_100px_160px_auto] dark:text-slate-400">
+                      <span>Concepto</span><span>UM</span><span>Cantidad</span><span>Precio por unidad ({quoteCurrency})</span><span aria-hidden="true" />
+                    </div>
+                    {concepts.map((concept, index) => (
+                      <div key={concept.id} className="grid gap-2 rounded-xl border border-slate-200 p-3 dark:border-slate-700 md:grid-cols-[minmax(220px,1fr)_150px_100px_160px_auto]">
+                        <input value={concept.description} onChange={(e) => updateConcept(concept.id, 'description', e.target.value)} placeholder={`Concepto ${index + 1}`} className="rounded-lg border border-slate-200 bg-transparent px-3 py-2 dark:border-slate-700" />
+                        <select aria-label="Unidad de medida del concepto" value={concept.unit} onChange={(e) => updateConcept(concept.id, 'unit', e.target.value)} className="rounded-lg border border-slate-200 bg-transparent px-3 py-2 dark:border-slate-700">{unitOptions.map((unit) => <option key={unit} value={unit}>{unit}</option>)}</select>
+                        <input type="number" min="0.01" step="0.01" value={concept.quantity} onChange={(e) => updateConcept(concept.id, 'quantity', e.target.value)} placeholder="Cantidad" className="rounded-lg border border-slate-200 bg-transparent px-3 py-2 dark:border-slate-700" />
+                        <input type="number" min="0" step="0.01" value={concept.unitPrice} onChange={(e) => updateConcept(concept.id, 'unitPrice', e.target.value)} placeholder={`Precio ${quoteCurrency}`} className="rounded-lg border border-slate-200 bg-transparent px-3 py-2 dark:border-slate-700" />
+                        <button type="button" onClick={() => removeConcept(concept.id)} disabled={concepts.length === 1} className="rounded-lg px-3 py-2 text-sm text-red-500 disabled:opacity-30">Quitar</button>
                       </div>
                     ))}
                   </div>
@@ -729,10 +796,25 @@ export default function QuotesPage() {
                 </div>
               ) : null}
 
-              <table className="w-full border-collapse bg-white text-sm">
-                <thead><tr className="border-b-2 border-slate-400 bg-white"><th className="py-3 text-left">Material</th><th className="py-3 text-center">UM</th><th className="py-3 text-right">Cantidad</th><th className="py-3 text-right">Precio por unidad ({printQuote.currency})</th><th className="py-3 text-right">Importe</th></tr></thead>
-                <tbody>{printQuote.items.map((item) => <tr key={item.id} className="border-b border-slate-200 bg-white"><td className="py-3">{item.description}</td><td className="py-3 text-center">{item.unit}</td><td className="py-3 text-right">{item.quantity}</td><td className="py-3 text-right">{money(Number(item.unitPrice), printQuote.currency)}</td><td className="py-3 text-right">{money(Number(item.quantity) * Number(item.unitPrice), printQuote.currency)}</td></tr>)}</tbody>
-              </table>
+              {printQuote.items.length > 0 ? (
+                <div>
+                  <h2 className="mb-2 text-sm font-bold uppercase tracking-wide">Materiales</h2>
+                  <table className="w-full border-collapse bg-white text-sm">
+                    <thead><tr className="border-b-2 border-slate-400 bg-white"><th className="py-3 text-left">Material</th><th className="py-3 text-center">UM</th><th className="py-3 text-right">Cantidad</th><th className="py-3 text-right">Precio por unidad ({printQuote.currency})</th><th className="py-3 text-right">Importe</th></tr></thead>
+                    <tbody>{printQuote.items.map((item) => <tr key={item.id} className="border-b border-slate-200 bg-white"><td className="py-3">{item.description}</td><td className="py-3 text-center">{item.unit}</td><td className="py-3 text-right">{item.quantity}</td><td className="py-3 text-right">{money(Number(item.unitPrice), printQuote.currency)}</td><td className="py-3 text-right">{money(Number(item.quantity) * Number(item.unitPrice), printQuote.currency)}</td></tr>)}</tbody>
+                  </table>
+                </div>
+              ) : null}
+
+              {(printQuote.concepts ?? []).length > 0 ? (
+                <div className="mt-7">
+                  <h2 className="mb-2 text-sm font-bold uppercase tracking-wide">Conceptos</h2>
+                  <table className="w-full border-collapse bg-white text-sm">
+                    <thead><tr className="border-b-2 border-slate-400 bg-white"><th className="py-3 text-left">Concepto</th><th className="py-3 text-center">UM</th><th className="py-3 text-right">Cantidad</th><th className="py-3 text-right">Precio por unidad ({printQuote.currency})</th><th className="py-3 text-right">Importe</th></tr></thead>
+                    <tbody>{(printQuote.concepts ?? []).map((concept) => <tr key={concept.id} className="border-b border-slate-200 bg-white"><td className="py-3">{concept.description}</td><td className="py-3 text-center">{concept.unit}</td><td className="py-3 text-right">{concept.quantity}</td><td className="py-3 text-right">{money(Number(concept.unitPrice), printQuote.currency)}</td><td className="py-3 text-right">{money(Number(concept.quantity) * Number(concept.unitPrice), printQuote.currency)}</td></tr>)}</tbody>
+                  </table>
+                </div>
+              ) : null}
 
               <div className="ml-auto mt-7 w-80 space-y-2 text-sm">
                 <div className="flex justify-between"><span>Subtotal</span><strong>{money(printQuote.subtotal, printQuote.currency)}</strong></div>
