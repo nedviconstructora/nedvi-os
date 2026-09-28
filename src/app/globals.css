@@ -192,13 +192,15 @@ body {
 .theme-light aside[aria-label="Navegación principal"] [class~="text-[#7187ff]"],
 .theme-light aside[aria-label="Navegación principal"] [class~="text-[#6F88FF]"],
 .theme-light aside[aria-label="Navegación principal"] [class~="text-[#6f88ff]"],
+.theme-light aside[aria-label="Navegación principal"] [class~="text-[#858A96]"],
 .theme-dark aside[aria-label="Navegación principal"] [class~="text-[#9CA3AF]"],
 .theme-dark aside[aria-label="Navegación principal"] [class~="text-[#646873]"],
 .theme-dark aside[aria-label="Navegación principal"] [class~="text-[#7D81D8]"],
 .theme-dark aside[aria-label="Navegación principal"] [class~="text-[#7187ff]"],
 .theme-dark aside[aria-label="Navegación principal"] [class~="text-[#6F88FF]"],
-.theme-dark aside[aria-label="Navegación principal"] [class~="text-[#6f88ff]"] {
-  color: rgba(255, 255, 255, 0.84) !important;
+.theme-dark aside[aria-label="Navegación principal"] [class~="text-[#6f88ff]"],
+.theme-dark aside[aria-label="Navegación principal"] [class~="text-[#858A96]"] {
+  color: rgba(255, 255, 255, 0.96) !important;
 }
 
 .theme-light aside[aria-label="Navegación principal"] [class~="bg-[#343A40]"],
