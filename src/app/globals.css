@@ -225,17 +225,16 @@ select option:checked {
   }
 
   section.print\:block > div > div:first-child::before {
-    content: '';
+    content: url('/logo-blanco.svg');
     position: absolute;
     left: 28px;
     top: 50%;
     width: 102px;
     height: 64px;
     transform: translateY(-50%);
-    background-image: var(--nedvi-logo-light);
-    background-position: center;
-    background-repeat: no-repeat;
-    background-size: contain;
+    display: block;
+    object-fit: contain;
+    overflow: hidden;
   }
 
   section.print\:block > div > div:first-child h1,
