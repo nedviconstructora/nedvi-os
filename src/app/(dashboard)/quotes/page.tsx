@@ -36,6 +36,21 @@ const STORAGE_KEY = 'nedvi_quotes'
 const SEQUENCE_KEY = 'nedvi_quotes_sequence'
 const PROJECT_INTAKE_KEY = 'nedvi_projects_from_quotes'
 
+const monthOptions = [
+  'Enero',
+  'Febrero',
+  'Marzo',
+  'Abril',
+  'Mayo',
+  'Junio',
+  'Julio',
+  'Agosto',
+  'Septiembre',
+  'Octubre',
+  'Noviembre',
+  'Diciembre',
+]
+
 const emptyItem = (): QuoteItem => ({
   id: crypto.randomUUID(),
   description: '',
@@ -86,6 +101,16 @@ function statusClass(status: QuoteStatus) {
     Vencida: 'bg-amber-100 text-amber-700 dark:bg-amber-950/50 dark:text-amber-300',
   }
   return classes[status]
+}
+
+function splitDate(value: string) {
+  if (!value) return { year: '', month: '', day: '' }
+  const [year = '', month = '', day = ''] = value.split('-')
+  return { year, month, day }
+}
+
+function daysInMonth(year: number, month: number) {
+  return new Date(year, month, 0).getDate()
 }
 
 export default function QuotesPage() {
@@ -163,6 +188,34 @@ export default function QuotesPage() {
     })
   }, [quotes, search, statusFilter])
 
+  const selectedDate = splitDate(validUntil)
+  const currentYear = new Date().getFullYear()
+  const yearOptions = Array.from({ length: 16 }, (_, index) => currentYear + index)
+  const maxDays =
+    selectedDate.month && selectedDate.year
+      ? daysInMonth(Number(selectedDate.year), Number(selectedDate.month))
+      : 31
+  const dayOptions = Array.from({ length: maxDays }, (_, index) => index + 1)
+
+  function updateValidUntil(part: 'day' | 'month' | 'year', value: string) {
+    const current = splitDate(validUntil)
+    const next = { ...current, [part]: value }
+
+    if (part === 'month' || part === 'year') {
+      const targetYear = Number(next.year || currentYear)
+      const targetMonth = Number(next.month || 1)
+      const maximum = daysInMonth(targetYear, targetMonth)
+      if (Number(next.day) > maximum) next.day = String(maximum).padStart(2, '0')
+    }
+
+    if (next.year && next.month && next.day) {
+      setValidUntil(`${next.year}-${next.month.padStart(2, '0')}-${next.day.padStart(2, '0')}`)
+      return
+    }
+
+    setValidUntil([next.year, next.month, next.day].join('-'))
+  }
+
   function resetForm() {
     setCustomerId('')
     setProject('')
@@ -224,6 +277,11 @@ export default function QuotesPage() {
     const customer = customers.find((item) => item.id === customerId)
     if (!customer || !project.trim()) {
       alert('Cliente y proyecto son obligatorios.')
+      return
+    }
+
+    if (validUntil && validUntil.split('-').some((part) => !part)) {
+      alert('Selecciona día, mes y año para la vigencia.')
       return
     }
 
@@ -490,10 +548,40 @@ export default function QuotesPage() {
                     <input value={project} onChange={(e) => setProject(e.target.value)} placeholder="Ej. Remodelación de oficinas" className="w-full rounded-xl border border-slate-200 bg-transparent px-4 py-3 dark:border-slate-700" />
                   </label>
 
-                  <label className="space-y-2">
+                  <div className="space-y-2">
                     <span className="text-sm font-semibold">Vigencia</span>
-                    <input type="date" value={validUntil} onChange={(e) => setValidUntil(e.target.value)} className="w-full rounded-xl border border-slate-200 bg-transparent px-4 py-3 dark:border-slate-700" />
-                  </label>
+                    <div className="grid grid-cols-[0.8fr_1.45fr_1fr] gap-2">
+                      <select
+                        aria-label="Día de vigencia"
+                        value={selectedDate.day ? String(Number(selectedDate.day)) : ''}
+                        onChange={(event) => updateValidUntil('day', event.target.value)}
+                        className="w-full rounded-xl border border-slate-200 bg-transparent px-3 py-3 dark:border-slate-700"
+                      >
+                        <option value="">Día</option>
+                        {dayOptions.map((day) => <option key={day} value={day}>{day}</option>)}
+                      </select>
+                      <select
+                        aria-label="Mes de vigencia"
+                        value={selectedDate.month ? String(Number(selectedDate.month)) : ''}
+                        onChange={(event) => updateValidUntil('month', event.target.value)}
+                        className="w-full rounded-xl border border-slate-200 bg-transparent px-3 py-3 dark:border-slate-700"
+                      >
+                        <option value="">Mes</option>
+                        {monthOptions.map((month, index) => (
+                          <option key={month} value={index + 1}>{month}</option>
+                        ))}
+                      </select>
+                      <select
+                        aria-label="Año de vigencia"
+                        value={selectedDate.year}
+                        onChange={(event) => updateValidUntil('year', event.target.value)}
+                        className="w-full rounded-xl border border-slate-200 bg-transparent px-3 py-3 dark:border-slate-700"
+                      >
+                        <option value="">Año</option>
+                        {yearOptions.map((year) => <option key={year} value={year}>{year}</option>)}
+                      </select>
+                    </div>
+                  </div>
 
                   <label className="space-y-2">
                     <span className="text-sm font-semibold">Responsable</span>
