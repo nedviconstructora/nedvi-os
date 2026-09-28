@@ -37,18 +37,8 @@ const SEQUENCE_KEY = 'nedvi_quotes_sequence'
 const PROJECT_INTAKE_KEY = 'nedvi_projects_from_quotes'
 
 const monthOptions = [
-  'Enero',
-  'Febrero',
-  'Marzo',
-  'Abril',
-  'Mayo',
-  'Junio',
-  'Julio',
-  'Agosto',
-  'Septiembre',
-  'Octubre',
-  'Noviembre',
-  'Diciembre',
+  'Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio',
+  'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre',
 ]
 
 const emptyItem = (): QuoteItem => ({
@@ -120,7 +110,7 @@ export default function QuotesPage() {
   const [editingId, setEditingId] = useState<string | null>(null)
   const [search, setSearch] = useState('')
   const [statusFilter, setStatusFilter] = useState<'Todas' | QuoteStatus>('Todas')
-  const [customerId, setCustomerId] = useState('')
+  const [clientName, setClientName] = useState('')
   const [project, setProject] = useState('')
   const [validUntil, setValidUntil] = useState('')
   const [taxRate, setTaxRate] = useState('16')
@@ -143,14 +133,12 @@ export default function QuotesPage() {
           items:
             Array.isArray(quote.items) && quote.items.length > 0
               ? quote.items
-              : [
-                  {
-                    id: crypto.randomUUID(),
-                    description: quote.project || 'Servicio',
-                    quantity: 1,
-                    unitPrice: quote.subtotal || 0,
-                  },
-                ],
+              : [{
+                  id: crypto.randomUUID(),
+                  description: quote.project || 'Servicio',
+                  quantity: 1,
+                  unitPrice: quote.subtotal || 0,
+                }],
           taxRate:
             typeof quote.taxRate === 'number'
               ? quote.taxRate
@@ -177,7 +165,6 @@ export default function QuotesPage() {
 
   const filtered = useMemo(() => {
     const value = search.trim().toLowerCase()
-
     return quotes.filter((quote) => {
       const matchesText = [quote.folio, quote.client, quote.project, quote.owner]
         .join(' ')
@@ -217,7 +204,7 @@ export default function QuotesPage() {
   }
 
   function resetForm() {
-    setCustomerId('')
+    setClientName('')
     setProject('')
     setValidUntil('')
     setTaxRate('16')
@@ -240,7 +227,7 @@ export default function QuotesPage() {
 
   function openEdit(quote: Quote) {
     setEditingId(quote.id)
-    setCustomerId(quote.customerId || '')
+    setClientName(quote.client)
     setProject(quote.project)
     setValidUntil(quote.validUntil)
     setTaxRate(String(quote.taxRate))
@@ -274,8 +261,8 @@ export default function QuotesPage() {
   function saveQuote(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
 
-    const customer = customers.find((item) => item.id === customerId)
-    if (!customer || !project.trim()) {
+    const cleanClientName = clientName.trim()
+    if (!cleanClientName || !project.trim()) {
       alert('Cliente y proyecto son obligatorios.')
       return
     }
@@ -294,6 +281,9 @@ export default function QuotesPage() {
       return
     }
 
+    const matchedCustomer = customers.find(
+      (customer) => customer.company.trim().toLowerCase() === cleanClientName.toLowerCase(),
+    )
     const calculated = quoteTotals(validItems, Number(taxRate || 0))
 
     if (editingId) {
@@ -302,8 +292,8 @@ export default function QuotesPage() {
           quote.id === editingId
             ? {
                 ...quote,
-                customerId: customer.id,
-                client: customer.company,
+                customerId: matchedCustomer?.id ?? '',
+                client: cleanClientName,
                 project: project.trim(),
                 validUntil,
                 items: validItems,
@@ -320,8 +310,8 @@ export default function QuotesPage() {
       const quote: Quote = {
         id: crypto.randomUUID(),
         folio: nextFolio(),
-        customerId: customer.id,
-        client: customer.company,
+        customerId: matchedCustomer?.id ?? '',
+        client: cleanClientName,
         project: project.trim(),
         createdAt: new Date().toISOString().slice(0, 10),
         validUntil,
@@ -418,33 +408,15 @@ export default function QuotesPage() {
               El folio NV-AÑO-#### identifica el expediente durante todo el proceso.
             </p>
           </div>
-
-          <button
-            onClick={openNew}
-            className="rounded-xl bg-[#7BAEE3] px-5 py-3 font-semibold text-slate-950 transition hover:brightness-95"
-          >
+          <button onClick={openNew} className="rounded-xl bg-[#7BAEE3] px-5 py-3 font-semibold text-slate-950 transition hover:brightness-95">
             + Nueva cotización
           </button>
         </div>
 
         <div className="grid gap-3 rounded-2xl border border-slate-200 bg-white p-4 shadow-sm dark:border-slate-800 dark:bg-slate-900 md:grid-cols-[1fr_220px]">
-          <input
-            value={search}
-            onChange={(event) => setSearch(event.target.value)}
-            placeholder="Buscar por folio, cliente, proyecto o responsable..."
-            className="w-full rounded-xl border border-slate-200 bg-transparent px-4 py-3 outline-none focus:border-[#7BAEE3] dark:border-slate-700"
-          />
-          <select
-            value={statusFilter}
-            onChange={(event) => setStatusFilter(event.target.value as 'Todas' | QuoteStatus)}
-            className="rounded-xl border border-slate-200 bg-transparent px-4 py-3 outline-none focus:border-[#7BAEE3] dark:border-slate-700"
-          >
-            <option>Todas</option>
-            <option>Borrador</option>
-            <option>Enviada</option>
-            <option>Aprobada</option>
-            <option>Rechazada</option>
-            <option>Vencida</option>
+          <input value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Buscar por folio, cliente, proyecto o responsable..." className="w-full rounded-xl border border-slate-200 bg-transparent px-4 py-3 outline-none focus:border-[#7BAEE3] dark:border-slate-700" />
+          <select value={statusFilter} onChange={(event) => setStatusFilter(event.target.value as 'Todas' | QuoteStatus)} className="rounded-xl border border-slate-200 bg-transparent px-4 py-3 outline-none focus:border-[#7BAEE3] dark:border-slate-700">
+            <option>Todas</option><option>Borrador</option><option>Enviada</option><option>Aprobada</option><option>Rechazada</option><option>Vencida</option>
           </select>
         </div>
 
@@ -452,63 +424,33 @@ export default function QuotesPage() {
           <div className="overflow-x-auto">
             <table className="min-w-full text-sm">
               <thead className="bg-slate-100 text-left text-xs uppercase text-slate-500 dark:bg-slate-800 dark:text-slate-400">
-                <tr>
-                  <th className="px-4 py-3">Folio</th>
-                  <th className="px-4 py-3">Cliente</th>
-                  <th className="px-4 py-3">Proyecto</th>
-                  <th className="px-4 py-3">Total</th>
-                  <th className="px-4 py-3">Estado</th>
-                  <th className="px-4 py-3">Acciones</th>
-                </tr>
+                <tr><th className="px-4 py-3">Folio</th><th className="px-4 py-3">Cliente</th><th className="px-4 py-3">Proyecto</th><th className="px-4 py-3">Total</th><th className="px-4 py-3">Estado</th><th className="px-4 py-3">Acciones</th></tr>
               </thead>
               <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
                 {filtered.length === 0 ? (
-                  <tr>
-                    <td colSpan={6} className="px-4 py-12 text-center text-slate-500">
-                      Todavía no hay cotizaciones.
+                  <tr><td colSpan={6} className="px-4 py-12 text-center text-slate-500">Todavía no hay cotizaciones.</td></tr>
+                ) : filtered.map((quote) => (
+                  <tr key={quote.id} className="align-top hover:bg-slate-50 dark:hover:bg-slate-800/40">
+                    <td className="px-4 py-4 font-semibold text-[#5B93C9]">{quote.folio}</td>
+                    <td className="px-4 py-4">{quote.client}</td>
+                    <td className="px-4 py-4"><div className="font-medium">{quote.project}</div><div className="mt-1 text-xs text-slate-500">{quote.owner || 'Sin responsable'}</div></td>
+                    <td className="px-4 py-4 font-semibold">{currency(quote.total)}</td>
+                    <td className="px-4 py-4">
+                      <select value={quote.status} onChange={(event) => changeStatus(quote.id, event.target.value as QuoteStatus)} className={`rounded-full border-0 px-3 py-1.5 text-xs font-semibold outline-none ${statusClass(quote.status)}`}>
+                        <option>Borrador</option><option>Enviada</option><option>Aprobada</option><option>Rechazada</option><option>Vencida</option>
+                      </select>
+                    </td>
+                    <td className="px-4 py-4">
+                      <div className="flex max-w-[360px] flex-wrap gap-2">
+                        <button onClick={() => openEdit(quote)} className="rounded-lg border border-slate-200 px-3 py-1.5 text-xs font-semibold dark:border-slate-700">Editar</button>
+                        <button onClick={() => duplicateQuote(quote)} className="rounded-lg border border-slate-200 px-3 py-1.5 text-xs font-semibold dark:border-slate-700">Duplicar</button>
+                        <button onClick={() => printPdf(quote)} className="rounded-lg border border-slate-200 px-3 py-1.5 text-xs font-semibold dark:border-slate-700">PDF</button>
+                        <button onClick={() => convertToProject(quote)} disabled={quote.convertedToProject} className="rounded-lg border border-emerald-200 px-3 py-1.5 text-xs font-semibold text-emerald-700 disabled:cursor-not-allowed disabled:opacity-50 dark:border-emerald-900 dark:text-emerald-300">{quote.convertedToProject ? 'Proyecto creado' : 'Crear proyecto'}</button>
+                        <button onClick={() => deleteQuote(quote)} className="rounded-lg border border-red-200 px-3 py-1.5 text-xs font-semibold text-red-600 dark:border-red-900 dark:text-red-400">Eliminar</button>
+                      </div>
                     </td>
                   </tr>
-                ) : (
-                  filtered.map((quote) => (
-                    <tr key={quote.id} className="align-top hover:bg-slate-50 dark:hover:bg-slate-800/40">
-                      <td className="px-4 py-4 font-semibold text-[#5B93C9]">{quote.folio}</td>
-                      <td className="px-4 py-4">{quote.client}</td>
-                      <td className="px-4 py-4">
-                        <div className="font-medium">{quote.project}</div>
-                        <div className="mt-1 text-xs text-slate-500">{quote.owner || 'Sin responsable'}</div>
-                      </td>
-                      <td className="px-4 py-4 font-semibold">{currency(quote.total)}</td>
-                      <td className="px-4 py-4">
-                        <select
-                          value={quote.status}
-                          onChange={(event) => changeStatus(quote.id, event.target.value as QuoteStatus)}
-                          className={`rounded-full border-0 px-3 py-1.5 text-xs font-semibold outline-none ${statusClass(quote.status)}`}
-                        >
-                          <option>Borrador</option>
-                          <option>Enviada</option>
-                          <option>Aprobada</option>
-                          <option>Rechazada</option>
-                          <option>Vencida</option>
-                        </select>
-                      </td>
-                      <td className="px-4 py-4">
-                        <div className="flex max-w-[360px] flex-wrap gap-2">
-                          <button onClick={() => openEdit(quote)} className="rounded-lg border border-slate-200 px-3 py-1.5 text-xs font-semibold dark:border-slate-700">Editar</button>
-                          <button onClick={() => duplicateQuote(quote)} className="rounded-lg border border-slate-200 px-3 py-1.5 text-xs font-semibold dark:border-slate-700">Duplicar</button>
-                          <button onClick={() => printPdf(quote)} className="rounded-lg border border-slate-200 px-3 py-1.5 text-xs font-semibold dark:border-slate-700">PDF</button>
-                          <button
-                            onClick={() => convertToProject(quote)}
-                            disabled={quote.convertedToProject}
-                            className="rounded-lg border border-emerald-200 px-3 py-1.5 text-xs font-semibold text-emerald-700 disabled:cursor-not-allowed disabled:opacity-50 dark:border-emerald-900 dark:text-emerald-300"
-                          >
-                            {quote.convertedToProject ? 'Proyecto creado' : 'Crear proyecto'}
-                          </button>
-                          <button onClick={() => deleteQuote(quote)} className="rounded-lg border border-red-200 px-3 py-1.5 text-xs font-semibold text-red-600 dark:border-red-900 dark:text-red-400">Eliminar</button>
-                        </div>
-                      </td>
-                    </tr>
-                  ))
-                )}
+                ))}
               </tbody>
             </table>
           </div>
@@ -520,9 +462,7 @@ export default function QuotesPage() {
               <div className="mb-5 flex items-start justify-between gap-4">
                 <div>
                   <h2 className="text-xl font-bold">{editingId ? 'Editar cotización' : 'Nueva cotización'}</h2>
-                  <p className="mt-1 text-xs text-slate-500">
-                    {editingId ? 'El folio existente se conserva.' : 'El folio se asignará automáticamente al guardar.'}
-                  </p>
+                  <p className="mt-1 text-xs text-slate-500">{editingId ? 'El folio existente se conserva.' : 'El folio se asignará automáticamente al guardar.'}</p>
                 </div>
                 <button onClick={closeForm} className="text-sm text-slate-500">Cerrar</button>
               </div>
@@ -531,16 +471,18 @@ export default function QuotesPage() {
                 <div className="grid gap-4 md:grid-cols-2">
                   <label className="space-y-2">
                     <span className="text-sm font-semibold">Cliente *</span>
-                    <select
-                      value={customerId}
-                      onChange={(event) => setCustomerId(event.target.value)}
-                      className="w-full rounded-xl border border-slate-200 bg-transparent px-4 py-3 dark:border-slate-700"
-                    >
-                      <option value="">Seleccionar cliente</option>
-                      {customers.map((customer) => (
-                        <option key={customer.id} value={customer.id}>{customer.company}</option>
-                      ))}
-                    </select>
+                    <input
+                      value={clientName}
+                      onChange={(event) => setClientName(event.target.value)}
+                      list="nedvi-clientes"
+                      placeholder="Escribe el nombre del cliente"
+                      autoComplete="off"
+                      className="w-full rounded-xl border border-slate-200 bg-transparent px-4 py-3 outline-none focus:border-[#7BAEE3] dark:border-slate-700"
+                    />
+                    <datalist id="nedvi-clientes">
+                      {customers.map((customer) => <option key={customer.id} value={customer.company} />)}
+                    </datalist>
+                    <p className="text-[11px] text-slate-500">Puedes escribir cualquier cliente. Los clientes registrados aparecen solo como sugerencias.</p>
                   </label>
 
                   <label className="space-y-2">
@@ -551,69 +493,28 @@ export default function QuotesPage() {
                   <div className="space-y-2">
                     <span className="text-sm font-semibold">Vigencia</span>
                     <div className="grid grid-cols-[0.8fr_1.45fr_1fr] gap-2">
-                      <select
-                        aria-label="Día de vigencia"
-                        value={selectedDate.day ? String(Number(selectedDate.day)) : ''}
-                        onChange={(event) => updateValidUntil('day', event.target.value)}
-                        className="w-full rounded-xl border border-slate-200 bg-transparent px-3 py-3 dark:border-slate-700"
-                      >
-                        <option value="">Día</option>
-                        {dayOptions.map((day) => <option key={day} value={day}>{day}</option>)}
+                      <select aria-label="Día de vigencia" value={selectedDate.day ? String(Number(selectedDate.day)) : ''} onChange={(event) => updateValidUntil('day', event.target.value)} className="w-full rounded-xl border border-slate-200 bg-transparent px-3 py-3 dark:border-slate-700">
+                        <option value="">Día</option>{dayOptions.map((day) => <option key={day} value={day}>{day}</option>)}
                       </select>
-                      <select
-                        aria-label="Mes de vigencia"
-                        value={selectedDate.month ? String(Number(selectedDate.month)) : ''}
-                        onChange={(event) => updateValidUntil('month', event.target.value)}
-                        className="w-full rounded-xl border border-slate-200 bg-transparent px-3 py-3 dark:border-slate-700"
-                      >
-                        <option value="">Mes</option>
-                        {monthOptions.map((month, index) => (
-                          <option key={month} value={index + 1}>{month}</option>
-                        ))}
+                      <select aria-label="Mes de vigencia" value={selectedDate.month ? String(Number(selectedDate.month)) : ''} onChange={(event) => updateValidUntil('month', event.target.value)} className="w-full rounded-xl border border-slate-200 bg-transparent px-3 py-3 dark:border-slate-700">
+                        <option value="">Mes</option>{monthOptions.map((month, index) => <option key={month} value={index + 1}>{month}</option>)}
                       </select>
-                      <select
-                        aria-label="Año de vigencia"
-                        value={selectedDate.year}
-                        onChange={(event) => updateValidUntil('year', event.target.value)}
-                        className="w-full rounded-xl border border-slate-200 bg-transparent px-3 py-3 dark:border-slate-700"
-                      >
-                        <option value="">Año</option>
-                        {yearOptions.map((year) => <option key={year} value={year}>{year}</option>)}
+                      <select aria-label="Año de vigencia" value={selectedDate.year} onChange={(event) => updateValidUntil('year', event.target.value)} className="w-full rounded-xl border border-slate-200 bg-transparent px-3 py-3 dark:border-slate-700">
+                        <option value="">Año</option>{yearOptions.map((year) => <option key={year} value={year}>{year}</option>)}
                       </select>
                     </div>
                   </div>
 
-                  <label className="space-y-2">
-                    <span className="text-sm font-semibold">Responsable</span>
-                    <input value={owner} onChange={(e) => setOwner(e.target.value)} placeholder="Responsable comercial" className="w-full rounded-xl border border-slate-200 bg-transparent px-4 py-3 dark:border-slate-700" />
-                  </label>
-
-                  <label className="space-y-2">
-                    <span className="text-sm font-semibold">Estado</span>
-                    <select value={status} onChange={(e) => setStatus(e.target.value as QuoteStatus)} className="w-full rounded-xl border border-slate-200 bg-transparent px-4 py-3 dark:border-slate-700">
-                      <option>Borrador</option>
-                      <option>Enviada</option>
-                      <option>Aprobada</option>
-                      <option>Rechazada</option>
-                      <option>Vencida</option>
-                    </select>
-                  </label>
-
-                  <label className="space-y-2">
-                    <span className="text-sm font-semibold">IVA (%)</span>
-                    <input type="number" min="0" step="0.01" value={taxRate} onChange={(e) => setTaxRate(e.target.value)} className="w-full rounded-xl border border-slate-200 bg-transparent px-4 py-3 dark:border-slate-700" />
-                  </label>
+                  <label className="space-y-2"><span className="text-sm font-semibold">Responsable</span><input value={owner} onChange={(e) => setOwner(e.target.value)} placeholder="Responsable comercial" className="w-full rounded-xl border border-slate-200 bg-transparent px-4 py-3 dark:border-slate-700" /></label>
+                  <label className="space-y-2"><span className="text-sm font-semibold">Estado</span><select value={status} onChange={(e) => setStatus(e.target.value as QuoteStatus)} className="w-full rounded-xl border border-slate-200 bg-transparent px-4 py-3 dark:border-slate-700"><option>Borrador</option><option>Enviada</option><option>Aprobada</option><option>Rechazada</option><option>Vencida</option></select></label>
+                  <label className="space-y-2"><span className="text-sm font-semibold">IVA (%)</span><input type="number" min="0" step="0.01" value={taxRate} onChange={(e) => setTaxRate(e.target.value)} className="w-full rounded-xl border border-slate-200 bg-transparent px-4 py-3 dark:border-slate-700" /></label>
                 </div>
 
                 <section>
                   <div className="mb-3 flex items-center justify-between">
-                    <div>
-                      <h3 className="font-semibold">Conceptos / partidas</h3>
-                      <p className="text-xs text-slate-500">El subtotal se calcula automáticamente.</p>
-                    </div>
+                    <div><h3 className="font-semibold">Conceptos / partidas</h3><p className="text-xs text-slate-500">El subtotal se calcula automáticamente.</p></div>
                     <button type="button" onClick={addItem} className="rounded-lg border border-slate-200 px-3 py-2 text-xs font-semibold dark:border-slate-700">+ Agregar partida</button>
                   </div>
-
                   <div className="space-y-3">
                     {items.map((item, index) => (
                       <div key={item.id} className="grid gap-2 rounded-xl border border-slate-200 p-3 dark:border-slate-700 md:grid-cols-[1fr_110px_150px_auto]">
@@ -626,10 +527,7 @@ export default function QuotesPage() {
                   </div>
                 </section>
 
-                <label className="block space-y-2">
-                  <span className="text-sm font-semibold">Notas / condiciones</span>
-                  <textarea rows={3} value={notes} onChange={(e) => setNotes(e.target.value)} placeholder="Condiciones de pago, alcance, vigencia, exclusiones..." className="w-full rounded-xl border border-slate-200 bg-transparent px-4 py-3 dark:border-slate-700" />
-                </label>
+                <label className="block space-y-2"><span className="text-sm font-semibold">Notas / condiciones</span><textarea rows={3} value={notes} onChange={(e) => setNotes(e.target.value)} placeholder="Condiciones de pago, alcance, vigencia, exclusiones..." className="w-full rounded-xl border border-slate-200 bg-transparent px-4 py-3 dark:border-slate-700" /></label>
 
                 <div className="grid gap-3 rounded-2xl bg-slate-50 p-4 dark:bg-slate-950 md:grid-cols-3">
                   <div><p className="text-xs uppercase text-slate-500">Subtotal</p><p className="mt-1 text-lg font-bold">{currency(totals.subtotal)}</p></div>
@@ -651,42 +549,15 @@ export default function QuotesPage() {
         <section className="hidden bg-white p-10 text-black print:block">
           <div className="mx-auto max-w-4xl">
             <div className="mb-8 flex items-start justify-between border-b border-slate-300 pb-6">
-              <div>
-                <h1 className="text-3xl font-bold">NEDVI CONSTRUCTORA</h1>
-                <p className="mt-1 text-sm">Cotización comercial</p>
-              </div>
-              <div className="text-right">
-                <p className="text-xl font-bold">{printQuote.folio}</p>
-                <p className="text-sm">Fecha: {printQuote.createdAt}</p>
-                {printQuote.validUntil ? <p className="text-sm">Vigencia: {printQuote.validUntil}</p> : null}
-              </div>
+              <div><h1 className="text-3xl font-bold">NEDVI CONSTRUCTORA</h1><p className="mt-1 text-sm">Cotización comercial</p></div>
+              <div className="text-right"><p className="text-xl font-bold">{printQuote.folio}</p><p className="text-sm">Fecha: {printQuote.createdAt}</p>{printQuote.validUntil ? <p className="text-sm">Vigencia: {printQuote.validUntil}</p> : null}</div>
             </div>
-
-            <div className="mb-6 grid grid-cols-2 gap-6">
-              <div><p className="text-xs uppercase text-slate-500">Cliente</p><p className="font-semibold">{printQuote.client}</p></div>
-              <div><p className="text-xs uppercase text-slate-500">Proyecto / servicio</p><p className="font-semibold">{printQuote.project}</p></div>
-            </div>
-
+            <div className="mb-6 grid grid-cols-2 gap-6"><div><p className="text-xs uppercase text-slate-500">Cliente</p><p className="font-semibold">{printQuote.client}</p></div><div><p className="text-xs uppercase text-slate-500">Proyecto / servicio</p><p className="font-semibold">{printQuote.project}</p></div></div>
             <table className="w-full border-collapse text-sm">
               <thead><tr className="border-b border-slate-400"><th className="py-2 text-left">Concepto</th><th className="py-2 text-right">Cant.</th><th className="py-2 text-right">P. unitario</th><th className="py-2 text-right">Importe</th></tr></thead>
-              <tbody>
-                {printQuote.items.map((item) => (
-                  <tr key={item.id} className="border-b border-slate-200">
-                    <td className="py-3">{item.description}</td>
-                    <td className="py-3 text-right">{item.quantity}</td>
-                    <td className="py-3 text-right">{currency(item.unitPrice)}</td>
-                    <td className="py-3 text-right">{currency(item.quantity * item.unitPrice)}</td>
-                  </tr>
-                ))}
-              </tbody>
+              <tbody>{printQuote.items.map((item) => <tr key={item.id} className="border-b border-slate-200"><td className="py-3">{item.description}</td><td className="py-3 text-right">{item.quantity}</td><td className="py-3 text-right">{currency(item.unitPrice)}</td><td className="py-3 text-right">{currency(item.quantity * item.unitPrice)}</td></tr>)}</tbody>
             </table>
-
-            <div className="ml-auto mt-6 w-72 space-y-2 text-sm">
-              <div className="flex justify-between"><span>Subtotal</span><strong>{currency(printQuote.subtotal)}</strong></div>
-              <div className="flex justify-between"><span>IVA ({printQuote.taxRate}%)</span><strong>{currency(printQuote.tax)}</strong></div>
-              <div className="flex justify-between border-t border-slate-400 pt-2 text-lg"><span>Total</span><strong>{currency(printQuote.total)}</strong></div>
-            </div>
-
+            <div className="ml-auto mt-6 w-72 space-y-2 text-sm"><div className="flex justify-between"><span>Subtotal</span><strong>{currency(printQuote.subtotal)}</strong></div><div className="flex justify-between"><span>IVA ({printQuote.taxRate}%)</span><strong>{currency(printQuote.tax)}</strong></div><div className="flex justify-between border-t border-slate-400 pt-2 text-lg"><span>Total</span><strong>{currency(printQuote.total)}</strong></div></div>
             {printQuote.notes ? <div className="mt-8"><p className="text-xs uppercase text-slate-500">Notas / condiciones</p><p className="mt-2 whitespace-pre-wrap text-sm">{printQuote.notes}</p></div> : null}
           </div>
         </section>
