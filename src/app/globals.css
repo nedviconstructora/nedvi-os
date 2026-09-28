@@ -7,6 +7,8 @@
   --sidebar: #17181c;
   --card: #20232a;
   --primary: #163dff;
+  --font-sans: var(--font-geist-sans);
+  --font-mono: var(--font-geist-mono);
 }
 
 * {
@@ -22,8 +24,17 @@ body {
   margin: 0;
   background: var(--background);
   color: var(--foreground);
-  font-family: "Avenir Next", "SF Pro Display", "Helvetica Neue", sans-serif;
+  font-family: var(--font-geist-sans), sans-serif;
   -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+code,
+kbd,
+pre,
+samp,
+.font-mono {
+  font-family: var(--font-geist-mono), monospace;
 }
 
 ::selection {
@@ -58,38 +69,15 @@ body {
 .animate-fade-up-delay {
   animation: fade-up 700ms 120ms cubic-bezier(0.22, 1, 0.36, 1) both;
 }
-.nedvi-splash {
-  animation: nedviSplash 1.8s ease forwards;
-}
 
-@keyframes nedviSplash {
-  0% {
-    opacity: 1;
-    visibility: visible;
-  }
-
-  75% {
-    opacity: 1;
-    visibility: visible;
-  }
-
-  100% {
-    opacity: 0;
-    visibility: hidden;
-    pointer-events: none;
-  }
-}
 .nedvi-splash {
   position: fixed;
   inset: 0;
   z-index: 9999;
-
   display: flex;
   align-items: center;
   justify-content: center;
-
   background: #09090b;
-
   animation: nedviSplash 1.8s ease forwards;
 }
 
