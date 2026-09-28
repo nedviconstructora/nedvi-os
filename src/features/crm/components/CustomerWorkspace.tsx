@@ -21,6 +21,7 @@ import { useCustomerFilters } from '@/features/crm/hooks/useCustomerFilters'
 import {
   CRM_STORAGE_KEY,
   CRM_UPDATED_EVENT,
+  deleteCustomer,
   readCustomers,
 } from '@/features/crm/services/customerStorage'
 import type { Customer } from '@/features/crm/types/customer'
@@ -79,6 +80,22 @@ export function CustomerWorkspace({ customers: initialCustomers }: CustomerWorks
   const qualifiedCustomers = customers.filter((customer) => customer.status === 'Qualified').length
   const proposalCustomers = customers.filter((customer) => customer.status === 'Proposal').length
 
+  function handleDeleteCustomer(customer: Customer) {
+    const confirmed = window.confirm(
+      `¿Eliminar al cliente ${customer.company}?\n\nEsta acción quitará el cliente del CRM. Las cotizaciones ya creadas conservarán los datos guardados en ellas.`
+    )
+
+    if (!confirmed) return
+
+    const deleted = deleteCustomer(customer.id)
+    if (!deleted) {
+      window.alert('No se pudo eliminar el cliente.')
+      return
+    }
+
+    setCustomers(readCustomers())
+  }
+
   return (
     <div className="mx-auto w-full max-w-[1600px] space-y-7">
       <header className="flex flex-col justify-between gap-5 sm:flex-row sm:items-end">
@@ -109,9 +126,9 @@ export function CustomerWorkspace({ customers: initialCustomers }: CustomerWorks
 
       {visibleCustomers.length ? (
         <>
-          <CustomerTable customers={visibleCustomers} sortKey={sortKey} sortDirection={sortDirection} onSort={toggleSort} />
+          <CustomerTable customers={visibleCustomers} sortKey={sortKey} sortDirection={sortDirection} onSort={toggleSort} onDelete={handleDeleteCustomer} />
           <div className="grid gap-4 md:grid-cols-2 lg:hidden">
-            {visibleCustomers.map((customer) => <CustomerCard customer={customer} key={customer.id} />)}
+            {visibleCustomers.map((customer) => <CustomerCard customer={customer} onDelete={handleDeleteCustomer} key={customer.id} />)}
           </div>
           <div className="flex flex-col items-center justify-between gap-3 text-xs text-[#646873] sm:flex-row">
             <span>Mostrando {(page - 1) * PAGE_SIZE + 1}-{Math.min(page * PAGE_SIZE, filteredCustomers.length)} de {filteredCustomers.length}</span>
