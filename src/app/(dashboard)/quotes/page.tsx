@@ -129,6 +129,7 @@ function daysInMonth(year: number, month: number) {
 export default function QuotesPage() {
   const customers = getCustomers()
   const [quotes, setQuotes] = useState<Quote[]>([])
+  const [quotesLoaded, setQuotesLoaded] = useState(false)
   const [open, setOpen] = useState(false)
   const [editingId, setEditingId] = useState<string | null>(null)
   const [search, setSearch] = useState('')
@@ -146,7 +147,11 @@ export default function QuotesPage() {
 
   useEffect(() => {
     const raw = localStorage.getItem(STORAGE_KEY)
-    if (!raw) return
+
+    if (!raw) {
+      setQuotesLoaded(true)
+      return
+    }
 
     try {
       const parsed = JSON.parse(raw) as Quote[]
@@ -185,12 +190,15 @@ export default function QuotesPage() {
       }
     } catch {
       console.warn('No se pudieron leer las cotizaciones guardadas.')
+    } finally {
+      setQuotesLoaded(true)
     }
   }, [])
 
   useEffect(() => {
+    if (!quotesLoaded) return
     localStorage.setItem(STORAGE_KEY, JSON.stringify(quotes))
-  }, [quotes])
+  }, [quotes, quotesLoaded])
 
   const totals = useMemo(
     () => quoteTotals(items, Number(taxRate || 0)),
