@@ -552,21 +552,100 @@ export default function QuotesPage() {
       </div>
 
       {printQuote && (
-        <section className="hidden bg-white p-10 text-black print:block">
-          <div className="mx-auto max-w-4xl">
-            <div className="mb-8 flex items-start justify-between border-b border-slate-300 pb-6">
-              <div><h1 className="text-3xl font-bold">NEDVI CONSTRUCTORA</h1><p className="mt-1 text-sm">Cotización comercial</p></div>
-              <div className="text-right"><p className="text-xl font-bold">{printQuote.folio}</p><p className="text-sm">Fecha: {printQuote.createdAt}</p>{printQuote.validUntil ? <p className="text-sm">Vigencia: {printQuote.validUntil}</p> : null}</div>
+        <>
+          <style>{`
+            @media print {
+              html, body {
+                background: #ffffff !important;
+                color: #000000 !important;
+              }
+              body * {
+                visibility: hidden !important;
+              }
+              #quote-print,
+              #quote-print * {
+                visibility: visible !important;
+              }
+              #quote-print {
+                display: block !important;
+                position: absolute !important;
+                inset: 0 !important;
+                width: 100% !important;
+                min-height: 100vh !important;
+                margin: 0 !important;
+                background: #ffffff !important;
+                color: #000000 !important;
+              }
+            }
+          `}</style>
+          <section id="quote-print" className="hidden min-h-screen w-full bg-white text-black print:block">
+            <div className="mx-auto max-w-4xl bg-white px-10 py-8">
+              <div className="mb-8 flex items-center justify-between border-b border-slate-300 pb-6">
+                <div className="flex items-center gap-4">
+                  <img src="/icon.png" alt="NEDVI Constructora" className="h-20 w-20 object-contain" />
+                  <div>
+                    <h1 className="text-3xl font-bold tracking-tight">NEDVI CONSTRUCTORA</h1>
+                    <p className="mt-1 text-sm text-slate-600">Cotización comercial</p>
+                  </div>
+                </div>
+                <div className="text-right">
+                  <p className="text-xl font-bold">{printQuote.folio}</p>
+                  <p className="mt-1 text-sm">Fecha: {printQuote.createdAt}</p>
+                  {printQuote.validUntil ? <p className="text-sm">Vigencia: {printQuote.validUntil}</p> : null}
+                </div>
+              </div>
+
+              <div className="mb-7 grid grid-cols-3 gap-6 border-b border-slate-200 pb-6">
+                <div>
+                  <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Cliente</p>
+                  <p className="mt-1 font-semibold">{printQuote.client}</p>
+                </div>
+                <div>
+                  <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Proyecto / servicio</p>
+                  <p className="mt-1 font-semibold">{printQuote.project}</p>
+                </div>
+                <div>
+                  <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Responsable</p>
+                  <p className="mt-1 font-semibold">{printQuote.owner || 'Sin responsable'}</p>
+                </div>
+              </div>
+
+              <table className="w-full border-collapse bg-white text-sm">
+                <thead>
+                  <tr className="border-b-2 border-slate-400 bg-white">
+                    <th className="py-3 text-left">Material</th>
+                    <th className="py-3 text-right">Cantidad</th>
+                    <th className="py-3 text-right">Precio por unidad</th>
+                    <th className="py-3 text-right">Importe</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {printQuote.items.map((item) => (
+                    <tr key={item.id} className="border-b border-slate-200 bg-white">
+                      <td className="py-3">{item.description}</td>
+                      <td className="py-3 text-right">{item.quantity}</td>
+                      <td className="py-3 text-right">{currency(item.unitPrice)}</td>
+                      <td className="py-3 text-right">{currency(item.quantity * item.unitPrice)}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+
+              <div className="ml-auto mt-7 w-72 space-y-2 text-sm">
+                <div className="flex justify-between"><span>Subtotal</span><strong>{currency(printQuote.subtotal)}</strong></div>
+                <div className="flex justify-between"><span>IVA ({printQuote.taxRate}%)</span><strong>{currency(printQuote.tax)}</strong></div>
+                <div className="flex justify-between border-t border-slate-400 pt-3 text-lg"><span>Total</span><strong>{currency(printQuote.total)}</strong></div>
+              </div>
+
+              {printQuote.notes ? (
+                <div className="mt-8 border-t border-slate-200 pt-5">
+                  <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Notas / condiciones</p>
+                  <p className="mt-2 whitespace-pre-wrap text-sm">{printQuote.notes}</p>
+                </div>
+              ) : null}
             </div>
-            <div className="mb-6 grid grid-cols-2 gap-6"><div><p className="text-xs uppercase text-slate-500">Cliente</p><p className="font-semibold">{printQuote.client}</p></div><div><p className="text-xs uppercase text-slate-500">Proyecto / servicio</p><p className="font-semibold">{printQuote.project}</p></div></div>
-            <table className="w-full border-collapse text-sm">
-              <thead><tr className="border-b border-slate-400"><th className="py-2 text-left">Material</th><th className="py-2 text-right">Cant.</th><th className="py-2 text-right">P. unitario</th><th className="py-2 text-right">Importe</th></tr></thead>
-              <tbody>{printQuote.items.map((item) => <tr key={item.id} className="border-b border-slate-200"><td className="py-3">{item.description}</td><td className="py-3 text-right">{item.quantity}</td><td className="py-3 text-right">{currency(item.unitPrice)}</td><td className="py-3 text-right">{currency(item.quantity * item.unitPrice)}</td></tr>)}</tbody>
-            </table>
-            <div className="ml-auto mt-6 w-72 space-y-2 text-sm"><div className="flex justify-between"><span>Subtotal</span><strong>{currency(printQuote.subtotal)}</strong></div><div className="flex justify-between"><span>IVA ({printQuote.taxRate}%)</span><strong>{currency(printQuote.tax)}</strong></div><div className="flex justify-between border-t border-slate-400 pt-2 text-lg"><span>Total</span><strong>{currency(printQuote.total)}</strong></div></div>
-            {printQuote.notes ? <div className="mt-8"><p className="text-xs uppercase text-slate-500">Notas / condiciones</p><p className="mt-2 whitespace-pre-wrap text-sm">{printQuote.notes}</p></div> : null}
-          </div>
-        </section>
+          </section>
+        </>
       )}
     </AppShell>
   )
