@@ -2,7 +2,12 @@
 
 import { FormEvent, useEffect, useMemo, useState } from 'react'
 import { AppShell } from '@/components/layout/AppShell'
-import { getCustomers } from '@/features/crm/services/customerService'
+import {
+  CRM_STORAGE_KEY,
+  CRM_UPDATED_EVENT,
+  readCustomers,
+} from '@/features/crm/services/customerStorage'
+import type { Customer } from '@/features/crm/types/customer'
 
 type QuoteStatus = 'Borrador' | 'Enviada' | 'Aprobada' | 'Rechazada' | 'Vencida'
 type QuoteCurrency = 'MXN' | 'USD'
@@ -23,11 +28,21 @@ type QuoteItem = {
   unitPrice: number | ''
 }
 
+type QuoteCustomerInfo = {
+  folio: string
+  contact: string
+  phone: string
+  email: string
+  address: string
+  rfc: string
+}
+
 type Quote = {
   id: string
   folio: string
   customerId: string
   client: string
+  customerInfo?: QuoteCustomerInfo
   project: string
   createdAt: string
   validUntil: string
@@ -69,6 +84,19 @@ const emptyItem = (): QuoteItem => ({
   quantity: '',
   unitPrice: '',
 })
+
+function customerSnapshot(customer?: Customer): QuoteCustomerInfo | undefined {
+  if (!customer) return undefined
+
+  return {
+    folio: customer.folio ?? '',
+    contact: customer.contact,
+    phone: customer.phone,
+    email: customer.email,
+    address: customer.address,
+    rfc: customer.rfc,
+  }
+}
 
 function money(value: number, currency: QuoteCurrency = 'MXN') {
   const amount = new Intl.NumberFormat('es-MX', {
@@ -127,7 +155,7 @@ function daysInMonth(year: number, month: number) {
 }
 
 export default function QuotesPage() {
-  const customers = getCustomers()
+  const [customers, setCustomers] = useState<Customer[]>([])
   const [quotes, setQuotes] = useState<Quote[]>([])
   const [quotesLoaded, setQuotesLoaded] = useState(false)
   const [open, setOpen] = useState(false)
@@ -135,6 +163,7 @@ export default function QuotesPage() {
   const [search, setSearch] = useState('')
   const [statusFilter, setStatusFilter] = useState<'Todas' | QuoteStatus>('Todas')
   const [clientName, setClientName] = useState('')
+  const [selectedCustomerInfo, setSelectedCustomerInfo] = useState<QuoteCustomerInfo | undefined>()
   const [project, setProject] = useState('')
   const [validUntil, setValidUntil] = useState('')
   const [taxRate, setTaxRate] = useState('16')
@@ -144,6 +173,24 @@ export default function QuotesPage() {
   const [status, setStatus] = useState<QuoteStatus>('Borrador')
   const [items, setItems] = useState<QuoteItem[]>([emptyItem()])
   const [printQuote, setPrintQuote] = useState<Quote | null>(null)
+
+  useEffect(() => {
+    const refreshCustomers = () => setCustomers(readCustomers())
+    const handleStorage = (event: StorageEvent) => {
+      if (event.key === CRM_STORAGE_KEY) refreshCustomers()
+    }
+
+    refreshCustomers()
+    window.addEventListener('storage', handleStorage)
+    window.addEventListener('focus', refreshCustomers)
+    window.addEventListener(CRM_UPDATED_EVENT, refreshCustomers)
+
+    return () => {
+      window.removeEventListener('storage', handleStorage)
+      window.removeEventListener('focus', refreshCustomers)
+      window.removeEventListener(CRM_UPDATED_EVENT, refreshCustomers)
+    }
+  }, [])
 
   useEffect(() => {
     const raw = localStorage.getItem(STORAGE_KEY)
@@ -159,6 +206,7 @@ export default function QuotesPage() {
         const normalized = parsed.map((quote) => ({
           ...quote,
           customerId: quote.customerId ?? '',
+          customerInfo: quote.customerInfo,
           currency: quote.currency === 'USD' ? 'USD' : 'MXN',
           items:
             Array.isArray(quote.items) && quote.items.length > 0
@@ -245,8 +293,26 @@ export default function QuotesPage() {
     setValidUntil([next.year, next.month, next.day].join('-'))
   }
 
+  function handleClientChange(value: string) {
+    setClientName(value)
+    const matchedCustomer = customers.find(
+      (customer) => customer.company.trim().toLowerCase() === value.trim().toLowerCase(),
+    )
+
+    if (!matchedCustomer) {
+      setSelectedCustomerInfo(undefined)
+      return
+    }
+
+    setSelectedCustomerInfo(customerSnapshot(matchedCustomer))
+    if (!owner.trim() && matchedCustomer.assignedSalesperson) {
+      setOwner(matchedCustomer.assignedSalesperson)
+    }
+  }
+
   function resetForm() {
     setClientName('')
+    setSelectedCustomerInfo(undefined)
     setProject('')
     setValidUntil('')
     setTaxRate('16')
@@ -269,8 +335,13 @@ export default function QuotesPage() {
   }
 
   function openEdit(quote: Quote) {
+    const matchedCustomer = customers.find(
+      (customer) => customer.id === quote.customerId || customer.company === quote.client,
+    )
+
     setEditingId(quote.id)
     setClientName(quote.client)
+    setSelectedCustomerInfo(quote.customerInfo ?? customerSnapshot(matchedCustomer))
     setProject(quote.project)
     setValidUntil(quote.validUntil)
     setTaxRate(String(quote.taxRate))
@@ -343,6 +414,7 @@ export default function QuotesPage() {
     const matchedCustomer = customers.find(
       (customer) => customer.company.trim().toLowerCase() === cleanClientName.toLowerCase(),
     )
+    const savedCustomerInfo = customerSnapshot(matchedCustomer) ?? selectedCustomerInfo
     const calculated = quoteTotals(normalizedItems, Number(taxRate || 0))
 
     if (editingId) {
@@ -351,8 +423,9 @@ export default function QuotesPage() {
           quote.id === editingId
             ? {
                 ...quote,
-                customerId: matchedCustomer?.id ?? '',
+                customerId: matchedCustomer?.id ?? quote.customerId,
                 client: cleanClientName,
+                customerInfo: savedCustomerInfo,
                 project: project.trim(),
                 validUntil,
                 items: normalizedItems,
@@ -372,6 +445,7 @@ export default function QuotesPage() {
         folio: nextFolio(),
         customerId: matchedCustomer?.id ?? '',
         client: cleanClientName,
+        customerInfo: savedCustomerInfo,
         project: project.trim(),
         createdAt: new Date().toISOString().slice(0, 10),
         validUntil,
@@ -494,7 +568,7 @@ export default function QuotesPage() {
                 ) : filtered.map((quote) => (
                   <tr key={quote.id} className="align-top hover:bg-slate-50 dark:hover:bg-slate-800/40">
                     <td className="px-4 py-4 font-semibold text-[#5B93C9]">{quote.folio}</td>
-                    <td className="px-4 py-4">{quote.client}</td>
+                    <td className="px-4 py-4"><div>{quote.client}</div>{quote.customerInfo?.contact ? <div className="mt-1 text-xs text-slate-500">{quote.customerInfo.contact}</div> : null}</td>
                     <td className="px-4 py-4"><div className="font-medium">{quote.project}</div><div className="mt-1 text-xs text-slate-500">{quote.owner || 'Sin responsable'}</div></td>
                     <td className="px-4 py-4 font-semibold">{money(quote.total, quote.currency)}</td>
                     <td className="px-4 py-4">
@@ -533,9 +607,9 @@ export default function QuotesPage() {
                 <div className="grid gap-4 md:grid-cols-2">
                   <label className="space-y-2">
                     <span className="text-sm font-semibold">Cliente *</span>
-                    <input value={clientName} onChange={(event) => setClientName(event.target.value)} list="nedvi-clientes" placeholder="Escribe el nombre del cliente" autoComplete="off" className="w-full rounded-xl border border-slate-200 bg-transparent px-4 py-3 outline-none focus:border-[#7BAEE3] dark:border-slate-700" />
-                    <datalist id="nedvi-clientes">{customers.map((customer) => <option key={customer.id} value={customer.company} />)}</datalist>
-                    <p className="text-[11px] text-slate-500">Puedes escribir cualquier cliente. Los clientes registrados aparecen solo como sugerencias.</p>
+                    <input value={clientName} onChange={(event) => handleClientChange(event.target.value)} list="nedvi-clientes" placeholder="Escribe o selecciona el cliente" autoComplete="off" className="w-full rounded-xl border border-slate-200 bg-transparent px-4 py-3 outline-none focus:border-[#7BAEE3] dark:border-slate-700" />
+                    <datalist id="nedvi-clientes">{customers.map((customer) => <option key={customer.id} value={customer.company}>{customer.contact}</option>)}</datalist>
+                    <p className="text-[11px] text-slate-500">Al seleccionar un cliente registrado, sus datos se agregan automáticamente a la cotización.</p>
                   </label>
 
                   <label className="space-y-2"><span className="text-sm font-semibold">Proyecto / servicio *</span><input value={project} onChange={(e) => setProject(e.target.value)} placeholder="Ej. Remodelación de oficinas" className="w-full rounded-xl border border-slate-200 bg-transparent px-4 py-3 dark:border-slate-700" /></label>
@@ -554,6 +628,22 @@ export default function QuotesPage() {
                   <label className="space-y-2"><span className="text-sm font-semibold">IVA (%)</span><input type="number" min="0" step="0.01" value={taxRate} onChange={(e) => setTaxRate(e.target.value)} className="w-full rounded-xl border border-slate-200 bg-transparent px-4 py-3 dark:border-slate-700" /></label>
                   <label className="space-y-2"><span className="text-sm font-semibold">Moneda</span><select value={quoteCurrency} onChange={(e) => setQuoteCurrency(e.target.value as QuoteCurrency)} className="w-full rounded-xl border border-slate-200 bg-transparent px-4 py-3 dark:border-slate-700"><option value="MXN">Pesos mexicanos (MXN)</option><option value="USD">Dólares estadounidenses (USD)</option></select></label>
                 </div>
+
+                {selectedCustomerInfo ? (
+                  <section className="rounded-2xl border border-[#5496CC]/30 bg-[#5496CC]/[0.07] p-4">
+                    <div className="mb-3 flex items-center justify-between gap-3">
+                      <div><h3 className="text-sm font-semibold">Datos del cliente</h3><p className="text-xs text-slate-500">Información tomada automáticamente del apartado Clientes.</p></div>
+                      {selectedCustomerInfo.folio ? <span className="rounded-full bg-[#5496CC]/15 px-3 py-1 text-xs font-semibold text-[#5496CC]">{selectedCustomerInfo.folio}</span> : null}
+                    </div>
+                    <div className="grid gap-3 text-sm sm:grid-cols-2 lg:grid-cols-3">
+                      <div><p className="text-xs text-slate-500">Contacto</p><p className="font-medium">{selectedCustomerInfo.contact || 'Sin registrar'}</p></div>
+                      <div><p className="text-xs text-slate-500">Teléfono</p><p className="font-medium">{selectedCustomerInfo.phone || 'Sin registrar'}</p></div>
+                      <div><p className="text-xs text-slate-500">Correo</p><p className="font-medium">{selectedCustomerInfo.email || 'Sin registrar'}</p></div>
+                      <div><p className="text-xs text-slate-500">RFC</p><p className="font-medium">{selectedCustomerInfo.rfc || 'Sin registrar'}</p></div>
+                      <div className="sm:col-span-2"><p className="text-xs text-slate-500">Dirección</p><p className="font-medium">{selectedCustomerInfo.address || 'Sin registrar'}</p></div>
+                    </div>
+                  </section>
+                ) : null}
 
                 <section>
                   <div className="mb-3 flex items-center justify-between">
@@ -623,11 +713,21 @@ export default function QuotesPage() {
                 <div className="text-right"><p className="text-xl font-bold">{printQuote.folio}</p><p className="mt-1 text-sm">Fecha: {printQuote.createdAt}</p>{printQuote.validUntil ? <p className="text-sm">Vigencia: {printQuote.validUntil}</p> : null}</div>
               </div>
 
-              <div className="mb-7 grid grid-cols-3 gap-6 border-b border-slate-200 pb-6">
+              <div className="mb-5 grid grid-cols-3 gap-6 border-b border-slate-200 pb-5">
                 <div><p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Cliente</p><p className="mt-1 font-semibold">{printQuote.client}</p></div>
                 <div><p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Proyecto / servicio</p><p className="mt-1 font-semibold">{printQuote.project}</p></div>
                 <div><p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Responsable</p><p className="mt-1 font-semibold">{printQuote.owner || 'Sin responsable'}</p></div>
               </div>
+
+              {printQuote.customerInfo ? (
+                <div className="mb-7 grid grid-cols-3 gap-x-6 gap-y-3 border-b border-slate-200 pb-5 text-sm">
+                  <div><p className="text-[10px] font-semibold uppercase tracking-wide text-slate-500">Contacto</p><p className="mt-1">{printQuote.customerInfo.contact || 'Sin registrar'}</p></div>
+                  <div><p className="text-[10px] font-semibold uppercase tracking-wide text-slate-500">Teléfono</p><p className="mt-1">{printQuote.customerInfo.phone || 'Sin registrar'}</p></div>
+                  <div><p className="text-[10px] font-semibold uppercase tracking-wide text-slate-500">Correo</p><p className="mt-1">{printQuote.customerInfo.email || 'Sin registrar'}</p></div>
+                  <div><p className="text-[10px] font-semibold uppercase tracking-wide text-slate-500">RFC</p><p className="mt-1">{printQuote.customerInfo.rfc || 'Sin registrar'}</p></div>
+                  <div className="col-span-2"><p className="text-[10px] font-semibold uppercase tracking-wide text-slate-500">Dirección</p><p className="mt-1">{printQuote.customerInfo.address || 'Sin registrar'}</p></div>
+                </div>
+              ) : null}
 
               <table className="w-full border-collapse bg-white text-sm">
                 <thead><tr className="border-b-2 border-slate-400 bg-white"><th className="py-3 text-left">Material</th><th className="py-3 text-center">UM</th><th className="py-3 text-right">Cantidad</th><th className="py-3 text-right">Precio por unidad ({printQuote.currency})</th><th className="py-3 text-right">Importe</th></tr></thead>
