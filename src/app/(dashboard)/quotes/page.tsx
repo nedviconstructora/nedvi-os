@@ -46,7 +46,7 @@ type Quote = {
   project: string
   createdAt: string
   validUntil: string
-  items: QuoteItem[]
+  items?: QuoteItem[]
   concepts: QuoteItem[]
   currency: QuoteCurrency
   taxRate: number
@@ -134,8 +134,8 @@ function nextFolio() {
   return `NV-${year}-${String(sequence).padStart(4, '0')}`
 }
 
-function quoteTotals(items: QuoteItem[], concepts: QuoteItem[], taxRate: number) {
-  const subtotal = [...items, ...concepts].reduce(
+function quoteTotals(concepts: QuoteItem[], taxRate: number) {
+  const subtotal = concepts.reduce(
     (sum, item) => sum + Number(item.quantity || 0) * Number(item.unitPrice || 0),
     0,
   )
@@ -199,7 +199,6 @@ export default function QuotesPage() {
   const [owner, setOwner] = useState('')
   const [notes, setNotes] = useState('')
   const [status, setStatus] = useState<QuoteStatus>('Borrador')
-  const [items, setItems] = useState<QuoteItem[]>([emptyItem()])
   const [concepts, setConcepts] = useState<QuoteItem[]>([emptyItem()])
   const [printQuote, setPrintQuote] = useState<Quote | null>(null)
 
@@ -232,33 +231,31 @@ export default function QuotesPage() {
     try {
       const parsed = JSON.parse(raw) as Quote[]
       if (Array.isArray(parsed)) {
-        const normalized = parsed.map((quote) => ({
-          ...quote,
-          customerId: quote.customerId ?? '',
-          customerInfo: quote.customerInfo,
-          currency: quote.currency === 'USD' ? 'USD' : 'MXN',
-          items:
-            Array.isArray(quote.items) && quote.items.length > 0
-              ? quote.items.map(normalizeItem)
-              : [{
-                  id: crypto.randomUUID(),
-                  description: quote.project || 'Servicio',
-                  unit: 'Piezas' as UnitMeasure,
-                  quantity: 1,
-                  unitPrice: quote.subtotal || 0,
-                }],
-          concepts: Array.isArray(quote.concepts)
-            ? quote.concepts.map(normalizeItem)
-            : [],
-          taxRate:
+        const normalized = parsed.map((quote) => {
+          const legacyItems = Array.isArray(quote.items) ? quote.items.map(normalizeItem) : []
+          const savedConcepts = Array.isArray(quote.concepts) ? quote.concepts.map(normalizeItem) : []
+          const mergedConcepts = [...legacyItems, ...savedConcepts]
+          const safeTaxRate =
             typeof quote.taxRate === 'number'
               ? quote.taxRate
               : quote.subtotal > 0
                 ? Number(((quote.tax / quote.subtotal) * 100).toFixed(2))
-                : 16,
-          notes: quote.notes ?? '',
-          owner: quote.owner ?? '',
-        }))
+                : 16
+          const recalculated = quoteTotals(mergedConcepts, safeTaxRate)
+
+          return {
+            ...quote,
+            customerId: quote.customerId ?? '',
+            customerInfo: quote.customerInfo,
+            currency: quote.currency === 'USD' ? 'USD' : 'MXN',
+            items: [],
+            concepts: mergedConcepts,
+            taxRate: safeTaxRate,
+            ...recalculated,
+            notes: quote.notes ?? '',
+            owner: quote.owner ?? '',
+          }
+        })
         setQuotes(normalized)
       }
     } catch {
@@ -274,8 +271,8 @@ export default function QuotesPage() {
   }, [quotes, quotesLoaded])
 
   const totals = useMemo(
-    () => quoteTotals(items, concepts, Number(taxRate || 0)),
-    [items, concepts, taxRate],
+    () => quoteTotals(concepts, Number(taxRate || 0)),
+    [concepts, taxRate],
   )
 
   const filtered = useMemo(() => {
@@ -343,7 +340,6 @@ export default function QuotesPage() {
     setOwner('')
     setNotes('')
     setStatus('Borrador')
-    setItems([emptyItem()])
     setConcepts([emptyItem()])
     setEditingId(null)
   }
@@ -373,23 +369,8 @@ export default function QuotesPage() {
     setOwner(quote.owner)
     setNotes(quote.notes)
     setStatus(quote.status)
-    setItems(quote.items.length ? quote.items.map(normalizeItem) : [emptyItem()])
     setConcepts(quote.concepts?.length ? quote.concepts.map(normalizeItem) : [emptyItem()])
     setOpen(true)
-  }
-
-  function updateItem(id: string, field: keyof QuoteItem, value: string) {
-    setItems((current) =>
-      current.map((item) => {
-        if (item.id !== id) return item
-        if (field === 'description') return { ...item, description: value }
-        if (field === 'unit') return { ...item, unit: value as UnitMeasure }
-
-        const numericValue: number | '' = value === '' ? '' : Number(value)
-        if (field === 'quantity') return { ...item, quantity: numericValue }
-        return { ...item, unitPrice: numericValue }
-      }),
-    )
   }
 
   function updateConcept(id: string, field: keyof QuoteItem, value: string) {
@@ -403,16 +384,6 @@ export default function QuotesPage() {
         if (field === 'quantity') return { ...item, quantity: numericValue }
         return { ...item, unitPrice: numericValue }
       }),
-    )
-  }
-
-  function addItem() {
-    setItems((current) => [...current, emptyItem()])
-  }
-
-  function removeItem(id: string) {
-    setItems((current) =>
-      current.length === 1 ? current : current.filter((item) => item.id !== id),
     )
   }
 
@@ -447,16 +418,15 @@ export default function QuotesPage() {
       return
     }
 
-    const normalizedItems = normalizeSavedItems(items)
     const normalizedConcepts = normalizeSavedItems(concepts)
 
-    if (normalizedItems.length === 0 && normalizedConcepts.length === 0) {
-      alert('Agrega al menos un material o concepto válido a la cotización.')
+    if (normalizedConcepts.length === 0) {
+      alert('Agrega al menos un concepto válido a la cotización.')
       return
     }
 
     const savedCustomerInfo = customerSnapshot(matchedCustomer)
-    const calculated = quoteTotals(normalizedItems, normalizedConcepts, Number(taxRate || 0))
+    const calculated = quoteTotals(normalizedConcepts, Number(taxRate || 0))
 
     if (editingId) {
       setQuotes((current) =>
@@ -469,7 +439,7 @@ export default function QuotesPage() {
                 customerInfo: savedCustomerInfo,
                 project: project.trim(),
                 validUntil,
-                items: normalizedItems,
+                items: [],
                 concepts: normalizedConcepts,
                 currency: quoteCurrency,
                 taxRate: Number(taxRate || 0),
@@ -491,7 +461,7 @@ export default function QuotesPage() {
         project: project.trim(),
         createdAt: new Date().toISOString().slice(0, 10),
         validUntil,
-        items: normalizedItems,
+        items: [],
         concepts: normalizedConcepts,
         currency: quoteCurrency,
         taxRate: Number(taxRate || 0),
@@ -515,7 +485,7 @@ export default function QuotesPage() {
       createdAt: new Date().toISOString().slice(0, 10),
       status: 'Borrador',
       convertedToProject: false,
-      items: quote.items.map((item) => ({ ...item, id: crypto.randomUUID() })),
+      items: [],
       concepts: (quote.concepts ?? []).map((item) => ({ ...item, id: crypto.randomUUID() })),
     }
     setQuotes((current) => [duplicated, ...current])
@@ -584,13 +554,9 @@ export default function QuotesPage() {
           <div>
             <p className="text-sm text-slate-500 dark:text-slate-400">Comercial y Ventas</p>
             <h1 className="text-3xl font-bold tracking-tight">Cotizaciones</h1>
-            <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
-              El folio NV-AÑO-#### identifica el expediente durante todo el proceso.
-            </p>
+            <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">El folio NV-AÑO-#### identifica el expediente durante todo el proceso.</p>
           </div>
-          <button onClick={openNew} className="rounded-xl bg-[#7BAEE3] px-5 py-3 font-semibold text-slate-950 transition hover:brightness-95">
-            + Nueva cotización
-          </button>
+          <button onClick={openNew} className="rounded-xl bg-[#7BAEE3] px-5 py-3 font-semibold text-slate-950 transition hover:brightness-95">+ Nueva cotización</button>
         </div>
 
         <div className="grid gap-3 rounded-2xl border border-slate-200 bg-white p-4 shadow-sm dark:border-slate-800 dark:bg-slate-900 md:grid-cols-[1fr_220px]">
@@ -693,28 +659,7 @@ export default function QuotesPage() {
 
                 <section>
                   <div className="mb-3 flex items-center justify-between">
-                    <div><h3 className="font-semibold">Materiales</h3><p className="text-xs text-slate-500">El subtotal se calcula automáticamente.</p></div>
-                    <button type="button" onClick={addItem} className="rounded-lg border border-slate-200 px-3 py-2 text-xs font-semibold dark:border-slate-700">+ Agregar material</button>
-                  </div>
-                  <div className="space-y-3">
-                    <div className="hidden gap-2 px-3 text-xs font-semibold text-slate-500 md:grid md:grid-cols-[minmax(220px,1fr)_150px_100px_160px_auto] dark:text-slate-400">
-                      <span>Material</span><span>UM</span><span>Cantidad</span><span>Precio por unidad ({quoteCurrency})</span><span aria-hidden="true" />
-                    </div>
-                    {items.map((item, index) => (
-                      <div key={item.id} className="grid gap-2 rounded-xl border border-slate-200 p-3 dark:border-slate-700 md:grid-cols-[minmax(220px,1fr)_150px_100px_160px_auto]">
-                        <input value={item.description} onChange={(e) => updateItem(item.id, 'description', e.target.value)} placeholder={`Material ${index + 1}`} className="rounded-lg border border-slate-200 bg-transparent px-3 py-2 dark:border-slate-700" />
-                        <select aria-label="Unidad de medida" value={item.unit} onChange={(e) => updateItem(item.id, 'unit', e.target.value)} className="rounded-lg border border-slate-200 bg-transparent px-3 py-2 dark:border-slate-700">{unitOptions.map((unit) => <option key={unit} value={unit}>{unit}</option>)}</select>
-                        <input type="number" min="0.01" step="0.01" value={item.quantity} onChange={(e) => updateItem(item.id, 'quantity', e.target.value)} placeholder="Cantidad" className="rounded-lg border border-slate-200 bg-transparent px-3 py-2 dark:border-slate-700" />
-                        <input type="number" min="0" step="0.01" value={item.unitPrice} onChange={(e) => updateItem(item.id, 'unitPrice', e.target.value)} placeholder={`Precio ${quoteCurrency}`} className="rounded-lg border border-slate-200 bg-transparent px-3 py-2 dark:border-slate-700" />
-                        <button type="button" onClick={() => removeItem(item.id)} disabled={items.length === 1} className="rounded-lg px-3 py-2 text-sm text-red-500 disabled:opacity-30">Quitar</button>
-                      </div>
-                    ))}
-                  </div>
-                </section>
-
-                <section>
-                  <div className="mb-3 flex items-center justify-between">
-                    <div><h3 className="font-semibold">Conceptos</h3><p className="text-xs text-slate-500">Los conceptos también se suman automáticamente al subtotal.</p></div>
+                    <div><h3 className="font-semibold">Conceptos</h3><p className="text-xs text-slate-500">El subtotal se calcula automáticamente.</p></div>
                     <button type="button" onClick={addConcept} className="rounded-lg border border-slate-200 px-3 py-2 text-xs font-semibold dark:border-slate-700">+ Agregar conceptos</button>
                   </div>
                   <div className="space-y-3">
@@ -772,12 +717,22 @@ export default function QuotesPage() {
           `}</style>
           <section id="quote-print" className="hidden min-h-screen w-full bg-white text-black print:block">
             <div className="mx-auto max-w-4xl bg-white px-10 py-8">
-              <div className="mb-8 flex items-center justify-between border-b border-slate-300 pb-6">
+              <div className="mb-6 flex items-center justify-between border-b border-slate-300 pb-5">
                 <div className="flex items-center gap-4">
                   <img src="/icon.png" alt="NEDVI Constructora" className="h-20 w-20 object-contain" />
                   <div><h1 className="text-3xl font-bold tracking-tight">NEDVI CONSTRUCTORA</h1><p className="mt-1 text-sm text-slate-600">Cotización comercial</p></div>
                 </div>
                 <div className="text-right"><p className="text-xl font-bold">{printQuote.folio}</p><p className="mt-1 text-sm">Fecha: {printQuote.createdAt}</p>{printQuote.validUntil ? <p className="text-sm">Vigencia: {printQuote.validUntil}</p> : null}</div>
+              </div>
+
+              <div className="mb-6 rounded-xl border border-slate-200 p-4">
+                <p className="mb-3 text-xs font-bold uppercase tracking-wide text-slate-500">Datos de la empresa</p>
+                <div className="grid grid-cols-2 gap-x-8 gap-y-3 text-sm">
+                  <div><span className="font-semibold">RFC:</span> NED260326S59</div>
+                  <div><span className="font-semibold">Denominación/Razón Social:</span> NEDVI</div>
+                  <div className="col-span-2"><span className="font-semibold">Victor Muciño:</span> victorm@nedviconstructora.com</div>
+                  <div className="col-span-2"><span className="font-semibold">Nestor Ortiz:</span> Nestor.ortiz@nedviconstrucciones.com</div>
+                </div>
               </div>
 
               <div className="mb-5 grid grid-cols-3 gap-6 border-b border-slate-200 pb-5">
@@ -796,18 +751,8 @@ export default function QuotesPage() {
                 </div>
               ) : null}
 
-              {printQuote.items.length > 0 ? (
-                <div>
-                  <h2 className="mb-2 text-sm font-bold uppercase tracking-wide">Materiales</h2>
-                  <table className="w-full border-collapse bg-white text-sm">
-                    <thead><tr className="border-b-2 border-slate-400 bg-white"><th className="py-3 text-left">Material</th><th className="py-3 text-center">UM</th><th className="py-3 text-right">Cantidad</th><th className="py-3 text-right">Precio por unidad ({printQuote.currency})</th><th className="py-3 text-right">Importe</th></tr></thead>
-                    <tbody>{printQuote.items.map((item) => <tr key={item.id} className="border-b border-slate-200 bg-white"><td className="py-3">{item.description}</td><td className="py-3 text-center">{item.unit}</td><td className="py-3 text-right">{item.quantity}</td><td className="py-3 text-right">{money(Number(item.unitPrice), printQuote.currency)}</td><td className="py-3 text-right">{money(Number(item.quantity) * Number(item.unitPrice), printQuote.currency)}</td></tr>)}</tbody>
-                  </table>
-                </div>
-              ) : null}
-
               {(printQuote.concepts ?? []).length > 0 ? (
-                <div className="mt-7">
+                <div>
                   <h2 className="mb-2 text-sm font-bold uppercase tracking-wide">Conceptos</h2>
                   <table className="w-full border-collapse bg-white text-sm">
                     <thead><tr className="border-b-2 border-slate-400 bg-white"><th className="py-3 text-left">Concepto</th><th className="py-3 text-center">UM</th><th className="py-3 text-right">Cantidad</th><th className="py-3 text-right">Precio por unidad ({printQuote.currency})</th><th className="py-3 text-right">Importe</th></tr></thead>
