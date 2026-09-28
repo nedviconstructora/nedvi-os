@@ -119,9 +119,12 @@ const navigationGroups: NavigationGroup[] = [
 
 function BrandMark() {
   return (
-    <span className="relative flex h-9 w-9 shrink-0 items-center justify-center overflow-hidden rounded-[10px] bg-[#163DFF] shadow-[0_8px_24px_rgba(22,61,255,0.28)]">
-      <span className="absolute h-4 w-1.5 -rotate-45 rounded-full bg-white" />
-      <span className="absolute h-4 w-1.5 rotate-45 rounded-full bg-white" />
+    <span className="flex h-11 w-11 shrink-0 items-center justify-center bg-transparent">
+      <img
+        src="/logo-blanco.svg"
+        alt="NEDVI Constructora"
+        className="h-10 w-10 object-contain"
+      />
     </span>
   )
 }
@@ -158,10 +161,10 @@ export function Sidebar({ collapsed, mobileOpen, onToggleCollapse, onCloseMobile
       aria-label="Navegación principal"
     >
       <div className={`flex h-[88px] shrink-0 items-center border-b border-white/[0.06] px-5 ${collapsed ? 'lg:justify-center lg:px-0' : 'justify-between'}`}>
-        <div className={`flex items-center gap-3 overflow-hidden ${collapsed ? 'lg:w-9' : ''}`}>
+        <div className={`flex items-center gap-3 overflow-hidden ${collapsed ? 'lg:w-11' : ''}`}>
           <BrandMark />
           <span className={`whitespace-nowrap text-[17px] font-semibold tracking-[-0.04em] text-white transition-opacity duration-200 ${collapsed ? 'lg:pointer-events-none lg:w-0 lg:opacity-0' : 'opacity-100'}`}>
-            NEDVI <span className="font-normal text-[#9CA3AF]">OS</span>
+            NEDVI <span className="font-normal text-white/90">OS</span>
           </span>
         </div>
         <button type="button" onClick={onCloseMobile} className="rounded-lg p-2 text-[#9CA3AF] transition hover:bg-white/[0.06] hover:text-white lg:hidden" aria-label="Cerrar navegación">
