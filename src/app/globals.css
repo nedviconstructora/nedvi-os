@@ -167,3 +167,88 @@ select option:checked {
     opacity: 1;
   }
 }
+
+/* Corporate print styling for NEDVI quotations. */
+@media print {
+  @page {
+    size: A4;
+    margin: 12mm;
+  }
+
+  html,
+  body {
+    background: #ffffff !important;
+    color: #111827 !important;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+
+  section.print\:block {
+    padding: 0 !important;
+    background: #ffffff !important;
+  }
+
+  section.print\:block > div {
+    max-width: none !important;
+  }
+
+  section.print\:block > div > div:first-child {
+    position: relative;
+    min-height: 112px;
+    margin: 0 0 30px !important;
+    padding: 24px 28px 24px 122px !important;
+    border: 0 !important;
+    border-radius: 14px;
+    background: #1f2329 !important;
+    color: #ffffff !important;
+    overflow: hidden;
+  }
+
+  section.print\:block > div > div:first-child::before {
+    content: '';
+    position: absolute;
+    left: 28px;
+    top: 50%;
+    width: 72px;
+    height: 72px;
+    transform: translateY(-50%);
+    border-radius: 12px;
+    background: #ffffff url('/icon.png') center / contain no-repeat;
+    box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.18);
+  }
+
+  section.print\:block > div > div:first-child h1,
+  section.print\:block > div > div:first-child p,
+  section.print\:block > div > div:first-child strong {
+    color: #ffffff !important;
+  }
+
+  section.print\:block > div > div:first-child p {
+    color: #d1d5db !important;
+  }
+
+  section.print\:block table {
+    overflow: hidden;
+    border: 1px solid #e5e7eb;
+    border-radius: 12px;
+  }
+
+  section.print\:block thead tr {
+    background: #f3f4f6 !important;
+  }
+
+  section.print\:block th {
+    color: #374151 !important;
+  }
+
+  section.print\:block tbody tr {
+    break-inside: avoid;
+  }
+
+  section.print\:block > div > div:nth-of-type(2) {
+    padding: 16px 18px;
+    border: 1px solid #e5e7eb;
+    border-radius: 12px;
+    background: #f9fafb !important;
+  }
+}
