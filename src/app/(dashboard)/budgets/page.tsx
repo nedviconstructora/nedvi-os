@@ -4,6 +4,7 @@ import { FormEvent, useCallback, useEffect, useMemo, useState } from 'react'
 import {
   Calculator,
   CircleDollarSign,
+  Eye,
   Pencil,
   Search,
   WalletCards,
@@ -125,6 +126,25 @@ function money(value: number, currency: Currency) {
   }).format(value)
 }
 
+function formatDateTime(value: string) {
+  if (!value) return 'Sin actualización registrada'
+  const date = new Date(value)
+  if (Number.isNaN(date.getTime())) return value
+
+  return new Intl.DateTimeFormat('es-MX', {
+    day: '2-digit',
+    month: 'short',
+    year: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit',
+  }).format(date)
+}
+
+function percentage(value: number, total: number) {
+  if (total <= 0) return '0.0%'
+  return `${((value / total) * 100).toFixed(1)}%`
+}
+
 function emptyForm(): BudgetForm {
   return {
     labor: '',
@@ -141,6 +161,7 @@ export default function BudgetsPage() {
   const [budgets, setBudgets] = useState<BudgetRecord[]>([])
   const [search, setSearch] = useState('')
   const [editingProject, setEditingProject] = useState<SavedQuote | null>(null)
+  const [viewingProject, setViewingProject] = useState<SavedQuote | null>(null)
   const [form, setForm] = useState<BudgetForm>(emptyForm())
 
   const loadData = useCallback(() => {
@@ -227,6 +248,15 @@ export default function BudgetsPage() {
     setForm(emptyForm())
   }
 
+  function openBudgetView(project: SavedQuote) {
+    if (!budgetByQuoteId.has(project.id)) return
+    setViewingProject(project)
+  }
+
+  function closeBudgetView() {
+    setViewingProject(null)
+  }
+
   function saveBudget(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
     if (!editingProject) return
@@ -260,6 +290,26 @@ export default function BudgetsPage() {
     Number(form.equipment || 0) +
     Number(form.subcontractors || 0) +
     Number(form.others || 0)
+
+  const viewingBudget = viewingProject
+    ? budgetByQuoteId.get(viewingProject.id)
+    : undefined
+  const viewingCurrency: Currency =
+    viewingProject?.currency === 'USD' ? 'USD' : 'MXN'
+  const viewingAllocated = allocated(viewingBudget)
+  const viewingRemaining = viewingProject
+    ? viewingProject.total - viewingAllocated
+    : 0
+
+  const detailRows = viewingBudget
+    ? [
+        ['Mano de obra', viewingBudget.labor],
+        ['Materiales', viewingBudget.materials],
+        ['Equipo / maquinaria', viewingBudget.equipment],
+        ['Subcontratos', viewingBudget.subcontractors],
+        ['Otros', viewingBudget.others],
+      ] as const
+    : []
 
   return (
     <AppShell>
@@ -381,14 +431,26 @@ export default function BudgetsPage() {
                           {money(remaining, currency)}
                         </td>
                         <td className="px-5 py-4">
-                          <button
-                            type="button"
-                            onClick={() => openBudget(project)}
-                            className="inline-flex items-center gap-2 rounded-lg border border-[var(--border)] px-3 py-2 text-xs font-semibold text-[var(--foreground)] transition hover:border-[#5496CC] hover:text-[#5496CC]"
-                          >
-                            <Pencil size={14} />
-                            {budget ? 'Editar' : 'Configurar'}
-                          </button>
+                          <div className="flex flex-wrap gap-2">
+                            {budget ? (
+                              <button
+                                type="button"
+                                onClick={() => openBudgetView(project)}
+                                className="inline-flex items-center gap-2 rounded-lg border border-[#5496CC]/40 px-3 py-2 text-xs font-semibold text-[#5496CC] transition hover:bg-[#5496CC]/10"
+                              >
+                                <Eye size={14} />
+                                Ver presupuesto
+                              </button>
+                            ) : null}
+                            <button
+                              type="button"
+                              onClick={() => openBudget(project)}
+                              className="inline-flex items-center gap-2 rounded-lg border border-[var(--border)] px-3 py-2 text-xs font-semibold text-[var(--foreground)] transition hover:border-[#5496CC] hover:text-[#5496CC]"
+                            >
+                              <Pencil size={14} />
+                              {budget ? 'Editar' : 'Configurar'}
+                            </button>
+                          </div>
                         </td>
                       </tr>
                     )
@@ -399,6 +461,148 @@ export default function BudgetsPage() {
           )}
         </div>
       </div>
+
+      {viewingProject && viewingBudget ? (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/55 p-4">
+          <div className="max-h-[92vh] w-full max-w-4xl overflow-y-auto rounded-2xl bg-[var(--surface)] p-6 shadow-2xl">
+            <div className="flex items-start justify-between gap-4 border-b border-[var(--border)] pb-5">
+              <div>
+                <p className="text-xs font-semibold uppercase tracking-[0.14em] text-[#5496CC]">
+                  Presupuesto completo · {viewingProject.folio}
+                </p>
+                <h2 className="mt-2 text-2xl font-bold text-[var(--foreground)]">
+                  {viewingProject.project}
+                </h2>
+                <p className="mt-1 text-sm text-[var(--muted)]">
+                  {viewingProject.client} · {viewingProject.owner || 'Sin responsable'}
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={closeBudgetView}
+                className="rounded-lg p-2 text-[var(--muted)] hover:bg-[var(--surface-soft)]"
+                aria-label="Cerrar detalle del presupuesto"
+              >
+                <X size={18} />
+              </button>
+            </div>
+
+            <div className="mt-5 grid gap-3 sm:grid-cols-3">
+              <div className="rounded-2xl bg-[var(--surface-soft)] p-4">
+                <p className="text-xs uppercase text-[var(--muted)]">Presupuesto aprobado</p>
+                <p className="mt-1 text-xl font-bold text-[var(--foreground)]">
+                  {money(viewingProject.total, viewingCurrency)}
+                </p>
+              </div>
+              <div className="rounded-2xl bg-[var(--surface-soft)] p-4">
+                <p className="text-xs uppercase text-[var(--muted)]">Distribuido</p>
+                <p className="mt-1 text-xl font-bold text-[var(--foreground)]">
+                  {money(viewingAllocated, viewingCurrency)}
+                </p>
+              </div>
+              <div className="rounded-2xl bg-[var(--surface-soft)] p-4">
+                <p className="text-xs uppercase text-[var(--muted)]">Disponible</p>
+                <p
+                  className={`mt-1 text-xl font-bold ${
+                    viewingRemaining < 0 ? 'text-red-500' : 'text-emerald-500'
+                  }`}
+                >
+                  {money(viewingRemaining, viewingCurrency)}
+                </p>
+              </div>
+            </div>
+
+            <div className="mt-5 overflow-hidden rounded-2xl border border-[var(--border)]">
+              <table className="w-full text-left text-sm">
+                <thead className="bg-[var(--surface-soft)] text-xs uppercase tracking-wide text-[var(--muted)]">
+                  <tr>
+                    <th className="px-5 py-4">Categoría</th>
+                    <th className="px-5 py-4 text-right">Monto</th>
+                    <th className="px-5 py-4 text-right">% del aprobado</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-[var(--border)]">
+                  {detailRows.map(([label, value]) => (
+                    <tr key={label}>
+                      <td className="px-5 py-4 font-medium text-[var(--foreground)]">
+                        {label}
+                      </td>
+                      <td className="px-5 py-4 text-right font-semibold text-[var(--foreground)]">
+                        {money(value, viewingCurrency)}
+                      </td>
+                      <td className="px-5 py-4 text-right text-[var(--muted)]">
+                        {percentage(value, viewingProject.total)}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+                <tfoot className="border-t-2 border-[var(--border)] bg-[var(--surface-soft)]">
+                  <tr>
+                    <td className="px-5 py-4 font-bold text-[var(--foreground)]">Total distribuido</td>
+                    <td className="px-5 py-4 text-right font-bold text-[var(--foreground)]">
+                      {money(viewingAllocated, viewingCurrency)}
+                    </td>
+                    <td className="px-5 py-4 text-right font-bold text-[var(--foreground)]">
+                      {percentage(viewingAllocated, viewingProject.total)}
+                    </td>
+                  </tr>
+                </tfoot>
+              </table>
+            </div>
+
+            <div className="mt-5 grid gap-4 md:grid-cols-2">
+              <div className="rounded-2xl border border-[var(--border)] p-4">
+                <p className="text-xs font-semibold uppercase tracking-wide text-[var(--muted)]">
+                  Información general
+                </p>
+                <div className="mt-3 space-y-2 text-sm">
+                  <div className="flex justify-between gap-4"><span className="text-[var(--muted)]">Folio</span><strong className="text-[var(--foreground)]">{viewingProject.folio}</strong></div>
+                  <div className="flex justify-between gap-4"><span className="text-[var(--muted)]">Cliente</span><strong className="text-right text-[var(--foreground)]">{viewingProject.client}</strong></div>
+                  <div className="flex justify-between gap-4"><span className="text-[var(--muted)]">Responsable</span><strong className="text-right text-[var(--foreground)]">{viewingProject.owner || 'Sin responsable'}</strong></div>
+                  <div className="flex justify-between gap-4"><span className="text-[var(--muted)]">Moneda</span><strong className="text-[var(--foreground)]">{viewingCurrency}</strong></div>
+                  <div className="flex justify-between gap-4"><span className="text-[var(--muted)]">Última actualización</span><strong className="text-right text-[var(--foreground)]">{formatDateTime(viewingBudget.updatedAt)}</strong></div>
+                </div>
+              </div>
+
+              <div className="rounded-2xl border border-[var(--border)] p-4">
+                <p className="text-xs font-semibold uppercase tracking-wide text-[var(--muted)]">
+                  Notas del presupuesto
+                </p>
+                <p className="mt-3 whitespace-pre-wrap text-sm leading-6 text-[var(--foreground)]">
+                  {viewingBudget.notes || 'Sin notas registradas.'}
+                </p>
+              </div>
+            </div>
+
+            {viewingRemaining < 0 ? (
+              <div className="mt-5 rounded-2xl border border-red-500/30 bg-red-500/10 p-4 text-sm text-red-500">
+                El presupuesto distribuido excede el monto aprobado por {money(Math.abs(viewingRemaining), viewingCurrency)}.
+              </div>
+            ) : null}
+
+            <div className="mt-6 flex justify-end gap-3">
+              <button
+                type="button"
+                onClick={closeBudgetView}
+                className="rounded-xl border border-[var(--border)] px-5 py-3 font-semibold text-[var(--foreground)]"
+              >
+                Cerrar
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  closeBudgetView()
+                  openBudget(viewingProject)
+                }}
+                className="inline-flex items-center gap-2 rounded-xl bg-[#5496CC] px-5 py-3 font-semibold text-white"
+              >
+                <Pencil size={15} />
+                Editar presupuesto
+              </button>
+            </div>
+          </div>
+        </div>
+      ) : null}
 
       {editingProject ? (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/55 p-4">
