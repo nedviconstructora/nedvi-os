@@ -1,6 +1,7 @@
 'use client'
 
 import { FormEvent, useEffect, useMemo, useState } from 'react'
+import { AppShell } from '@/components/layout/AppShell'
 
 type QuoteStatus = 'Borrador' | 'Enviada' | 'Aprobada' | 'Rechazada' | 'Vencida'
 
@@ -60,10 +61,13 @@ export default function QuotesPage() {
   useEffect(() => {
     const raw = localStorage.getItem(STORAGE_KEY)
     if (!raw) return
+
     try {
       const parsed = JSON.parse(raw)
       if (Array.isArray(parsed)) setQuotes(parsed)
-    } catch {}
+    } catch {
+      console.warn('No se pudieron cargar las cotizaciones guardadas.')
+    }
   }, [])
 
   useEffect(() => {
@@ -72,6 +76,7 @@ export default function QuotesPage() {
 
   const filtered = useMemo(() => {
     const value = search.trim().toLowerCase()
+
     return quotes.filter((quote) =>
       [quote.folio, quote.client, quote.project, quote.owner]
         .join(' ')
@@ -116,99 +121,163 @@ export default function QuotesPage() {
   }
 
   return (
-    <div className="mx-auto max-w-7xl space-y-6 p-4 md:p-6">
-      <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
-        <div>
-          <p className="text-sm text-slate-500 dark:text-slate-400">Comercial y Ventas</p>
-          <h1 className="text-3xl font-bold tracking-tight">Cotizaciones</h1>
-          <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
-            Cada nueva cotización genera automáticamente un folio NV-AÑO-####.
-          </p>
+    <AppShell>
+      <div className="mx-auto max-w-7xl space-y-6 p-4 md:p-6">
+        <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+          <div>
+            <p className="text-sm text-slate-500 dark:text-slate-400">Comercial y Ventas</p>
+            <h1 className="text-3xl font-bold tracking-tight">Cotizaciones</h1>
+            <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
+              Cada nueva cotización genera automáticamente un folio NV-AÑO-####.
+            </p>
+          </div>
+
+          <button
+            type="button"
+            onClick={() => setOpen(true)}
+            className="rounded-xl bg-[#7BAEE3] px-5 py-3 font-semibold text-slate-950 transition hover:brightness-95"
+          >
+            + Nueva cotización
+          </button>
         </div>
 
-        <button
-          onClick={() => setOpen(true)}
-          className="rounded-xl bg-[#7BAEE3] px-5 py-3 font-semibold text-slate-950 transition hover:brightness-95"
-        >
-          + Nueva cotización
-        </button>
-      </div>
+        <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm dark:border-slate-800 dark:bg-slate-900">
+          <input
+            value={search}
+            onChange={(event) => setSearch(event.target.value)}
+            placeholder="Buscar por folio, cliente, proyecto o responsable..."
+            className="w-full rounded-xl border border-slate-200 bg-transparent px-4 py-3 outline-none focus:border-[#7BAEE3] dark:border-slate-700"
+          />
+        </div>
 
-      <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm dark:border-slate-800 dark:bg-slate-900">
-        <input
-          value={search}
-          onChange={(event) => setSearch(event.target.value)}
-          placeholder="Buscar por folio, cliente, proyecto o responsable..."
-          className="w-full rounded-xl border border-slate-200 bg-transparent px-4 py-3 outline-none focus:border-[#7BAEE3] dark:border-slate-700"
-        />
-      </div>
-
-      <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm dark:border-slate-800 dark:bg-slate-900">
-        <div className="overflow-x-auto">
-          <table className="min-w-full text-sm">
-            <thead className="bg-slate-100 text-left text-xs uppercase text-slate-500 dark:bg-slate-800 dark:text-slate-400">
-              <tr>
-                <th className="px-4 py-3">Folio</th>
-                <th className="px-4 py-3">Cliente</th>
-                <th className="px-4 py-3">Proyecto</th>
-                <th className="px-4 py-3">Fecha</th>
-                <th className="px-4 py-3">Total</th>
-                <th className="px-4 py-3">Estado</th>
-                <th className="px-4 py-3">Responsable</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
-              {filtered.length === 0 ? (
+        <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm dark:border-slate-800 dark:bg-slate-900">
+          <div className="overflow-x-auto">
+            <table className="min-w-full text-sm">
+              <thead className="bg-slate-100 text-left text-xs uppercase text-slate-500 dark:bg-slate-800 dark:text-slate-400">
                 <tr>
-                  <td colSpan={7} className="px-4 py-12 text-center text-slate-500">
-                    Todavía no hay cotizaciones.
-                  </td>
+                  <th className="px-4 py-3">Folio</th>
+                  <th className="px-4 py-3">Cliente</th>
+                  <th className="px-4 py-3">Proyecto</th>
+                  <th className="px-4 py-3">Fecha</th>
+                  <th className="px-4 py-3">Total</th>
+                  <th className="px-4 py-3">Estado</th>
+                  <th className="px-4 py-3">Responsable</th>
                 </tr>
-              ) : (
-                filtered.map((quote) => (
-                  <tr key={quote.id} className="hover:bg-slate-50 dark:hover:bg-slate-800/40">
-                    <td className="px-4 py-4 font-semibold text-[#5B93C9]">{quote.folio}</td>
-                    <td className="px-4 py-4">{quote.client}</td>
-                    <td className="px-4 py-4">{quote.project}</td>
-                    <td className="px-4 py-4">{quote.createdAt}</td>
-                    <td className="px-4 py-4 font-semibold">{currency(quote.total)}</td>
-                    <td className="px-4 py-4">{quote.status}</td>
-                    <td className="px-4 py-4">{quote.owner || 'Sin asignar'}</td>
+              </thead>
+
+              <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
+                {filtered.length === 0 ? (
+                  <tr>
+                    <td colSpan={7} className="px-4 py-12 text-center text-slate-500">
+                      Todavía no hay cotizaciones.
+                    </td>
                   </tr>
-                ))
-              )}
-            </tbody>
-          </table>
-        </div>
-      </div>
-
-      {open && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
-          <div className="w-full max-w-2xl rounded-2xl bg-white p-6 shadow-2xl dark:bg-slate-900">
-            <div className="mb-5 flex items-start justify-between gap-4">
-              <div>
-                <h2 className="text-xl font-bold">Nueva cotización</h2>
-                <p className="mt-1 text-xs text-slate-500">El folio se asignará al guardar.</p>
-              </div>
-              <button onClick={() => setOpen(false)} className="text-sm text-slate-500">Cerrar</button>
-            </div>
-
-            <form onSubmit={saveQuote} className="grid gap-4 md:grid-cols-2">
-              <input value={client} onChange={(e) => setClient(e.target.value)} placeholder="Cliente *" className="rounded-xl border border-slate-200 bg-transparent px-4 py-3 dark:border-slate-700" />
-              <input value={project} onChange={(e) => setProject(e.target.value)} placeholder="Proyecto / servicio *" className="rounded-xl border border-slate-200 bg-transparent px-4 py-3 dark:border-slate-700" />
-              <input type="date" value={validUntil} onChange={(e) => setValidUntil(e.target.value)} className="rounded-xl border border-slate-200 bg-transparent px-4 py-3 dark:border-slate-700" />
-              <input value={owner} onChange={(e) => setOwner(e.target.value)} placeholder="Responsable" className="rounded-xl border border-slate-200 bg-transparent px-4 py-3 dark:border-slate-700" />
-              <input type="number" min="0" step="0.01" value={subtotal} onChange={(e) => setSubtotal(e.target.value)} placeholder="Subtotal" className="rounded-xl border border-slate-200 bg-transparent px-4 py-3 dark:border-slate-700" />
-              <input type="number" min="0" step="0.01" value={taxRate} onChange={(e) => setTaxRate(e.target.value)} placeholder="IVA %" className="rounded-xl border border-slate-200 bg-transparent px-4 py-3 dark:border-slate-700" />
-
-              <div className="md:col-span-2 flex justify-end gap-3 pt-2">
-                <button type="button" onClick={() => setOpen(false)} className="rounded-xl border border-slate-200 px-5 py-3 font-semibold dark:border-slate-700">Cancelar</button>
-                <button type="submit" className="rounded-xl bg-[#7BAEE3] px-5 py-3 font-semibold text-slate-950">Crear cotización</button>
-              </div>
-            </form>
+                ) : (
+                  filtered.map((quote) => (
+                    <tr key={quote.id} className="hover:bg-slate-50 dark:hover:bg-slate-800/40">
+                      <td className="px-4 py-4 font-semibold text-[#5B93C9]">{quote.folio}</td>
+                      <td className="px-4 py-4">{quote.client}</td>
+                      <td className="px-4 py-4">{quote.project}</td>
+                      <td className="px-4 py-4">{quote.createdAt}</td>
+                      <td className="px-4 py-4 font-semibold">{currency(quote.total)}</td>
+                      <td className="px-4 py-4">{quote.status}</td>
+                      <td className="px-4 py-4">{quote.owner || 'Sin asignar'}</td>
+                    </tr>
+                  ))
+                )}
+              </tbody>
+            </table>
           </div>
         </div>
-      )}
-    </div>
+
+        {open && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+            <div className="w-full max-w-2xl rounded-2xl bg-white p-6 shadow-2xl dark:bg-slate-900">
+              <div className="mb-5 flex items-start justify-between gap-4">
+                <div>
+                  <h2 className="text-xl font-bold">Nueva cotización</h2>
+                  <p className="mt-1 text-xs text-slate-500">El folio se asignará al guardar.</p>
+                </div>
+
+                <button
+                  type="button"
+                  onClick={() => setOpen(false)}
+                  className="text-sm text-slate-500"
+                >
+                  Cerrar
+                </button>
+              </div>
+
+              <form onSubmit={saveQuote} className="grid gap-4 md:grid-cols-2">
+                <input
+                  value={client}
+                  onChange={(event) => setClient(event.target.value)}
+                  placeholder="Cliente *"
+                  className="rounded-xl border border-slate-200 bg-transparent px-4 py-3 dark:border-slate-700"
+                />
+
+                <input
+                  value={project}
+                  onChange={(event) => setProject(event.target.value)}
+                  placeholder="Proyecto / servicio *"
+                  className="rounded-xl border border-slate-200 bg-transparent px-4 py-3 dark:border-slate-700"
+                />
+
+                <input
+                  type="date"
+                  value={validUntil}
+                  onChange={(event) => setValidUntil(event.target.value)}
+                  className="rounded-xl border border-slate-200 bg-transparent px-4 py-3 dark:border-slate-700"
+                />
+
+                <input
+                  value={owner}
+                  onChange={(event) => setOwner(event.target.value)}
+                  placeholder="Responsable"
+                  className="rounded-xl border border-slate-200 bg-transparent px-4 py-3 dark:border-slate-700"
+                />
+
+                <input
+                  type="number"
+                  min="0"
+                  step="0.01"
+                  value={subtotal}
+                  onChange={(event) => setSubtotal(event.target.value)}
+                  placeholder="Subtotal"
+                  className="rounded-xl border border-slate-200 bg-transparent px-4 py-3 dark:border-slate-700"
+                />
+
+                <input
+                  type="number"
+                  min="0"
+                  step="0.01"
+                  value={taxRate}
+                  onChange={(event) => setTaxRate(event.target.value)}
+                  placeholder="IVA %"
+                  className="rounded-xl border border-slate-200 bg-transparent px-4 py-3 dark:border-slate-700"
+                />
+
+                <div className="flex justify-end gap-3 pt-2 md:col-span-2">
+                  <button
+                    type="button"
+                    onClick={() => setOpen(false)}
+                    className="rounded-xl border border-slate-200 px-5 py-3 font-semibold dark:border-slate-700"
+                  >
+                    Cancelar
+                  </button>
+
+                  <button
+                    type="submit"
+                    className="rounded-xl bg-[#7BAEE3] px-5 py-3 font-semibold text-slate-950"
+                  >
+                    Crear cotización
+                  </button>
+                </div>
+              </form>
+            </div>
+          </div>
+        )}
+      </div>
+    </AppShell>
   )
 }
