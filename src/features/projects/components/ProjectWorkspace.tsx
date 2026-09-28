@@ -23,6 +23,7 @@ import {
   PROJECTS_UPDATED_EVENT,
   readProjects,
 } from '@/features/projects/services/projectStorage'
+import { syncQuoteProjectsIntoProjectStorage } from '@/features/projects/services/quoteProjectSync'
 import type { Project } from '@/features/projects/types/project'
 
 const PAGE_SIZE = 6
@@ -35,12 +36,20 @@ export function ProjectWorkspace({ projects: initialProjects }: ProjectWorkspace
   const [projects, setProjects] = useState<Project[]>(initialProjects)
 
   useEffect(() => {
-    const loadProjects = () => setProjects(readProjects())
+    const loadProjects = () => {
+      syncQuoteProjectsIntoProjectStorage()
+      setProjects(readProjects())
+    }
 
     loadProjects()
 
     const handleStorage = (event: StorageEvent) => {
-      if (event.key === PROJECTS_STORAGE_KEY) loadProjects()
+      if (
+        event.key === PROJECTS_STORAGE_KEY ||
+        event.key === 'nedvi_projects_from_quotes'
+      ) {
+        loadProjects()
+      }
     }
 
     window.addEventListener('storage', handleStorage)
