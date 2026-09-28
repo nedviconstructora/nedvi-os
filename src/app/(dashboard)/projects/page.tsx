@@ -38,23 +38,10 @@ type SavedQuote = {
   convertedToProject?: boolean
 }
 
-type ProjectIntake = {
-  id: string
-  folio: string
-  customerId?: string
-  client: string
-  name: string
-  quoteId?: string
-  quoteTotal: number
-  quoteCurrency?: string
-  createdAt: string
-  source?: string
-}
-
 type ProjectRow = {
   id: string
   folio: string
-  quoteId?: string
+  quoteId: string
   name: string
   client: string
   customerContact: string
@@ -68,7 +55,6 @@ type ProjectRow = {
 }
 
 const QUOTES_STORAGE_KEY = 'nedvi_quotes'
-const PROJECT_INTAKE_KEY = 'nedvi_projects_from_quotes'
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null
@@ -143,66 +129,9 @@ function readQuotes(): SavedQuote[] {
     }))
 }
 
-function readIntakes(): ProjectIntake[] {
-  return readJsonArray(PROJECT_INTAKE_KEY)
-    .filter(isRecord)
-    .filter(
-      (value) =>
-        typeof value.id === 'string' &&
-        typeof value.folio === 'string' &&
-        typeof value.client === 'string' &&
-        typeof value.name === 'string' &&
-        typeof value.quoteTotal === 'number' &&
-        typeof value.createdAt === 'string',
-    )
-    .map((value) => ({
-      id: value.id as string,
-      folio: value.folio as string,
-      customerId: typeof value.customerId === 'string' ? value.customerId : undefined,
-      client: value.client as string,
-      name: value.name as string,
-      quoteId: typeof value.quoteId === 'string' ? value.quoteId : undefined,
-      quoteTotal: value.quoteTotal as number,
-      quoteCurrency:
-        typeof value.quoteCurrency === 'string' ? value.quoteCurrency : 'MXN',
-      createdAt: value.createdAt as string,
-      source: typeof value.source === 'string' ? value.source : 'Cotización aprobada',
-    }))
-}
-
 function buildProjects(): ProjectRow[] {
-  const convertedQuotes = readQuotes()
-  const intakes = readIntakes()
-  const quoteById = new Map(convertedQuotes.map((quote) => [quote.id, quote]))
-  const quoteByFolio = new Map(convertedQuotes.map((quote) => [quote.folio, quote]))
-  const projectsByFolio = new Map<string, ProjectRow>()
-
-  for (const intake of intakes) {
-    const quote =
-      (intake.quoteId ? quoteById.get(intake.quoteId) : undefined) ??
-      quoteByFolio.get(intake.folio)
-
-    projectsByFolio.set(intake.folio, {
-      id: intake.id,
-      folio: intake.folio,
-      quoteId: intake.quoteId ?? quote?.id,
-      name: intake.name || quote?.project || 'Proyecto sin nombre',
-      client: intake.client || quote?.client || 'Sin cliente',
-      customerContact: quote?.customerInfo?.contact ?? '',
-      responsible: quote?.owner ?? '',
-      address: quote?.customerInfo?.address ?? '',
-      budget: intake.quoteTotal || quote?.total || 0,
-      currency: intake.quoteCurrency === 'USD' || quote?.currency === 'USD' ? 'USD' : 'MXN',
-      createdAt: intake.createdAt || quote?.createdAt || '',
-      source: intake.source || 'Cotización aprobada',
-      status: 'Planeación',
-    })
-  }
-
-  for (const quote of convertedQuotes) {
-    if (projectsByFolio.has(quote.folio)) continue
-
-    projectsByFolio.set(quote.folio, {
+  return readQuotes()
+    .map((quote) => ({
       id: `quote-project-${quote.id}`,
       folio: quote.folio,
       quoteId: quote.id,
@@ -215,13 +144,9 @@ function buildProjects(): ProjectRow[] {
       currency: quote.currency === 'USD' ? 'USD' : 'MXN',
       createdAt: quote.createdAt,
       source: 'Cotización aprobada',
-      status: 'Planeación',
-    })
-  }
-
-  return Array.from(projectsByFolio.values()).sort((a, b) =>
-    b.createdAt.localeCompare(a.createdAt),
-  )
+      status: 'Planeación' as const,
+    }))
+    .sort((a, b) => b.createdAt.localeCompare(a.createdAt))
 }
 
 function money(value: number, currency: ProjectCurrency) {
@@ -259,10 +184,7 @@ export default function ProjectsPage() {
     loadProjects()
 
     const handleStorage = (event: StorageEvent) => {
-      if (
-        event.key === QUOTES_STORAGE_KEY ||
-        event.key === PROJECT_INTAKE_KEY
-      ) {
+      if (event.key === QUOTES_STORAGE_KEY) {
         loadProjects()
       }
     }
@@ -314,7 +236,7 @@ export default function ProjectsPage() {
               Proyectos creados
             </h1>
             <p className="mt-2 max-w-2xl text-sm text-[var(--muted)]">
-              Cada cotización aprobada que marques como “Crear proyecto” aparecerá aquí automáticamente con el mismo folio.
+              Aquí aparecen únicamente las cotizaciones existentes que hayas convertido en proyecto. Si eliminas la cotización, el proyecto también desaparece automáticamente.
             </p>
           </div>
 
@@ -342,7 +264,7 @@ export default function ProjectsPage() {
             icon={FolderKanban}
             label="Total de proyectos"
             value={projects.length.toString()}
-            detail="Creados desde cotizaciones"
+            detail="Cotizaciones convertidas vigentes"
           />
           <MetricCard
             icon={BriefcaseBusiness}
@@ -396,7 +318,7 @@ export default function ProjectsPage() {
               </h2>
               <p className="mt-2 max-w-lg text-sm text-[var(--muted)]">
                 {projects.length === 0
-                  ? 'Ve a Cotizaciones, cambia una cotización a Aprobada y presiona Crear proyecto. Aparecerá aquí usando directamente la información de esa cotización.'
+                  ? 'Ve a Cotizaciones, cambia una cotización a Aprobada y presiona Crear proyecto. Solo las cotizaciones que sigan existiendo aparecerán aquí.'
                   : 'Prueba con otro folio, cliente, proyecto o responsable.'}
               </p>
               {projects.length === 0 ? (
@@ -426,7 +348,7 @@ export default function ProjectsPage() {
                 <tbody className="divide-y divide-[var(--border)]">
                   {filteredProjects.map((project) => (
                     <tr
-                      key={project.folio}
+                      key={project.quoteId}
                       className="transition hover:bg-[var(--surface-soft)]"
                     >
                       <td className="px-5 py-4 font-semibold text-[#5496CC]">
