@@ -2,13 +2,13 @@
 
 import Link from 'next/link'
 import { useEffect, useState } from 'react'
-import { useParams } from 'next/navigation'
-import { ArrowLeft, Edit3, Mail, MapPin, Phone } from 'lucide-react'
+import { useParams, useRouter } from 'next/navigation'
+import { ArrowLeft, Edit3, Mail, MapPin, Phone, Trash2 } from 'lucide-react'
 import { AppShell } from '@/components/layout/AppShell'
 import { Card, CardHeader } from '@/components/ui/Card'
 import { CustomerStatusBadge } from '@/features/crm/components/CustomerStatusBadge'
 import { CustomerTimeline } from '@/features/crm/components/CustomerTimeline'
-import { readCustomerById } from '@/features/crm/services/customerStorage'
+import { deleteCustomer, readCustomerById } from '@/features/crm/services/customerStorage'
 import type { Customer } from '@/features/crm/types/customer'
 import {
   formatCustomerDate,
@@ -17,12 +17,29 @@ import {
 
 export default function CustomerDetailPage() {
   const params = useParams<{ id: string }>()
+  const router = useRouter()
   const customerId = params.id
   const [customer, setCustomer] = useState<Customer | null | undefined>(undefined)
 
   useEffect(() => {
     setCustomer(readCustomerById(customerId) ?? null)
   }, [customerId])
+
+  function handleDelete() {
+    if (!customer) return
+
+    const confirmed = window.confirm(
+      `¿Eliminar al cliente ${customer.company}?\n\nEsta acción quitará el cliente del CRM. Las cotizaciones ya creadas conservarán los datos guardados.`
+    )
+    if (!confirmed) return
+
+    if (deleteCustomer(customer.id)) {
+      router.push('/crm')
+      return
+    }
+
+    window.alert('No se pudo eliminar el cliente.')
+  }
 
   return (
     <AppShell>
@@ -84,13 +101,23 @@ export default function CustomerDetailPage() {
                 </div>
               </div>
 
-              <Link
-                href={`/crm/${customer.id}/edit`}
-                className="inline-flex h-10 items-center justify-center gap-2 rounded-xl border border-white/[0.09] px-4 text-xs font-semibold text-[#d5d7df] transition hover:bg-white/[0.06] hover:text-white"
-              >
-                <Edit3 size={14} />
-                Editar cliente
-              </Link>
+              <div className="flex flex-wrap gap-2">
+                <Link
+                  href={`/crm/${customer.id}/edit`}
+                  className="inline-flex h-10 items-center justify-center gap-2 rounded-xl border border-white/[0.09] px-4 text-xs font-semibold text-[#d5d7df] transition hover:bg-white/[0.06] hover:text-white"
+                >
+                  <Edit3 size={14} />
+                  Editar cliente
+                </Link>
+                <button
+                  type="button"
+                  onClick={handleDelete}
+                  className="inline-flex h-10 items-center justify-center gap-2 rounded-xl border border-red-400/25 px-4 text-xs font-semibold text-red-300 transition hover:bg-red-400/10 hover:text-red-200"
+                >
+                  <Trash2 size={14} />
+                  Eliminar cliente
+                </button>
+              </div>
             </header>
 
             <div className="grid gap-5 lg:grid-cols-[0.9fr_1.1fr]">
