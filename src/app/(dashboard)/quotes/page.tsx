@@ -5,12 +5,22 @@ import { AppShell } from '@/components/layout/AppShell'
 import { getCustomers } from '@/features/crm/services/customerService'
 
 type QuoteStatus = 'Borrador' | 'Enviada' | 'Aprobada' | 'Rechazada' | 'Vencida'
+type QuoteCurrency = 'MXN' | 'USD'
+type UnitMeasure =
+  | 'Kilómetros'
+  | 'Metros Cuadrados'
+  | 'Metros Cúbicos'
+  | 'Metros Lineales'
+  | 'Piezas'
+  | 'Litros'
+  | 'Otros'
 
 type QuoteItem = {
   id: string
   description: string
-  quantity: number
-  unitPrice: number
+  unit: UnitMeasure
+  quantity: number | ''
+  unitPrice: number | ''
 }
 
 type Quote = {
@@ -22,6 +32,7 @@ type Quote = {
   createdAt: string
   validUntil: string
   items: QuoteItem[]
+  currency: QuoteCurrency
   taxRate: number
   subtotal: number
   tax: number
@@ -41,18 +52,30 @@ const monthOptions = [
   'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre',
 ]
 
+const unitOptions: UnitMeasure[] = [
+  'Kilómetros',
+  'Metros Cuadrados',
+  'Metros Cúbicos',
+  'Metros Lineales',
+  'Piezas',
+  'Litros',
+  'Otros',
+]
+
 const emptyItem = (): QuoteItem => ({
   id: crypto.randomUUID(),
   description: '',
-  quantity: 1,
-  unitPrice: 0,
+  unit: 'Piezas',
+  quantity: '',
+  unitPrice: '',
 })
 
-function currency(value: number) {
-  return new Intl.NumberFormat('es-MX', {
-    style: 'currency',
-    currency: 'MXN',
+function money(value: number, currency: QuoteCurrency = 'MXN') {
+  const amount = new Intl.NumberFormat('es-MX', {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
   }).format(value)
+  return `${currency} $${amount}`
 }
 
 function nextFolio() {
@@ -114,6 +137,7 @@ export default function QuotesPage() {
   const [project, setProject] = useState('')
   const [validUntil, setValidUntil] = useState('')
   const [taxRate, setTaxRate] = useState('16')
+  const [quoteCurrency, setQuoteCurrency] = useState<QuoteCurrency>('MXN')
   const [owner, setOwner] = useState('')
   const [notes, setNotes] = useState('')
   const [status, setStatus] = useState<QuoteStatus>('Borrador')
@@ -130,12 +154,21 @@ export default function QuotesPage() {
         const normalized = parsed.map((quote) => ({
           ...quote,
           customerId: quote.customerId ?? '',
+          currency: quote.currency === 'USD' ? 'USD' : 'MXN',
           items:
             Array.isArray(quote.items) && quote.items.length > 0
-              ? quote.items
+              ? quote.items.map((item) => ({
+                  ...item,
+                  unit: unitOptions.includes(item.unit as UnitMeasure)
+                    ? item.unit
+                    : 'Piezas',
+                  quantity: item.quantity ?? '',
+                  unitPrice: item.unitPrice ?? '',
+                }))
               : [{
                   id: crypto.randomUUID(),
                   description: quote.project || 'Servicio',
+                  unit: 'Piezas' as UnitMeasure,
                   quantity: 1,
                   unitPrice: quote.subtotal || 0,
                 }],
@@ -146,6 +179,7 @@ export default function QuotesPage() {
                 ? Number(((quote.tax / quote.subtotal) * 100).toFixed(2))
                 : 16,
           notes: quote.notes ?? '',
+          owner: quote.owner ?? '',
         }))
         setQuotes(normalized)
       }
@@ -208,6 +242,7 @@ export default function QuotesPage() {
     setProject('')
     setValidUntil('')
     setTaxRate('16')
+    setQuoteCurrency('MXN')
     setOwner('')
     setNotes('')
     setStatus('Borrador')
@@ -231,10 +266,11 @@ export default function QuotesPage() {
     setProject(quote.project)
     setValidUntil(quote.validUntil)
     setTaxRate(String(quote.taxRate))
+    setQuoteCurrency(quote.currency === 'USD' ? 'USD' : 'MXN')
     setOwner(quote.owner)
     setNotes(quote.notes)
     setStatus(quote.status)
-    setItems(quote.items.map((item) => ({ ...item })))
+    setItems(quote.items.map((item) => ({ ...item, unit: item.unit || 'Piezas' })))
     setOpen(true)
   }
 
@@ -243,7 +279,11 @@ export default function QuotesPage() {
       current.map((item) => {
         if (item.id !== id) return item
         if (field === 'description') return { ...item, description: value }
-        return { ...item, [field]: Number(value || 0) }
+        if (field === 'unit') return { ...item, unit: value as UnitMeasure }
+
+        const numericValue: number | '' = value === '' ? '' : Number(value)
+        if (field === 'quantity') return { ...item, quantity: numericValue }
+        return { ...item, unitPrice: numericValue }
       }),
     )
   }
@@ -273,7 +313,12 @@ export default function QuotesPage() {
     }
 
     const validItems = items.filter(
-      (item) => item.description.trim() && item.quantity > 0 && item.unitPrice >= 0,
+      (item) =>
+        item.description.trim() &&
+        item.quantity !== '' &&
+        Number(item.quantity) > 0 &&
+        item.unitPrice !== '' &&
+        Number(item.unitPrice) >= 0,
     )
 
     if (validItems.length === 0) {
@@ -281,10 +326,16 @@ export default function QuotesPage() {
       return
     }
 
+    const normalizedItems: QuoteItem[] = validItems.map((item) => ({
+      ...item,
+      quantity: Number(item.quantity),
+      unitPrice: Number(item.unitPrice),
+    }))
+
     const matchedCustomer = customers.find(
       (customer) => customer.company.trim().toLowerCase() === cleanClientName.toLowerCase(),
     )
-    const calculated = quoteTotals(validItems, Number(taxRate || 0))
+    const calculated = quoteTotals(normalizedItems, Number(taxRate || 0))
 
     if (editingId) {
       setQuotes((current) =>
@@ -296,7 +347,8 @@ export default function QuotesPage() {
                 client: cleanClientName,
                 project: project.trim(),
                 validUntil,
-                items: validItems,
+                items: normalizedItems,
+                currency: quoteCurrency,
                 taxRate: Number(taxRate || 0),
                 ...calculated,
                 status,
@@ -315,7 +367,8 @@ export default function QuotesPage() {
         project: project.trim(),
         createdAt: new Date().toISOString().slice(0, 10),
         validUntil,
-        items: validItems,
+        items: normalizedItems,
+        currency: quoteCurrency,
         taxRate: Number(taxRate || 0),
         ...calculated,
         status,
@@ -379,6 +432,7 @@ export default function QuotesPage() {
       name: quote.project,
       quoteId: quote.id,
       quoteTotal: quote.total,
+      quoteCurrency: quote.currency,
       createdAt: new Date().toISOString().slice(0, 10),
       source: 'Cotización aprobada',
     }
@@ -434,7 +488,7 @@ export default function QuotesPage() {
                     <td className="px-4 py-4 font-semibold text-[#5B93C9]">{quote.folio}</td>
                     <td className="px-4 py-4">{quote.client}</td>
                     <td className="px-4 py-4"><div className="font-medium">{quote.project}</div><div className="mt-1 text-xs text-slate-500">{quote.owner || 'Sin responsable'}</div></td>
-                    <td className="px-4 py-4 font-semibold">{currency(quote.total)}</td>
+                    <td className="px-4 py-4 font-semibold">{money(quote.total, quote.currency)}</td>
                     <td className="px-4 py-4">
                       <select value={quote.status} onChange={(event) => changeStatus(quote.id, event.target.value as QuoteStatus)} className={`rounded-full border-0 px-3 py-1.5 text-xs font-semibold outline-none ${statusClass(quote.status)}`}>
                         <option>Borrador</option><option>Enviada</option><option>Aprobada</option><option>Rechazada</option><option>Vencida</option>
@@ -458,7 +512,7 @@ export default function QuotesPage() {
 
         {open && (
           <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
-            <div className="max-h-[92vh] w-full max-w-4xl overflow-y-auto rounded-2xl bg-white p-6 shadow-2xl dark:bg-slate-900">
+            <div className="max-h-[92vh] w-full max-w-5xl overflow-y-auto rounded-2xl bg-white p-6 shadow-2xl dark:bg-slate-900">
               <div className="mb-5 flex items-start justify-between gap-4">
                 <div>
                   <h2 className="text-xl font-bold">{editingId ? 'Editar cotización' : 'Nueva cotización'}</h2>
@@ -471,43 +525,26 @@ export default function QuotesPage() {
                 <div className="grid gap-4 md:grid-cols-2">
                   <label className="space-y-2">
                     <span className="text-sm font-semibold">Cliente *</span>
-                    <input
-                      value={clientName}
-                      onChange={(event) => setClientName(event.target.value)}
-                      list="nedvi-clientes"
-                      placeholder="Escribe el nombre del cliente"
-                      autoComplete="off"
-                      className="w-full rounded-xl border border-slate-200 bg-transparent px-4 py-3 outline-none focus:border-[#7BAEE3] dark:border-slate-700"
-                    />
-                    <datalist id="nedvi-clientes">
-                      {customers.map((customer) => <option key={customer.id} value={customer.company} />)}
-                    </datalist>
+                    <input value={clientName} onChange={(event) => setClientName(event.target.value)} list="nedvi-clientes" placeholder="Escribe el nombre del cliente" autoComplete="off" className="w-full rounded-xl border border-slate-200 bg-transparent px-4 py-3 outline-none focus:border-[#7BAEE3] dark:border-slate-700" />
+                    <datalist id="nedvi-clientes">{customers.map((customer) => <option key={customer.id} value={customer.company} />)}</datalist>
                     <p className="text-[11px] text-slate-500">Puedes escribir cualquier cliente. Los clientes registrados aparecen solo como sugerencias.</p>
                   </label>
 
-                  <label className="space-y-2">
-                    <span className="text-sm font-semibold">Proyecto / servicio *</span>
-                    <input value={project} onChange={(e) => setProject(e.target.value)} placeholder="Ej. Remodelación de oficinas" className="w-full rounded-xl border border-slate-200 bg-transparent px-4 py-3 dark:border-slate-700" />
-                  </label>
+                  <label className="space-y-2"><span className="text-sm font-semibold">Proyecto / servicio *</span><input value={project} onChange={(e) => setProject(e.target.value)} placeholder="Ej. Remodelación de oficinas" className="w-full rounded-xl border border-slate-200 bg-transparent px-4 py-3 dark:border-slate-700" /></label>
 
                   <div className="space-y-2">
                     <span className="text-sm font-semibold">Vigencia</span>
                     <div className="grid grid-cols-[0.8fr_1.45fr_1fr] gap-2">
-                      <select aria-label="Día de vigencia" value={selectedDate.day ? String(Number(selectedDate.day)) : ''} onChange={(event) => updateValidUntil('day', event.target.value)} className="w-full rounded-xl border border-slate-200 bg-transparent px-3 py-3 dark:border-slate-700">
-                        <option value="">Día</option>{dayOptions.map((day) => <option key={day} value={day}>{day}</option>)}
-                      </select>
-                      <select aria-label="Mes de vigencia" value={selectedDate.month ? String(Number(selectedDate.month)) : ''} onChange={(event) => updateValidUntil('month', event.target.value)} className="w-full rounded-xl border border-slate-200 bg-transparent px-3 py-3 dark:border-slate-700">
-                        <option value="">Mes</option>{monthOptions.map((month, index) => <option key={month} value={index + 1}>{month}</option>)}
-                      </select>
-                      <select aria-label="Año de vigencia" value={selectedDate.year} onChange={(event) => updateValidUntil('year', event.target.value)} className="w-full rounded-xl border border-slate-200 bg-transparent px-3 py-3 dark:border-slate-700">
-                        <option value="">Año</option>{yearOptions.map((year) => <option key={year} value={year}>{year}</option>)}
-                      </select>
+                      <select aria-label="Día de vigencia" value={selectedDate.day ? String(Number(selectedDate.day)) : ''} onChange={(event) => updateValidUntil('day', event.target.value)} className="w-full rounded-xl border border-slate-200 bg-transparent px-3 py-3 dark:border-slate-700"><option value="">Día</option>{dayOptions.map((day) => <option key={day} value={day}>{day}</option>)}</select>
+                      <select aria-label="Mes de vigencia" value={selectedDate.month ? String(Number(selectedDate.month)) : ''} onChange={(event) => updateValidUntil('month', event.target.value)} className="w-full rounded-xl border border-slate-200 bg-transparent px-3 py-3 dark:border-slate-700"><option value="">Mes</option>{monthOptions.map((month, index) => <option key={month} value={index + 1}>{month}</option>)}</select>
+                      <select aria-label="Año de vigencia" value={selectedDate.year} onChange={(event) => updateValidUntil('year', event.target.value)} className="w-full rounded-xl border border-slate-200 bg-transparent px-3 py-3 dark:border-slate-700"><option value="">Año</option>{yearOptions.map((year) => <option key={year} value={year}>{year}</option>)}</select>
                     </div>
                   </div>
 
                   <label className="space-y-2"><span className="text-sm font-semibold">Responsable</span><input value={owner} onChange={(e) => setOwner(e.target.value)} placeholder="Responsable comercial" className="w-full rounded-xl border border-slate-200 bg-transparent px-4 py-3 dark:border-slate-700" /></label>
                   <label className="space-y-2"><span className="text-sm font-semibold">Estado</span><select value={status} onChange={(e) => setStatus(e.target.value as QuoteStatus)} className="w-full rounded-xl border border-slate-200 bg-transparent px-4 py-3 dark:border-slate-700"><option>Borrador</option><option>Enviada</option><option>Aprobada</option><option>Rechazada</option><option>Vencida</option></select></label>
                   <label className="space-y-2"><span className="text-sm font-semibold">IVA (%)</span><input type="number" min="0" step="0.01" value={taxRate} onChange={(e) => setTaxRate(e.target.value)} className="w-full rounded-xl border border-slate-200 bg-transparent px-4 py-3 dark:border-slate-700" /></label>
+                  <label className="space-y-2"><span className="text-sm font-semibold">Moneda</span><select value={quoteCurrency} onChange={(e) => setQuoteCurrency(e.target.value as QuoteCurrency)} className="w-full rounded-xl border border-slate-200 bg-transparent px-4 py-3 dark:border-slate-700"><option value="MXN">Pesos mexicanos (MXN)</option><option value="USD">Dólares estadounidenses (USD)</option></select></label>
                 </div>
 
                 <section>
@@ -516,17 +553,15 @@ export default function QuotesPage() {
                     <button type="button" onClick={addItem} className="rounded-lg border border-slate-200 px-3 py-2 text-xs font-semibold dark:border-slate-700">+ Agregar material</button>
                   </div>
                   <div className="space-y-3">
-                    <div className="hidden gap-2 px-3 text-xs font-semibold text-slate-500 md:grid md:grid-cols-[1fr_110px_150px_auto] dark:text-slate-400">
-                      <span>Material</span>
-                      <span>Cantidad</span>
-                      <span>Precio por unidad</span>
-                      <span aria-hidden="true" />
+                    <div className="hidden gap-2 px-3 text-xs font-semibold text-slate-500 md:grid md:grid-cols-[minmax(220px,1fr)_150px_100px_160px_auto] dark:text-slate-400">
+                      <span>Material</span><span>UM</span><span>Cantidad</span><span>Precio por unidad ({quoteCurrency})</span><span aria-hidden="true" />
                     </div>
                     {items.map((item, index) => (
-                      <div key={item.id} className="grid gap-2 rounded-xl border border-slate-200 p-3 dark:border-slate-700 md:grid-cols-[1fr_110px_150px_auto]">
+                      <div key={item.id} className="grid gap-2 rounded-xl border border-slate-200 p-3 dark:border-slate-700 md:grid-cols-[minmax(220px,1fr)_150px_100px_160px_auto]">
                         <input value={item.description} onChange={(e) => updateItem(item.id, 'description', e.target.value)} placeholder={`Material ${index + 1}`} className="rounded-lg border border-slate-200 bg-transparent px-3 py-2 dark:border-slate-700" />
+                        <select aria-label="Unidad de medida" value={item.unit} onChange={(e) => updateItem(item.id, 'unit', e.target.value)} className="rounded-lg border border-slate-200 bg-transparent px-3 py-2 dark:border-slate-700">{unitOptions.map((unit) => <option key={unit} value={unit}>{unit}</option>)}</select>
                         <input type="number" min="0.01" step="0.01" value={item.quantity} onChange={(e) => updateItem(item.id, 'quantity', e.target.value)} placeholder="Cantidad" className="rounded-lg border border-slate-200 bg-transparent px-3 py-2 dark:border-slate-700" />
-                        <input type="number" min="0" step="0.01" value={item.unitPrice} onChange={(e) => updateItem(item.id, 'unitPrice', e.target.value)} placeholder="Precio unitario" className="rounded-lg border border-slate-200 bg-transparent px-3 py-2 dark:border-slate-700" />
+                        <input type="number" min="0" step="0.01" value={item.unitPrice} onChange={(e) => updateItem(item.id, 'unitPrice', e.target.value)} placeholder={`Precio ${quoteCurrency}`} className="rounded-lg border border-slate-200 bg-transparent px-3 py-2 dark:border-slate-700" />
                         <button type="button" onClick={() => removeItem(item.id)} disabled={items.length === 1} className="rounded-lg px-3 py-2 text-sm text-red-500 disabled:opacity-30">Quitar</button>
                       </div>
                     ))}
@@ -536,9 +571,9 @@ export default function QuotesPage() {
                 <label className="block space-y-2"><span className="text-sm font-semibold">Notas / condiciones</span><textarea rows={3} value={notes} onChange={(e) => setNotes(e.target.value)} placeholder="Condiciones de pago, alcance, vigencia, exclusiones..." className="w-full rounded-xl border border-slate-200 bg-transparent px-4 py-3 dark:border-slate-700" /></label>
 
                 <div className="grid gap-3 rounded-2xl bg-slate-50 p-4 dark:bg-slate-950 md:grid-cols-3">
-                  <div><p className="text-xs uppercase text-slate-500">Subtotal</p><p className="mt-1 text-lg font-bold">{currency(totals.subtotal)}</p></div>
-                  <div><p className="text-xs uppercase text-slate-500">IVA</p><p className="mt-1 text-lg font-bold">{currency(totals.tax)}</p></div>
-                  <div><p className="text-xs uppercase text-slate-500">Total</p><p className="mt-1 text-lg font-bold text-[#5B93C9]">{currency(totals.total)}</p></div>
+                  <div><p className="text-xs uppercase text-slate-500">Subtotal</p><p className="mt-1 text-lg font-bold">{money(totals.subtotal, quoteCurrency)}</p></div>
+                  <div><p className="text-xs uppercase text-slate-500">IVA</p><p className="mt-1 text-lg font-bold">{money(totals.tax, quoteCurrency)}</p></div>
+                  <div><p className="text-xs uppercase text-slate-500">Total</p><p className="mt-1 text-lg font-bold text-[#5B93C9]">{money(totals.total, quoteCurrency)}</p></div>
                 </div>
 
                 <div className="flex justify-end gap-3">
@@ -555,17 +590,9 @@ export default function QuotesPage() {
         <>
           <style>{`
             @media print {
-              html, body {
-                background: #ffffff !important;
-                color: #000000 !important;
-              }
-              body * {
-                visibility: hidden !important;
-              }
-              #quote-print,
-              #quote-print * {
-                visibility: visible !important;
-              }
+              html, body { background: #ffffff !important; color: #000000 !important; }
+              body * { visibility: hidden !important; }
+              #quote-print, #quote-print * { visibility: visible !important; }
               #quote-print {
                 display: block !important;
                 position: absolute !important;
@@ -583,66 +610,29 @@ export default function QuotesPage() {
               <div className="mb-8 flex items-center justify-between border-b border-slate-300 pb-6">
                 <div className="flex items-center gap-4">
                   <img src="/icon.png" alt="NEDVI Constructora" className="h-20 w-20 object-contain" />
-                  <div>
-                    <h1 className="text-3xl font-bold tracking-tight">NEDVI CONSTRUCTORA</h1>
-                    <p className="mt-1 text-sm text-slate-600">Cotización comercial</p>
-                  </div>
+                  <div><h1 className="text-3xl font-bold tracking-tight">NEDVI CONSTRUCTORA</h1><p className="mt-1 text-sm text-slate-600">Cotización comercial</p></div>
                 </div>
-                <div className="text-right">
-                  <p className="text-xl font-bold">{printQuote.folio}</p>
-                  <p className="mt-1 text-sm">Fecha: {printQuote.createdAt}</p>
-                  {printQuote.validUntil ? <p className="text-sm">Vigencia: {printQuote.validUntil}</p> : null}
-                </div>
+                <div className="text-right"><p className="text-xl font-bold">{printQuote.folio}</p><p className="mt-1 text-sm">Fecha: {printQuote.createdAt}</p>{printQuote.validUntil ? <p className="text-sm">Vigencia: {printQuote.validUntil}</p> : null}</div>
               </div>
 
               <div className="mb-7 grid grid-cols-3 gap-6 border-b border-slate-200 pb-6">
-                <div>
-                  <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Cliente</p>
-                  <p className="mt-1 font-semibold">{printQuote.client}</p>
-                </div>
-                <div>
-                  <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Proyecto / servicio</p>
-                  <p className="mt-1 font-semibold">{printQuote.project}</p>
-                </div>
-                <div>
-                  <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Responsable</p>
-                  <p className="mt-1 font-semibold">{printQuote.owner || 'Sin responsable'}</p>
-                </div>
+                <div><p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Cliente</p><p className="mt-1 font-semibold">{printQuote.client}</p></div>
+                <div><p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Proyecto / servicio</p><p className="mt-1 font-semibold">{printQuote.project}</p></div>
+                <div><p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Responsable</p><p className="mt-1 font-semibold">{printQuote.owner || 'Sin responsable'}</p></div>
               </div>
 
               <table className="w-full border-collapse bg-white text-sm">
-                <thead>
-                  <tr className="border-b-2 border-slate-400 bg-white">
-                    <th className="py-3 text-left">Material</th>
-                    <th className="py-3 text-right">Cantidad</th>
-                    <th className="py-3 text-right">Precio por unidad</th>
-                    <th className="py-3 text-right">Importe</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {printQuote.items.map((item) => (
-                    <tr key={item.id} className="border-b border-slate-200 bg-white">
-                      <td className="py-3">{item.description}</td>
-                      <td className="py-3 text-right">{item.quantity}</td>
-                      <td className="py-3 text-right">{currency(item.unitPrice)}</td>
-                      <td className="py-3 text-right">{currency(item.quantity * item.unitPrice)}</td>
-                    </tr>
-                  ))}
-                </tbody>
+                <thead><tr className="border-b-2 border-slate-400 bg-white"><th className="py-3 text-left">Material</th><th className="py-3 text-center">UM</th><th className="py-3 text-right">Cantidad</th><th className="py-3 text-right">Precio por unidad ({printQuote.currency})</th><th className="py-3 text-right">Importe</th></tr></thead>
+                <tbody>{printQuote.items.map((item) => <tr key={item.id} className="border-b border-slate-200 bg-white"><td className="py-3">{item.description}</td><td className="py-3 text-center">{item.unit}</td><td className="py-3 text-right">{item.quantity}</td><td className="py-3 text-right">{money(Number(item.unitPrice), printQuote.currency)}</td><td className="py-3 text-right">{money(Number(item.quantity) * Number(item.unitPrice), printQuote.currency)}</td></tr>)}</tbody>
               </table>
 
-              <div className="ml-auto mt-7 w-72 space-y-2 text-sm">
-                <div className="flex justify-between"><span>Subtotal</span><strong>{currency(printQuote.subtotal)}</strong></div>
-                <div className="flex justify-between"><span>IVA ({printQuote.taxRate}%)</span><strong>{currency(printQuote.tax)}</strong></div>
-                <div className="flex justify-between border-t border-slate-400 pt-3 text-lg"><span>Total</span><strong>{currency(printQuote.total)}</strong></div>
+              <div className="ml-auto mt-7 w-80 space-y-2 text-sm">
+                <div className="flex justify-between"><span>Subtotal</span><strong>{money(printQuote.subtotal, printQuote.currency)}</strong></div>
+                <div className="flex justify-between"><span>IVA ({printQuote.taxRate}%)</span><strong>{money(printQuote.tax, printQuote.currency)}</strong></div>
+                <div className="flex justify-between border-t border-slate-400 pt-3 text-lg"><span>Total</span><strong>{money(printQuote.total, printQuote.currency)}</strong></div>
               </div>
 
-              {printQuote.notes ? (
-                <div className="mt-8 border-t border-slate-200 pt-5">
-                  <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Notas / condiciones</p>
-                  <p className="mt-2 whitespace-pre-wrap text-sm">{printQuote.notes}</p>
-                </div>
-              ) : null}
+              {printQuote.notes ? <div className="mt-8 border-t border-slate-200 pt-5"><p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Notas / condiciones</p><p className="mt-2 whitespace-pre-wrap text-sm">{printQuote.notes}</p></div> : null}
             </div>
           </section>
         </>
