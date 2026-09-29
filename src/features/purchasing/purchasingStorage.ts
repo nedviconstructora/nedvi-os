@@ -21,6 +21,10 @@ export type Supplier = {
   category: SupplierCategory
   address: string
   paymentTerms: string
+  bankAccountName: string
+  bankName: string
+  bankClabe: string
+  bankRfc: string
   status: SupplierStatus
   notes: string
   createdAt: string
@@ -198,7 +202,7 @@ function today() {
   return new Date().toISOString().slice(0, 10)
 }
 
-function nextSequence(type: 'SUP' | 'REQ' | 'OC') {
+function nextSequence(type: 'OC') {
   if (typeof window === 'undefined') return 1
   const year = new Date().getFullYear()
   const raw = window.localStorage.getItem(SEQUENCES_STORAGE_KEY)
@@ -228,13 +232,66 @@ function nextSequence(type: 'SUP' | 'REQ' | 'OC') {
   return nextValue
 }
 
+function compactFolioNumber(value: string, prefix: 'P' | 'R') {
+  const match = value.match(new RegExp(`^${prefix}(\\d{4,})$`))
+  return match ? Number(match[1]) : 0
+}
+
+function migrateCompactFolios(values: unknown[], prefix: 'P' | 'R', storageKey: string) {
+  if (typeof window === 'undefined') return values
+
+  const records = values.filter(isRecord)
+  const used = new Set(
+    records
+      .map((value) =>
+        typeof value.folio === 'string' ? compactFolioNumber(value.folio, prefix) : 0,
+      )
+      .filter((value) => value > 0),
+  )
+
+  const legacyRecords = records
+    .filter((value) => {
+      const folio = typeof value.folio === 'string' ? value.folio : ''
+      return compactFolioNumber(folio, prefix) === 0
+    })
+    .sort((a, b) => {
+      const left = typeof a.createdAt === 'string' ? a.createdAt : ''
+      const right = typeof b.createdAt === 'string' ? b.createdAt : ''
+      return left.localeCompare(right)
+    })
+
+  const migratedById = new Map<string, string>()
+  let candidate = 1
+
+  for (const value of legacyRecords) {
+    while (used.has(candidate)) candidate += 1
+    if (typeof value.id === 'string') {
+      migratedById.set(value.id, `${prefix}${String(candidate).padStart(4, '0')}`)
+      used.add(candidate)
+      candidate += 1
+    }
+  }
+
+  if (!migratedById.size) return values
+
+  const migrated = values.map((value) => {
+    if (!isRecord(value) || typeof value.id !== 'string') return value
+    const folio = migratedById.get(value.id)
+    return folio ? { ...value, folio } : value
+  })
+
+  window.localStorage.setItem(storageKey, JSON.stringify(migrated))
+  return migrated
+}
+
 export function nextSupplierFolio() {
-  return `NEDVI-PROV-${String(nextSequence('SUP')).padStart(4, '0')}`
+  const next = Math.max(0, ...readSuppliers().map((supplier) => compactFolioNumber(supplier.folio, 'P'))) + 1
+  return `P${String(next).padStart(4, '0')}`
 }
 
 export function nextRequisitionFolio() {
-  const year = new Date().getFullYear()
-  return `REQ-${year}-${String(nextSequence('REQ')).padStart(4, '0')}`
+  const next = Math.max(0, ...readRequisitions().map((requisition) => compactFolioNumber(requisition.folio, 'R'))) + 1
+  return `R${String(next).padStart(4, '0')}`
 }
 
 export function nextPurchaseOrderFolio() {
@@ -243,7 +300,7 @@ export function nextPurchaseOrderFolio() {
 }
 
 export function readSuppliers(): Supplier[] {
-  return readArray(SUPPLIERS_STORAGE_KEY)
+  return migrateCompactFolios(readArray(SUPPLIERS_STORAGE_KEY), 'P', SUPPLIERS_STORAGE_KEY)
     .filter(isRecord)
     .filter(
       (value) =>
@@ -264,6 +321,10 @@ export function readSuppliers(): Supplier[] {
         : 'Otro',
       address: typeof value.address === 'string' ? value.address : '',
       paymentTerms: typeof value.paymentTerms === 'string' ? value.paymentTerms : '',
+      bankAccountName: typeof value.bankAccountName === 'string' ? value.bankAccountName : '',
+      bankName: typeof value.bankName === 'string' ? value.bankName : '',
+      bankClabe: typeof value.bankClabe === 'string' ? value.bankClabe : '',
+      bankRfc: typeof value.bankRfc === 'string' ? value.bankRfc : '',
       status: value.status === 'Inactivo' ? 'Inactivo' : 'Activo',
       notes: typeof value.notes === 'string' ? value.notes : '',
       createdAt: typeof value.createdAt === 'string' ? value.createdAt : today(),
@@ -298,7 +359,7 @@ export function readConvertedProjects(): PurchasingProject[] {
 }
 
 export function readRequisitions(): Requisition[] {
-  return readArray(REQUISITIONS_STORAGE_KEY)
+  return migrateCompactFolios(readArray(REQUISITIONS_STORAGE_KEY), 'R', REQUISITIONS_STORAGE_KEY)
     .filter(isRecord)
     .filter(
       (value) =>
@@ -347,6 +408,10 @@ export function writeRequisitions(values: Requisition[]) {
 }
 
 export function readPurchaseOrders(): PurchaseOrder[] {
+  const requisitionFolioById = new Map(
+    readRequisitions().map((requisition) => [requisition.id, requisition.folio]),
+  )
+
   return readArray(PURCHASE_ORDERS_STORAGE_KEY)
     .filter(isRecord)
     .filter(
@@ -361,7 +426,9 @@ export function readPurchaseOrders(): PurchaseOrder[] {
       id: value.id as string,
       folio: value.folio as string,
       requisitionId: value.requisitionId as string,
-      requisitionFolio: typeof value.requisitionFolio === 'string' ? value.requisitionFolio : '',
+      requisitionFolio:
+        requisitionFolioById.get(value.requisitionId as string) ??
+        (typeof value.requisitionFolio === 'string' ? value.requisitionFolio : ''),
       projectQuoteId: typeof value.projectQuoteId === 'string' ? value.projectQuoteId : '',
       projectFolio: typeof value.projectFolio === 'string' ? value.projectFolio : '',
       projectName: typeof value.projectName === 'string' ? value.projectName : '',
