@@ -79,10 +79,10 @@ const navigationGroups: NavigationGroup[] = [
     label: 'Operaciones / Obra',
     icon: HardHat,
     items: [
-      { label: 'Avance de obra', icon: BarChart3, comingSoon: true },
-      { label: 'Reportes diarios', icon: FileText, comingSoon: true },
-      { label: 'Asistencias', icon: UsersRound, comingSoon: true },
-      { label: 'Cuadrillas', icon: UserRound, comingSoon: true },
+      { label: 'Avance de obra', href: '/site-progress', icon: BarChart3 },
+      { label: 'Reportes diarios', href: '/daily-reports', icon: FileText },
+      { label: 'Asistencias', href: '/attendance', icon: UsersRound },
+      { label: 'Cuadrillas', href: '/crews', icon: UserRound },
     ],
   },
   {
