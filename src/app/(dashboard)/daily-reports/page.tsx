@@ -366,7 +366,7 @@ export default function DailyReportsPage() {
     const progressRows = progress?.items ?? []
     const totals = progressTotals(progressRows)
     const progressPercent = Math.max(0, Math.min(100, progress?.percent ?? 0))
-    const printWindow = window.open('', '_blank', 'width=1100,height=850')
+    const printWindow = window.open('', '_blank', 'width=900,height=1000')
 
     if (!printWindow) {
       window.alert('Permite las ventanas emergentes para generar el PDF del reporte.')
@@ -446,68 +446,69 @@ export default function DailyReportsPage() {
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>${escapeHtml(title)}</title>
   <style>
-    @page { size: A4 landscape; margin: 0; }
+    @page { size: A4 portrait; margin: 0; }
     * { box-sizing: border-box; }
     html, body { margin: 0; padding: 0; background: #ffffff; color: #172033; }
     body {
-      width: 297mm;
-      min-height: 210mm;
-      padding: 10mm 12mm;
+      width: 210mm;
+      min-height: 297mm;
+      padding: 11mm 12mm;
       font-family: Arial, Helvetica, sans-serif;
-      font-size: 10px;
-      line-height: 1.4;
+      font-size: 9px;
+      line-height: 1.38;
       -webkit-print-color-adjust: exact;
       print-color-adjust: exact;
     }
     .document { width: 100%; margin: 0; background: #ffffff; }
-    .header { display: flex; align-items: center; justify-content: space-between; gap: 24px; padding-bottom: 12px; border-bottom: 2px solid #5496CC; }
-    .brand { display: flex; align-items: center; gap: 12px; }
-    .logo { width: 44px; height: 44px; object-fit: contain; }
-    h1 { margin: 0; font-size: 19px; line-height: 1.15; color: #101827; }
+    .header { display: flex; align-items: center; justify-content: space-between; gap: 18px; padding-bottom: 11px; border-bottom: 2px solid #5496CC; }
+    .brand { display: flex; align-items: center; gap: 11px; }
+    .logo { width: 42px; height: 42px; object-fit: contain; }
+    h1 { margin: 0; font-size: 17px; line-height: 1.15; color: #101827; }
     .subtitle { margin: 4px 0 0; color: #657083; }
     .folio { text-align: right; }
-    .folio strong { color: #5496CC; font-size: 12px; }
+    .folio strong { color: #5496CC; font-size: 11px; }
     .folio p { margin: 4px 0 0; }
-    .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 12px; }
-    .card { padding: 11px 12px; border: 0; border-radius: 9px; background: #f7f9fb; }
-    .section { margin-top: 12px; }
-    .section-title { margin: 0 0 7px; color: #697386; font-size: 8.5px; font-weight: 700; letter-spacing: .07em; text-transform: uppercase; }
-    .rows { display: grid; grid-template-columns: repeat(4, 1fr); gap: 4px 16px; }
-    .rows p, .card p { margin: 0 0 4px; }
+    .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 10px; }
+    .card { padding: 10px 11px; border: 0; border-radius: 8px; background: #f7f9fb; }
+    .section { margin-top: 10px; }
+    .section-title { margin: 0 0 6px; color: #697386; font-size: 7.5px; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; }
+    .rows { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 4px 10px; }
+    .rows p, .card p { margin: 0 0 3px; overflow-wrap: anywhere; }
     .rows p:last-child, .card p:last-child { margin-bottom: 0; }
-    .progress-card { margin-top: 12px; padding: 11px 12px; border-radius: 9px; background: #f5f9fd; }
-    .progress-head { display: flex; justify-content: space-between; gap: 16px; }
-    .progress-label { margin: 0; color: #5496CC; font-size: 8.5px; font-weight: 700; letter-spacing: .07em; text-transform: uppercase; }
-    .progress-value { margin: 5px 0 0; font-size: 16px; font-weight: 700; }
-    .progress-milestone { margin: 3px 0 0; font-weight: 600; }
-    .progress-date { color: #7a8494; font-size: 8.5px; white-space: nowrap; }
-    .bar { margin-top: 8px; height: 6px; overflow: hidden; border-radius: 999px; background: #e5eaf0; }
+    .progress-card { margin-top: 10px; padding: 10px 11px; border-radius: 8px; background: #f5f9fd; }
+    .progress-head { display: flex; justify-content: space-between; gap: 12px; }
+    .progress-label { margin: 0; color: #5496CC; font-size: 7.5px; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; }
+    .progress-value { margin: 4px 0 0; font-size: 14px; font-weight: 700; }
+    .progress-milestone { margin: 2px 0 0; font-weight: 600; }
+    .progress-date { color: #7a8494; font-size: 7.5px; white-space: nowrap; }
+    .bar { margin-top: 7px; height: 5px; overflow: hidden; border-radius: 999px; background: #e5eaf0; }
     .bar > div { height: 100%; border-radius: inherit; background: #5496CC; }
-    .progress-notes { margin: 7px 0 0; color: #4c5668; }
-    .text-box { min-height: 58px; padding: 10px 12px; border-radius: 8px; background: #f8fafc; }
+    .progress-notes { margin: 6px 0 0; color: #4c5668; }
+    .text-box { min-height: 48px; padding: 9px 10px; border-radius: 7px; background: #f8fafc; }
     .text-box p { margin: 0; }
-    .table-wrap { width: 100%; overflow: hidden; border-radius: 8px; border: 1px solid #e4e8ee; }
-    .progress-table { width: 100%; border-collapse: collapse; table-layout: fixed; font-size: 8px; }
-    .progress-table th { padding: 7px 5px; background: #f2f5f8; color: #5f6b7c; text-align: left; text-transform: uppercase; font-size: 7px; letter-spacing: .03em; }
-    .progress-table td { padding: 7px 5px; border-top: 1px solid #edf0f3; vertical-align: top; overflow-wrap: anywhere; }
-    .progress-table th:first-child, .progress-table td:first-child { width: 19%; }
-    .progress-table th:nth-child(2), .progress-table td:nth-child(2) { width: 8%; }
+    .table-wrap { width: 100%; overflow: hidden; border-radius: 7px; border: 1px solid #e4e8ee; }
+    .progress-table { width: 100%; border-collapse: collapse; table-layout: fixed; font-size: 5.6px; }
+    .progress-table th { padding: 5px 2.5px; background: #f2f5f8; color: #5f6b7c; text-align: left; text-transform: uppercase; font-size: 5.1px; line-height: 1.15; letter-spacing: .01em; overflow-wrap: anywhere; }
+    .progress-table td { padding: 5px 2.5px; border-top: 1px solid #edf0f3; vertical-align: top; line-height: 1.2; overflow-wrap: anywhere; }
+    .progress-table th:first-child, .progress-table td:first-child { width: 16%; }
+    .progress-table th:nth-child(2), .progress-table td:nth-child(2) { width: 10%; }
     .progress-table .num { text-align: right; }
     .progress-table .strong { font-weight: 700; }
     .progress-table .blue { color: #397db4; }
     .progress-table tfoot td { background: #f7f9fb; border-top: 1.5px solid #d9e0e8; }
-    .empty-table { padding: 12px; border-radius: 8px; background: #f8fafc; color: #7a8494; }
-    .photos { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; }
+    .empty-table { padding: 10px; border-radius: 7px; background: #f8fafc; color: #7a8494; }
+    .photos { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
     .photo-card { margin: 0; padding: 0; break-inside: avoid; page-break-inside: avoid; }
-    .photo-card img { display: block; width: 100%; height: 165px; object-fit: cover; border-radius: 7px; background: #eef2f6; }
-    .photo-card figcaption { margin-top: 4px; color: #7a8494; font-size: 7.5px; overflow-wrap: anywhere; }
-    .footer { margin-top: 14px; padding-top: 8px; border-top: 1px solid #e5e7eb; color: #7b8493; font-size: 8px; }
+    .photo-card img { display: block; width: 100%; height: 175px; object-fit: cover; border-radius: 7px; background: #eef2f6; }
+    .photo-card figcaption { margin-top: 3px; color: #7a8494; font-size: 7px; overflow-wrap: anywhere; }
+    .footer { margin-top: 12px; padding-top: 7px; border-top: 1px solid #e5e7eb; color: #7b8493; font-size: 7px; }
     strong { color: #111827; }
     .progress-table-section { break-inside: avoid; page-break-inside: avoid; }
     @media print {
       html, body { background: #ffffff !important; }
-      body { margin: 0 !important; }
+      body { width: 210mm !important; min-height: 297mm !important; margin: 0 !important; }
       .photo-section { break-before: auto; }
+      .photo-card { break-inside: avoid; page-break-inside: avoid; }
     }
   </style>
 </head>
