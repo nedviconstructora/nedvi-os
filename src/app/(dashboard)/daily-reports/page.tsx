@@ -27,7 +27,7 @@ import {
   writeDailyReports,
 } from '@/features/operations/services/operationsStorage'
 
-const MAX_REPORT_IMAGES = 6
+const MAX_REPORT_IMAGES = 30
 
 function today() {
   return new Date().toISOString().slice(0, 10)
