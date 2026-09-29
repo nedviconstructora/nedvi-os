@@ -31,6 +31,7 @@ import {
 import type { Customer } from '@/features/crm/types/customer'
 
 type ExecutionTime = 'Jornada normal' | 'Fin de semana' | 'Extraordinaria'
+type EstimatedTimeUnit = 'Horas' | 'Días' | 'Semanas' | 'Meses'
 
 type SurveyAttachment = {
   id: string
@@ -60,6 +61,7 @@ type SurveyForm = Omit<SiteSurvey, 'id' | 'createdAt' | 'updatedAt'>
 
 const STORAGE_KEY = 'nedvi_site_surveys'
 const EXECUTION_OPTIONS: ExecutionTime[] = ['Jornada normal', 'Fin de semana', 'Extraordinaria']
+const ESTIMATED_TIME_UNITS: EstimatedTimeUnit[] = ['Horas', 'Días', 'Semanas', 'Meses']
 const MAX_FILES = 8
 const MAX_FILE_BYTES = 1_250_000
 const MAX_TOTAL_BYTES = 4_000_000
@@ -81,6 +83,29 @@ function emptyForm(): SurveyForm {
     attachments: [],
     drawing: '',
   }
+}
+
+function parseEstimatedTime(value: string): { amount: string; unit: EstimatedTimeUnit } {
+  const amount = value.match(/\d+(?:\.\d+)?/)?.[0] ?? ''
+  const normalized = value.toLowerCase()
+  if (normalized.includes('hora')) return { amount, unit: 'Horas' }
+  if (normalized.includes('semana')) return { amount, unit: 'Semanas' }
+  if (normalized.includes('mes')) return { amount, unit: 'Meses' }
+  return { amount, unit: 'Días' }
+}
+
+function formatEstimatedTime(amount: string, unit: EstimatedTimeUnit) {
+  const numeric = Number(amount)
+  if (!Number.isFinite(numeric) || numeric <= 0) return ''
+  if (numeric !== 1) return `${amount} ${unit}`
+
+  const singular: Record<EstimatedTimeUnit, string> = {
+    Horas: 'Hora',
+    Días: 'Día',
+    Semanas: 'Semana',
+    Meses: 'Mes',
+  }
+  return `${amount} ${singular[unit]}`
 }
 
 function readSurveys(): SiteSurvey[] {
@@ -170,6 +195,7 @@ export default function SiteSurveysPage() {
   const [editingId, setEditingId] = useState<string | null>(null)
   const [viewing, setViewing] = useState<SiteSurvey | null>(null)
   const [form, setForm] = useState<SurveyForm>(emptyForm())
+  const [estimatedTimeUnit, setEstimatedTimeUnit] = useState<EstimatedTimeUnit>('Días')
 
   useEffect(() => {
     setSurveys(readSurveys())
@@ -220,13 +246,16 @@ export default function SiteSurveysPage() {
 
   function openNew() {
     setEditingId(null)
+    setEstimatedTimeUnit('Días')
     setForm(emptyForm())
     setOpen(true)
   }
 
   function openEdit(survey: SiteSurvey) {
     const clientStillExists = customers.some((customer) => customer.company === survey.clientName)
+    const estimated = parseEstimatedTime(survey.estimatedTime)
     setEditingId(survey.id)
+    setEstimatedTimeUnit(estimated.unit)
     setForm({
       clientName: clientStillExists ? survey.clientName : '',
       date: survey.date,
@@ -235,7 +264,7 @@ export default function SiteSurveysPage() {
       performedBy: survey.performedBy,
       description: survey.description,
       executionTimes: [...survey.executionTimes],
-      estimatedTime: survey.estimatedTime,
+      estimatedTime: estimated.amount,
       attachments: [...survey.attachments],
       drawing: survey.drawing,
     })
@@ -245,6 +274,7 @@ export default function SiteSurveysPage() {
   function closeForm() {
     setOpen(false)
     setEditingId(null)
+    setEstimatedTimeUnit('Días')
     setForm(emptyForm())
   }
 
@@ -311,7 +341,12 @@ export default function SiteSurveysPage() {
       return
     }
     if (!form.description.trim()) return
+    if (!form.estimatedTime.trim() || Number(form.estimatedTime) <= 0) {
+      window.alert('Captura el número del tiempo estimado.')
+      return
+    }
 
+    const estimatedTime = formatEstimatedTime(form.estimatedTime.trim(), estimatedTimeUnit)
     const now = new Date().toISOString()
     let next: SiteSurvey[]
 
@@ -326,7 +361,7 @@ export default function SiteSurveysPage() {
               requestedBy: form.requestedBy.trim(),
               performedBy: form.performedBy.trim(),
               description: form.description.trim(),
-              estimatedTime: form.estimatedTime.trim(),
+              estimatedTime,
               updatedAt: now,
             }
           : survey,
@@ -341,7 +376,7 @@ export default function SiteSurveysPage() {
           requestedBy: form.requestedBy.trim(),
           performedBy: form.performedBy.trim(),
           description: form.description.trim(),
-          estimatedTime: form.estimatedTime.trim(),
+          estimatedTime,
           createdAt: now,
           updatedAt: now,
         },
@@ -552,7 +587,14 @@ export default function SiteSurveysPage() {
                   <Field label="Ciudad / Zona"><input value={form.location} onChange={(e) => setForm({ ...form, location: e.target.value })} placeholder="Ej. Tijuana, Ensenada, Tecate..." className="survey-input" /></Field>
                   <Field label="Solicita"><input value={form.requestedBy} onChange={(e) => setForm({ ...form, requestedBy: e.target.value })} placeholder="Quién solicita el levantamiento" className="survey-input" /></Field>
                   <Field label="Realiza"><input value={form.performedBy} onChange={(e) => setForm({ ...form, performedBy: e.target.value })} placeholder="Quién realiza la visita" className="survey-input" /></Field>
-                  <Field label="Tiempo estimado"><input value={form.estimatedTime} onChange={(e) => setForm({ ...form, estimatedTime: e.target.value })} placeholder="Ej. 5 días, 3 semanas..." className="survey-input" /></Field>
+                  <Field label="Tiempo estimado *">
+                    <div className="grid grid-cols-[minmax(0,1fr)_145px] gap-2">
+                      <input required type="number" min="1" step="1" value={form.estimatedTime} onChange={(e) => setForm({ ...form, estimatedTime: e.target.value })} placeholder="Ej. 5" className="survey-input" />
+                      <select required value={estimatedTimeUnit} onChange={(e) => setEstimatedTimeUnit(e.target.value as EstimatedTimeUnit)} className="survey-input">
+                        {ESTIMATED_TIME_UNITS.map((unit) => <option key={unit}>{unit}</option>)}
+                      </select>
+                    </div>
+                  </Field>
                 </div>
               </section>
 
