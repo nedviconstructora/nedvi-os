@@ -326,16 +326,6 @@ export default function SiteProgressPage() {
               const projectRecords = recordsByProject.get(project.id) ?? []
               const latest = projectRecords[0]
               const rows = latest?.items ?? []
-              const totals = rows.reduce(
-                (acc, row) => ({
-                  total: acc.total + row.total,
-                  accumulatedPrevious: acc.accumulatedPrevious + row.accumulatedPrevious,
-                  previousExecution: acc.previousExecution + row.previousExecution,
-                  executed: acc.executed + row.executed,
-                  totalToExecute: acc.totalToExecute + row.totalToExecute,
-                }),
-                { total: 0, accumulatedPrevious: 0, previousExecution: 0, executed: 0, totalToExecute: 0 },
-              )
 
               return (
                 <section key={project.id} className="overflow-hidden rounded-2xl border border-[var(--border)] bg-[var(--surface)] shadow-sm">
@@ -356,54 +346,16 @@ export default function SiteProgressPage() {
                     </div>
                   </div>
 
-                  {rows.length ? (
-                    <div className="overflow-x-auto">
-                      <table className="w-full min-w-[1450px] text-left text-sm">
-                        <thead className="bg-[var(--surface-soft)] text-xs uppercase tracking-wide text-[var(--muted)]">
-                          <tr>
-                            <th className="px-4 py-3">Concepto</th>
-                            <th className="px-4 py-3">Unidad</th>
-                            <th className="px-4 py-3 text-right">P.O</th>
-                            <th className="px-4 py-3 text-right">Cantidad</th>
-                            <th className="px-4 py-3 text-right">Total</th>
-                            <th className="px-4 py-3 text-right">Acumulado Anterior</th>
-                            <th className="px-4 py-3 text-right">Ejecución Anterior</th>
-                            <th className="px-4 py-3 text-right">Ejecutado</th>
-                            <th className="px-4 py-3 text-right">Total por ejecutar</th>
-                          </tr>
-                        </thead>
-                        <tbody className="divide-y divide-[var(--border)]">
-                          {rows.map((row) => (
-                            <tr key={row.id} className="hover:bg-[var(--surface-soft)]">
-                              <td className="px-4 py-4 font-semibold text-[var(--foreground)]">{row.concept}</td>
-                              <td className="px-4 py-4 text-[var(--foreground)]">{row.unit || '—'}</td>
-                              <td className="px-4 py-4 text-right">{money(row.po)}</td>
-                              <td className="px-4 py-4 text-right">{quantity(row.quantity)}</td>
-                              <td className="px-4 py-4 text-right font-semibold">{money(row.total)}</td>
-                              <td className="px-4 py-4 text-right">{money(row.accumulatedPrevious)}</td>
-                              <td className="px-4 py-4 text-right">{money(row.previousExecution)}</td>
-                              <td className="px-4 py-4 text-right font-semibold text-[#5496CC]">{money(row.executed)}</td>
-                              <td className="px-4 py-4 text-right font-semibold">{money(row.totalToExecute)}</td>
-                            </tr>
-                          ))}
-                        </tbody>
-                        <tfoot className="border-t border-[var(--border)] bg-[var(--surface-soft)] font-bold">
-                          <tr>
-                            <td className="px-4 py-4" colSpan={4}>Totales</td>
-                            <td className="px-4 py-4 text-right">{money(totals.total)}</td>
-                            <td className="px-4 py-4 text-right">{money(totals.accumulatedPrevious)}</td>
-                            <td className="px-4 py-4 text-right">{money(totals.previousExecution)}</td>
-                            <td className="px-4 py-4 text-right text-[#5496CC]">{money(totals.executed)}</td>
-                            <td className="px-4 py-4 text-right">{money(totals.totalToExecute)}</td>
-                          </tr>
-                        </tfoot>
-                      </table>
-                    </div>
-                  ) : (
-                    <div className="px-6 py-10 text-center text-sm text-[var(--muted)]">
-                      {latest ? 'Este proyecto tiene registros anteriores, pero aún no tiene conceptos en el nuevo formato de tabla.' : 'Todavía no hay avance registrado para este proyecto.'}
-                    </div>
-                  )}
+                  <div className="border-b border-[var(--border)] bg-[var(--surface-soft)]/40 px-5 py-3">
+                    <p className="text-xs font-semibold uppercase tracking-[0.12em] text-[var(--muted)]">Avance actual del proyecto</p>
+                  </div>
+
+                  <ProgressTable
+                    rows={rows}
+                    emptyMessage={latest
+                      ? 'Este proyecto tiene registros anteriores, pero aún no tiene conceptos en el nuevo formato. Usa “Actualizar avance” para comenzar la tabla.'
+                      : 'Todavía no hay conceptos registrados. Usa “Registrar avance” para agregar la primera tabla.'}
+                  />
                 </section>
               )
             })}
@@ -430,7 +382,7 @@ export default function SiteProgressPage() {
                     <div className="flex flex-wrap items-center gap-3"><span className="rounded-full bg-[#5496CC]/10 px-3 py-1 text-xs font-bold text-[#5496CC]">{record.percent}%</span><span className="text-sm font-semibold">{formatDate(record.date)}</span>{index === 0 ? <span className="rounded-full bg-emerald-500/10 px-2.5 py-1 text-[10px] font-bold uppercase text-emerald-500">Actual</span> : null}</div>
                     <button type="button" onClick={() => remove(record.id)} className="self-start rounded-lg p-2 text-red-500 hover:bg-red-500/10"><Trash2 size={16} /></button>
                   </div>
-                  {record.items.length ? <ProgressTable rows={record.items} /> : <div className="px-5 py-8 text-sm text-[var(--muted)]">Registro anterior sin tabla de conceptos. Avance registrado: {record.percent}%.</div>}
+                  <ProgressTable rows={record.items} emptyMessage={`Registro anterior sin tabla de conceptos. Avance registrado: ${record.percent}%.`} />
                   {record.notes ? <div className="border-t border-[var(--border)] px-5 py-4"><p className="text-xs font-semibold uppercase tracking-wide text-[var(--muted)]">Observaciones</p><p className="mt-2 whitespace-pre-wrap text-sm">{record.notes}</p></div> : null}
                 </section>
               ))}
@@ -490,7 +442,7 @@ export default function SiteProgressPage() {
   )
 }
 
-function ProgressTable({ rows }: { rows: ProgressItem[] }) {
+function ProgressTable({ rows, emptyMessage = 'Sin conceptos registrados.' }: { rows: ProgressItem[]; emptyMessage?: string }) {
   const totals = rows.reduce(
     (acc, row) => ({
       total: acc.total + row.total,
@@ -502,7 +454,56 @@ function ProgressTable({ rows }: { rows: ProgressItem[] }) {
     { total: 0, accumulatedPrevious: 0, previousExecution: 0, executed: 0, totalToExecute: 0 },
   )
 
-  return <div className="overflow-x-auto"><table className="w-full min-w-[1450px] text-left text-sm"><thead className="bg-[var(--surface-soft)] text-xs uppercase tracking-wide text-[var(--muted)]"><tr><th className="px-4 py-3">Concepto</th><th className="px-4 py-3">Unidad</th><th className="px-4 py-3 text-right">P.O</th><th className="px-4 py-3 text-right">Cantidad</th><th className="px-4 py-3 text-right">Total</th><th className="px-4 py-3 text-right">Acumulado Anterior</th><th className="px-4 py-3 text-right">Ejecución Anterior</th><th className="px-4 py-3 text-right">Ejecutado</th><th className="px-4 py-3 text-right">Total por ejecutar</th></tr></thead><tbody className="divide-y divide-[var(--border)]">{rows.map((row) => <tr key={row.id}><td className="px-4 py-4 font-semibold">{row.concept}</td><td className="px-4 py-4">{row.unit || '—'}</td><td className="px-4 py-4 text-right">{money(row.po)}</td><td className="px-4 py-4 text-right">{quantity(row.quantity)}</td><td className="px-4 py-4 text-right font-semibold">{money(row.total)}</td><td className="px-4 py-4 text-right">{money(row.accumulatedPrevious)}</td><td className="px-4 py-4 text-right">{money(row.previousExecution)}</td><td className="px-4 py-4 text-right font-semibold text-[#5496CC]">{money(row.executed)}</td><td className="px-4 py-4 text-right font-semibold">{money(row.totalToExecute)}</td></tr>)}</tbody><tfoot className="border-t border-[var(--border)] bg-[var(--surface-soft)] font-bold"><tr><td className="px-4 py-4" colSpan={4}>Totales</td><td className="px-4 py-4 text-right">{money(totals.total)}</td><td className="px-4 py-4 text-right">{money(totals.accumulatedPrevious)}</td><td className="px-4 py-4 text-right">{money(totals.previousExecution)}</td><td className="px-4 py-4 text-right text-[#5496CC]">{money(totals.executed)}</td><td className="px-4 py-4 text-right">{money(totals.totalToExecute)}</td></tr></tfoot></table></div>
+  return (
+    <div className="overflow-x-auto">
+      <table className="w-full min-w-[1450px] text-left text-sm">
+        <thead className="bg-[var(--surface-soft)] text-xs uppercase tracking-wide text-[var(--muted)]">
+          <tr>
+            <th className="px-4 py-3">Concepto</th>
+            <th className="px-4 py-3">Unidad</th>
+            <th className="px-4 py-3 text-right">P.O</th>
+            <th className="px-4 py-3 text-right">Cantidad</th>
+            <th className="px-4 py-3 text-right">Total</th>
+            <th className="px-4 py-3 text-right">Acumulado Anterior</th>
+            <th className="px-4 py-3 text-right">Ejecución Anterior</th>
+            <th className="px-4 py-3 text-right">Ejecutado</th>
+            <th className="px-4 py-3 text-right">Total por ejecutar</th>
+          </tr>
+        </thead>
+        <tbody className="divide-y divide-[var(--border)]">
+          {rows.length ? rows.map((row) => (
+            <tr key={row.id} className="hover:bg-[var(--surface-soft)]">
+              <td className="px-4 py-4 font-semibold">{row.concept}</td>
+              <td className="px-4 py-4">{row.unit || '—'}</td>
+              <td className="px-4 py-4 text-right">{money(row.po)}</td>
+              <td className="px-4 py-4 text-right">{quantity(row.quantity)}</td>
+              <td className="px-4 py-4 text-right font-semibold">{money(row.total)}</td>
+              <td className="px-4 py-4 text-right">{money(row.accumulatedPrevious)}</td>
+              <td className="px-4 py-4 text-right">{money(row.previousExecution)}</td>
+              <td className="px-4 py-4 text-right font-semibold text-[#5496CC]">{money(row.executed)}</td>
+              <td className="px-4 py-4 text-right font-semibold">{money(row.totalToExecute)}</td>
+            </tr>
+          )) : (
+            <tr>
+              <td colSpan={9} className="px-5 py-10 text-center text-sm text-[var(--muted)]">{emptyMessage}</td>
+            </tr>
+          )}
+        </tbody>
+        {rows.length ? (
+          <tfoot className="border-t border-[var(--border)] bg-[var(--surface-soft)] font-bold">
+            <tr>
+              <td className="px-4 py-4" colSpan={4}>Totales</td>
+              <td className="px-4 py-4 text-right">{money(totals.total)}</td>
+              <td className="px-4 py-4 text-right">{money(totals.accumulatedPrevious)}</td>
+              <td className="px-4 py-4 text-right">{money(totals.previousExecution)}</td>
+              <td className="px-4 py-4 text-right text-[#5496CC]">{money(totals.executed)}</td>
+              <td className="px-4 py-4 text-right">{money(totals.totalToExecute)}</td>
+            </tr>
+          </tfoot>
+        ) : null}
+      </table>
+    </div>
+  )
 }
 
 function Metric({ label, value }: { label: string; value: string }) {
