@@ -421,7 +421,7 @@ export default function SiteProgressPage() {
 
               <div className="overflow-x-auto rounded-2xl border border-[var(--border)]">
                 <table className="w-full min-w-[1500px] text-left text-sm">
-                  <thead className="bg-[var(--surface-soft)] text-xs uppercase tracking-wide text-[var(--muted)]"><tr><th className="px-3 py-3">Concepto</th><th className="px-3 py-3">UM</th><th className="px-3 py-3">P.O</th><th className="px-3 py-3">Cantidad</th><th className="px-3 py-3">Total</th><th className="px-3 py-3">Acumulado Anterior</th><th className="px-3 py-3">Ejecución Anterior</th><th className="px-3 py-3">Ejecutado</th><th className="px-3 py-3">Total por ejecutar</th><th className="w-12"></th></tr></thead>
+                  <thead className="bg-[var(--surface-soft)] text-xs uppercase tracking-wide text-[var(--muted)]"><tr><th className="px-3 py-3">Concepto</th><th className="px-3 py-3">UM</th><th className="px-3 py-3">Cantidad</th><th className="px-3 py-3">P.O</th><th className="px-3 py-3">Total</th><th className="px-3 py-3">Acumulado Anterior</th><th className="px-3 py-3">Ejecución Anterior</th><th className="px-3 py-3">Ejecutado</th><th className="px-3 py-3">Total por ejecutar</th><th className="w-12"></th></tr></thead>
                   <tbody className="divide-y divide-[var(--border)]">
                     {items.map((item) => (
                       <tr key={item.id}>
@@ -432,8 +432,8 @@ export default function SiteProgressPage() {
                             {UM_OPTIONS.map((option) => <option key={option} value={option}>{option}</option>)}
                           </select>
                         </td>
-                        <td className="p-2"><input type="number" min="0" step="0.01" value={item.po} onChange={(e) => updateItem(item.id, 'po', e.target.value)} className="table-input min-w-[120px]" /></td>
                         <td className="p-2"><input type="number" min="0" step="0.01" value={item.quantity} onChange={(e) => updateItem(item.id, 'quantity', e.target.value)} className="table-input min-w-[110px]" /></td>
+                        <td className="p-2"><input type="number" min="0" step="0.01" value={item.po} onChange={(e) => updateItem(item.id, 'po', e.target.value)} className="table-input min-w-[120px]" /></td>
                         <td className="p-2 text-right font-semibold">{money(itemTotal(item))}</td>
                         <td className="p-2"><input type="number" min="0" step="0.01" value={item.accumulatedPrevious} onChange={(e) => updateItem(item.id, 'accumulatedPrevious', e.target.value)} className="table-input min-w-[150px]" /></td>
                         <td className="p-2"><input type="number" min="0" step="0.01" value={item.previousExecution} onChange={(e) => updateItem(item.id, 'previousExecution', e.target.value)} className="table-input min-w-[150px]" /></td>
@@ -480,8 +480,8 @@ function ProgressTable({ rows, emptyMessage = 'Sin conceptos registrados.' }: { 
           <tr>
             <th className="px-4 py-3">Concepto</th>
             <th className="px-4 py-3">UM</th>
-            <th className="px-4 py-3 text-right">P.O</th>
             <th className="px-4 py-3 text-right">Cantidad</th>
+            <th className="px-4 py-3 text-right">P.O</th>
             <th className="px-4 py-3 text-right">Total</th>
             <th className="px-4 py-3 text-right">Acumulado Anterior</th>
             <th className="px-4 py-3 text-right">Ejecución Anterior</th>
@@ -494,8 +494,8 @@ function ProgressTable({ rows, emptyMessage = 'Sin conceptos registrados.' }: { 
             <tr key={row.id} className="hover:bg-[var(--surface-soft)]">
               <td className="px-4 py-4 font-semibold">{row.concept}</td>
               <td className="px-4 py-4">{row.unit || '—'}</td>
-              <td className="px-4 py-4 text-right">{money(row.po)}</td>
               <td className="px-4 py-4 text-right">{quantity(row.quantity)}</td>
+              <td className="px-4 py-4 text-right">{money(row.po)}</td>
               <td className="px-4 py-4 text-right font-semibold">{money(row.total)}</td>
               <td className="px-4 py-4 text-right">{money(row.accumulatedPrevious)}</td>
               <td className="px-4 py-4 text-right">{money(row.previousExecution)}</td>
