@@ -138,7 +138,6 @@ export const PURCHASE_ORDERS_STORAGE_KEY = 'nedvi_purchase_orders'
 export const PURCHASING_UPDATED_EVENT = 'nedvi-purchasing-updated'
 
 const QUOTES_STORAGE_KEY = 'nedvi_quotes'
-const SEQUENCES_STORAGE_KEY = 'nedvi_purchasing_sequences'
 
 const supplierCategories: SupplierCategory[] = [
   'Materiales',
@@ -202,38 +201,13 @@ function today() {
   return new Date().toISOString().slice(0, 10)
 }
 
-function nextSequence(type: 'OC') {
-  if (typeof window === 'undefined') return 1
-  const year = new Date().getFullYear()
-  const raw = window.localStorage.getItem(SEQUENCES_STORAGE_KEY)
-  let sequences: Record<string, { year: number; value: number }> = {}
-
-  try {
-    const parsed = raw ? (JSON.parse(raw) as unknown) : {}
-    if (isRecord(parsed)) {
-      for (const [key, value] of Object.entries(parsed)) {
-        if (
-          isRecord(value) &&
-          typeof value.year === 'number' &&
-          typeof value.value === 'number'
-        ) {
-          sequences[key] = { year: value.year, value: value.value }
-        }
-      }
-    }
-  } catch {
-    sequences = {}
-  }
-
-  const current = sequences[type]
-  const nextValue = current && current.year === year ? current.value + 1 : 1
-  sequences[type] = { year, value: nextValue }
-  window.localStorage.setItem(SEQUENCES_STORAGE_KEY, JSON.stringify(sequences))
-  return nextValue
-}
-
 function compactFolioNumber(value: string, prefix: 'P' | 'R') {
   const match = value.match(new RegExp(`^${prefix}(\\d{4,})$`))
+  return match ? Number(match[1]) : 0
+}
+
+function purchaseOrderFolioNumber(value: string) {
+  const match = value.match(/^OC(\d{3,})$/)
   return match ? Number(match[1]) : 0
 }
 
@@ -284,6 +258,53 @@ function migrateCompactFolios(values: unknown[], prefix: 'P' | 'R', storageKey: 
   return migrated
 }
 
+function migratePurchaseOrderFolios(values: unknown[]) {
+  if (typeof window === 'undefined') return values
+
+  const records = values.filter(isRecord)
+  const used = new Set(
+    records
+      .map((value) =>
+        typeof value.folio === 'string' ? purchaseOrderFolioNumber(value.folio) : 0,
+      )
+      .filter((value) => value > 0),
+  )
+
+  const legacyRecords = records
+    .filter((value) => {
+      const folio = typeof value.folio === 'string' ? value.folio : ''
+      return purchaseOrderFolioNumber(folio) === 0
+    })
+    .sort((a, b) => {
+      const left = typeof a.createdAt === 'string' ? a.createdAt : ''
+      const right = typeof b.createdAt === 'string' ? b.createdAt : ''
+      return left.localeCompare(right)
+    })
+
+  const migratedById = new Map<string, string>()
+  let candidate = 1
+
+  for (const value of legacyRecords) {
+    while (used.has(candidate)) candidate += 1
+    if (typeof value.id === 'string') {
+      migratedById.set(value.id, `OC${String(candidate).padStart(3, '0')}`)
+      used.add(candidate)
+      candidate += 1
+    }
+  }
+
+  if (!migratedById.size) return values
+
+  const migrated = values.map((value) => {
+    if (!isRecord(value) || typeof value.id !== 'string') return value
+    const folio = migratedById.get(value.id)
+    return folio ? { ...value, folio } : value
+  })
+
+  window.localStorage.setItem(PURCHASE_ORDERS_STORAGE_KEY, JSON.stringify(migrated))
+  return migrated
+}
+
 export function nextSupplierFolio() {
   const next = Math.max(0, ...readSuppliers().map((supplier) => compactFolioNumber(supplier.folio, 'P'))) + 1
   return `P${String(next).padStart(4, '0')}`
@@ -295,8 +316,8 @@ export function nextRequisitionFolio() {
 }
 
 export function nextPurchaseOrderFolio() {
-  const year = new Date().getFullYear()
-  return `OC-${year}-${String(nextSequence('OC')).padStart(4, '0')}`
+  const next = Math.max(0, ...readPurchaseOrders().map((order) => purchaseOrderFolioNumber(order.folio))) + 1
+  return `OC${String(next).padStart(3, '0')}`
 }
 
 export function readSuppliers(): Supplier[] {
@@ -412,7 +433,7 @@ export function readPurchaseOrders(): PurchaseOrder[] {
     readRequisitions().map((requisition) => [requisition.id, requisition.folio]),
   )
 
-  return readArray(PURCHASE_ORDERS_STORAGE_KEY)
+  return migratePurchaseOrderFolios(readArray(PURCHASE_ORDERS_STORAGE_KEY))
     .filter(isRecord)
     .filter(
       (value) =>
