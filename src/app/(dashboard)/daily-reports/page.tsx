@@ -20,6 +20,7 @@ import {
   type DailyReport,
   type DailyReportImage,
   type OperationProject,
+  type ProgressItem,
   type ProgressRecord,
   readDailyReports,
   readOperationProjects,
@@ -43,6 +44,18 @@ function formatDate(value: string) {
     month: 'long',
     year: 'numeric',
   }).format(date)
+}
+
+function money(value: number) {
+  return new Intl.NumberFormat('es-MX', {
+    style: 'currency',
+    currency: 'MXN',
+    minimumFractionDigits: 2,
+  }).format(value)
+}
+
+function quantity(value: number) {
+  return new Intl.NumberFormat('es-MX', { maximumFractionDigits: 2 }).format(value)
 }
 
 function escapeHtml(value: string | number) {
@@ -104,6 +117,19 @@ async function prepareReportImage(file: File): Promise<DailyReportImage> {
   }
 }
 
+function progressTotals(rows: ProgressItem[]) {
+  return rows.reduce(
+    (acc, row) => ({
+      total: acc.total + row.total,
+      accumulatedPrevious: acc.accumulatedPrevious + row.accumulatedPrevious,
+      previousExecution: acc.previousExecution + row.previousExecution,
+      executed: acc.executed + row.executed,
+      totalToExecute: acc.totalToExecute + row.totalToExecute,
+    }),
+    { total: 0, accumulatedPrevious: 0, previousExecution: 0, executed: 0, totalToExecute: 0 },
+  )
+}
+
 export default function DailyReportsPage() {
   const [projects, setProjects] = useState<OperationProject[]>([])
   const [reports, setReports] = useState<DailyReport[]>([])
@@ -162,17 +188,23 @@ export default function DailyReportsPage() {
     [projects],
   )
 
-  function progressForReport(report: DailyReport) {
+  function progressForProjectDate(projectId: string, reportDate: string) {
     const matches = progressRecords
-      .filter((record) => record.quoteId === report.quoteId && record.date <= report.date)
+      .filter((record) => record.quoteId === projectId && record.date <= reportDate)
       .sort((a, b) => b.date.localeCompare(a.date))
 
     if (matches.length) return matches[0]
 
     return progressRecords
-      .filter((record) => record.quoteId === report.quoteId)
+      .filter((record) => record.quoteId === projectId)
       .sort((a, b) => b.date.localeCompare(a.date))[0]
   }
+
+  function progressForReport(report: DailyReport) {
+    return progressForProjectDate(report.quoteId, report.date)
+  }
+
+  const selectedProgress = quoteId ? progressForProjectDate(quoteId, date) : undefined
 
   const reportGroups = useMemo(() => {
     const query = search.trim().toLowerCase()
@@ -331,8 +363,10 @@ export default function DailyReportsPage() {
     if (!project) return
 
     const progress = progressForReport(report)
+    const progressRows = progress?.items ?? []
+    const totals = progressTotals(progressRows)
     const progressPercent = Math.max(0, Math.min(100, progress?.percent ?? 0))
-    const printWindow = window.open('', '_blank', 'width=1000,height=800')
+    const printWindow = window.open('', '_blank', 'width=1100,height=850')
 
     if (!printWindow) {
       window.alert('Permite las ventanas emergentes para generar el PDF del reporte.')
@@ -342,6 +376,52 @@ export default function DailyReportsPage() {
     const logoUrl = `${window.location.origin}/icon.png`
     const title = `Reporte_Diario_${report.folio}_${report.date}`
     const reportProjectName = report.projectName || project.project
+    const progressTableSection = progressRows.length
+      ? `<section class="section progress-table-section">
+          <p class="section-title">Avance real por concepto</p>
+          <div class="table-wrap">
+            <table class="progress-table">
+              <thead>
+                <tr>
+                  <th>Concepto</th>
+                  <th>UM</th>
+                  <th class="num">P.O</th>
+                  <th class="num">Cantidad</th>
+                  <th class="num">Total</th>
+                  <th class="num">Acum. anterior</th>
+                  <th class="num">Ejec. anterior</th>
+                  <th class="num">Ejecutado</th>
+                  <th class="num">Por ejecutar</th>
+                </tr>
+              </thead>
+              <tbody>
+                ${progressRows.map((item) => `<tr>
+                  <td>${escapeHtml(item.concept)}</td>
+                  <td>${escapeHtml(item.unit || '—')}</td>
+                  <td class="num">${escapeHtml(money(item.po))}</td>
+                  <td class="num">${escapeHtml(quantity(item.quantity))}</td>
+                  <td class="num strong">${escapeHtml(money(item.total))}</td>
+                  <td class="num">${escapeHtml(money(item.accumulatedPrevious))}</td>
+                  <td class="num">${escapeHtml(money(item.previousExecution))}</td>
+                  <td class="num blue strong">${escapeHtml(money(item.executed))}</td>
+                  <td class="num strong">${escapeHtml(money(item.totalToExecute))}</td>
+                </tr>`).join('')}
+              </tbody>
+              <tfoot>
+                <tr>
+                  <td colspan="4"><strong>Totales</strong></td>
+                  <td class="num strong">${escapeHtml(money(totals.total))}</td>
+                  <td class="num strong">${escapeHtml(money(totals.accumulatedPrevious))}</td>
+                  <td class="num strong">${escapeHtml(money(totals.previousExecution))}</td>
+                  <td class="num blue strong">${escapeHtml(money(totals.executed))}</td>
+                  <td class="num strong">${escapeHtml(money(totals.totalToExecute))}</td>
+                </tr>
+              </tfoot>
+            </table>
+          </div>
+        </section>`
+      : `<section class="section"><p class="section-title">Avance real por concepto</p><div class="empty-table">No hay tabla de avance por conceptos registrada para esta fecha.</div></section>`
+
     const imageSection = report.images.length
       ? `<section class="section photo-section">
           <p class="section-title">Evidencia fotográfica</p>
@@ -366,52 +446,64 @@ export default function DailyReportsPage() {
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>${escapeHtml(title)}</title>
   <style>
-    @page { size: A4; margin: 0; }
+    @page { size: A4 landscape; margin: 0; }
     * { box-sizing: border-box; }
     html, body { margin: 0; padding: 0; background: #ffffff; color: #172033; }
     body {
-      width: 210mm;
-      min-height: 297mm;
-      padding: 12mm 14mm;
+      width: 297mm;
+      min-height: 210mm;
+      padding: 10mm 12mm;
       font-family: Arial, Helvetica, sans-serif;
-      font-size: 11px;
-      line-height: 1.45;
+      font-size: 10px;
+      line-height: 1.4;
       -webkit-print-color-adjust: exact;
       print-color-adjust: exact;
     }
     .document { width: 100%; margin: 0; background: #ffffff; }
-    .header { display: flex; align-items: center; justify-content: space-between; gap: 24px; padding-bottom: 14px; border-bottom: 2px solid #5496CC; }
-    .brand { display: flex; align-items: center; gap: 14px; }
-    .logo { width: 48px; height: 48px; object-fit: contain; }
-    h1 { margin: 0; font-size: 20px; line-height: 1.15; color: #101827; }
-    .subtitle { margin: 5px 0 0; color: #657083; }
+    .header { display: flex; align-items: center; justify-content: space-between; gap: 24px; padding-bottom: 12px; border-bottom: 2px solid #5496CC; }
+    .brand { display: flex; align-items: center; gap: 12px; }
+    .logo { width: 44px; height: 44px; object-fit: contain; }
+    h1 { margin: 0; font-size: 19px; line-height: 1.15; color: #101827; }
+    .subtitle { margin: 4px 0 0; color: #657083; }
     .folio { text-align: right; }
     .folio strong { color: #5496CC; font-size: 12px; }
     .folio p { margin: 4px 0 0; }
-    .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-top: 14px; }
-    .card { padding: 13px 14px; border: 0; border-radius: 10px; background: #f7f9fb; }
-    .section { margin-top: 14px; }
-    .section-title { margin: 0 0 8px; color: #697386; font-size: 9px; font-weight: 700; letter-spacing: .07em; text-transform: uppercase; }
-    .rows { display: grid; grid-template-columns: 1fr 1fr; gap: 5px 20px; }
-    .rows p, .card p { margin: 0 0 5px; }
+    .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 12px; }
+    .card { padding: 11px 12px; border: 0; border-radius: 9px; background: #f7f9fb; }
+    .section { margin-top: 12px; }
+    .section-title { margin: 0 0 7px; color: #697386; font-size: 8.5px; font-weight: 700; letter-spacing: .07em; text-transform: uppercase; }
+    .rows { display: grid; grid-template-columns: repeat(4, 1fr); gap: 4px 16px; }
+    .rows p, .card p { margin: 0 0 4px; }
     .rows p:last-child, .card p:last-child { margin-bottom: 0; }
-    .progress-card { margin-top: 14px; padding: 13px 14px; border-radius: 10px; background: #f5f9fd; }
+    .progress-card { margin-top: 12px; padding: 11px 12px; border-radius: 9px; background: #f5f9fd; }
     .progress-head { display: flex; justify-content: space-between; gap: 16px; }
-    .progress-label { margin: 0; color: #5496CC; font-size: 9px; font-weight: 700; letter-spacing: .07em; text-transform: uppercase; }
-    .progress-value { margin: 6px 0 0; font-size: 17px; font-weight: 700; }
+    .progress-label { margin: 0; color: #5496CC; font-size: 8.5px; font-weight: 700; letter-spacing: .07em; text-transform: uppercase; }
+    .progress-value { margin: 5px 0 0; font-size: 16px; font-weight: 700; }
     .progress-milestone { margin: 3px 0 0; font-weight: 600; }
-    .progress-date { color: #7a8494; font-size: 9px; white-space: nowrap; }
-    .bar { margin-top: 10px; height: 7px; overflow: hidden; border-radius: 999px; background: #e5eaf0; }
+    .progress-date { color: #7a8494; font-size: 8.5px; white-space: nowrap; }
+    .bar { margin-top: 8px; height: 6px; overflow: hidden; border-radius: 999px; background: #e5eaf0; }
     .bar > div { height: 100%; border-radius: inherit; background: #5496CC; }
-    .progress-notes { margin: 9px 0 0; color: #4c5668; }
-    .text-box { min-height: 74px; padding: 13px 14px; border-radius: 8px; background: #f8fafc; }
+    .progress-notes { margin: 7px 0 0; color: #4c5668; }
+    .text-box { min-height: 58px; padding: 10px 12px; border-radius: 8px; background: #f8fafc; }
     .text-box p { margin: 0; }
-    .photos { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
+    .table-wrap { width: 100%; overflow: hidden; border-radius: 8px; border: 1px solid #e4e8ee; }
+    .progress-table { width: 100%; border-collapse: collapse; table-layout: fixed; font-size: 8px; }
+    .progress-table th { padding: 7px 5px; background: #f2f5f8; color: #5f6b7c; text-align: left; text-transform: uppercase; font-size: 7px; letter-spacing: .03em; }
+    .progress-table td { padding: 7px 5px; border-top: 1px solid #edf0f3; vertical-align: top; overflow-wrap: anywhere; }
+    .progress-table th:first-child, .progress-table td:first-child { width: 19%; }
+    .progress-table th:nth-child(2), .progress-table td:nth-child(2) { width: 8%; }
+    .progress-table .num { text-align: right; }
+    .progress-table .strong { font-weight: 700; }
+    .progress-table .blue { color: #397db4; }
+    .progress-table tfoot td { background: #f7f9fb; border-top: 1.5px solid #d9e0e8; }
+    .empty-table { padding: 12px; border-radius: 8px; background: #f8fafc; color: #7a8494; }
+    .photos { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; }
     .photo-card { margin: 0; padding: 0; break-inside: avoid; page-break-inside: avoid; }
-    .photo-card img { display: block; width: 100%; height: 205px; object-fit: cover; border-radius: 8px; background: #eef2f6; }
-    .photo-card figcaption { margin-top: 4px; color: #7a8494; font-size: 8px; overflow-wrap: anywhere; }
-    .footer { margin-top: 18px; padding-top: 10px; border-top: 1px solid #e5e7eb; color: #7b8493; font-size: 9px; }
+    .photo-card img { display: block; width: 100%; height: 165px; object-fit: cover; border-radius: 7px; background: #eef2f6; }
+    .photo-card figcaption { margin-top: 4px; color: #7a8494; font-size: 7.5px; overflow-wrap: anywhere; }
+    .footer { margin-top: 14px; padding-top: 8px; border-top: 1px solid #e5e7eb; color: #7b8493; font-size: 8px; }
     strong { color: #111827; }
+    .progress-table-section { break-inside: avoid; page-break-inside: avoid; }
     @media print {
       html, body { background: #ffffff !important; }
       body { margin: 0 !important; }
@@ -473,13 +565,15 @@ export default function DailyReportsPage() {
         <div>
           <p class="progress-label">Proceso / avance de obra</p>
           <p class="progress-value">${progress ? `${escapeHtml(progress.percent)}%` : 'Sin avance registrado'}</p>
-          <p class="progress-milestone">${escapeHtml(progress?.milestone || 'No hay hito registrado para este proyecto.')}</p>
+          <p class="progress-milestone">${escapeHtml(progress?.milestone || 'No hay avance registrado para este proyecto.')}</p>
         </div>
         ${progress ? `<div class="progress-date">Actualizado: ${escapeHtml(formatDate(progress.date))}</div>` : ''}
       </div>
       <div class="bar"><div style="width:${progressPercent}%"></div></div>
       ${progress?.notes ? `<p class="progress-notes">${textBlock(progress.notes)}</p>` : ''}
     </section>
+
+    ${progressTableSection}
 
     <section class="section">
       <p class="section-title">Actividades realizadas</p>
@@ -534,7 +628,7 @@ export default function DailyReportsPage() {
           <div>
             <p className="text-xs font-semibold uppercase tracking-[0.16em] text-[#5496CC]">Operaciones / Obra</p>
             <h1 className="mt-2 text-3xl font-bold text-[var(--foreground)]">Reportes diarios</h1>
-            <p className="mt-2 text-sm text-[var(--muted)]">Bitácora diaria agrupada por proyecto con datos del cliente, factura y evidencia fotográfica.</p>
+            <p className="mt-2 text-sm text-[var(--muted)]">Bitácora diaria con información del cliente, avance real por concepto y evidencia fotográfica.</p>
           </div>
           <button onClick={() => setOpen(true)} className="inline-flex h-11 items-center gap-2 rounded-xl bg-[#5496CC] px-4 text-sm font-semibold text-white"><Plus size={16} /> Nuevo reporte</button>
         </header>
@@ -613,7 +707,7 @@ export default function DailyReportsPage() {
 
       {viewingGroup ? (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4">
-          <div className="max-h-[94vh] w-full max-w-6xl overflow-y-auto rounded-2xl bg-[var(--surface)] shadow-2xl">
+          <div className="max-h-[94vh] w-full max-w-[1500px] overflow-y-auto rounded-2xl bg-[var(--surface)] shadow-2xl">
             <div className="sticky top-0 z-10 flex items-start justify-between gap-4 border-b border-[var(--border)] bg-[var(--surface)] p-5">
               <div>
                 <p className="text-xs font-semibold uppercase tracking-[0.14em] text-[#5496CC]">Historial de reportes diarios</p>
@@ -628,40 +722,49 @@ export default function DailyReportsPage() {
                 const progress = progressForReport(report)
 
                 return (
-                  <article key={report.id} className="rounded-2xl border border-[var(--border)] bg-[var(--surface-soft)] p-5">
-                    <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
-                      <div>
-                        <p className="text-xs font-semibold text-[#5496CC]">{formatDate(report.date)}</p>
-                        <h3 className="mt-1 text-base font-bold text-[var(--foreground)]">{report.projectName || viewingGroup.project.project}</h3>
-                        <p className="mt-1 text-sm text-[var(--muted)]">Elaboró: {report.author || 'Sin registrar'}</p>
+                  <article key={report.id} className="overflow-hidden rounded-2xl border border-[var(--border)] bg-[var(--surface-soft)]">
+                    <div className="p-5">
+                      <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+                        <div>
+                          <p className="text-xs font-semibold text-[#5496CC]">{formatDate(report.date)}</p>
+                          <h3 className="mt-1 text-base font-bold text-[var(--foreground)]">{report.projectName || viewingGroup.project.project}</h3>
+                          <p className="mt-1 text-sm text-[var(--muted)]">Elaboró: {report.author || 'Sin registrar'}</p>
+                        </div>
+                        <div className="flex flex-wrap gap-2">
+                          <button type="button" onClick={() => printPdf(report)} className="inline-flex items-center gap-2 rounded-lg border border-[#5496CC]/40 px-3 py-2 text-xs font-semibold text-[#5496CC] hover:bg-[#5496CC]/10"><Printer size={15} /> PDF</button>
+                          <button type="button" onClick={() => remove(report.id)} className="inline-flex items-center gap-2 rounded-lg border border-red-500/20 px-3 py-2 text-xs font-semibold text-red-500 hover:bg-red-500/10"><Trash2 size={15} /> Eliminar</button>
+                        </div>
                       </div>
-                      <div className="flex flex-wrap gap-2">
-                        <button type="button" onClick={() => printPdf(report)} className="inline-flex items-center gap-2 rounded-lg border border-[#5496CC]/40 px-3 py-2 text-xs font-semibold text-[#5496CC] hover:bg-[#5496CC]/10"><Printer size={15} /> PDF</button>
-                        <button type="button" onClick={() => remove(report.id)} className="inline-flex items-center gap-2 rounded-lg border border-red-500/20 px-3 py-2 text-xs font-semibold text-red-500 hover:bg-red-500/10"><Trash2 size={15} /> Eliminar</button>
+
+                      <div className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
+                        <Info label="Clima" value={report.weather || 'Sin registrar'} />
+                        <Info label="Personal" value={`${report.workers} personas`} />
+                        <Info label="Avance de obra" value={progress ? `${progress.percent}%` : 'Sin registrar'} />
+                        <Info label="Factura / referencia" value={report.clientInvoice || 'Sin registrar'} />
+                        <Info label="Imágenes" value={report.images.length.toString()} />
+                      </div>
+
+                      <div className="mt-4 grid gap-4 lg:grid-cols-[1.3fr_1fr]">
+                        <div className="rounded-xl bg-[var(--surface)] p-4">
+                          <p className="text-xs font-semibold uppercase tracking-wide text-[var(--muted)]">Actividades realizadas</p>
+                          <p className="mt-2 whitespace-pre-wrap text-sm leading-6 text-[var(--foreground)]">{report.summary}</p>
+                        </div>
+                        <div className={`rounded-xl p-4 ${report.blockers ? 'border border-amber-500/20 bg-amber-500/10' : 'bg-[var(--surface)]'}`}>
+                          <p className={`text-xs font-semibold uppercase tracking-wide ${report.blockers ? 'text-amber-600' : 'text-[var(--muted)]'}`}>Bloqueos / pendientes</p>
+                          <p className="mt-2 whitespace-pre-wrap text-sm leading-6 text-[var(--foreground)]">{report.blockers || 'Sin bloqueos o pendientes registrados.'}</p>
+                        </div>
                       </div>
                     </div>
 
-                    <div className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
-                      <Info label="Clima" value={report.weather || 'Sin registrar'} />
-                      <Info label="Personal" value={`${report.workers} personas`} />
-                      <Info label="Avance de obra" value={progress ? `${progress.percent}%` : 'Sin registrar'} />
-                      <Info label="Factura / referencia" value={report.clientInvoice || 'Sin registrar'} />
-                      <Info label="Imágenes" value={report.images.length.toString()} />
-                    </div>
-
-                    <div className="mt-4 grid gap-4 lg:grid-cols-[1.3fr_1fr]">
-                      <div className="rounded-xl bg-[var(--surface)] p-4">
-                        <p className="text-xs font-semibold uppercase tracking-wide text-[var(--muted)]">Actividades realizadas</p>
-                        <p className="mt-2 whitespace-pre-wrap text-sm leading-6 text-[var(--foreground)]">{report.summary}</p>
+                    <div className="border-t border-[var(--border)]">
+                      <div className="bg-[var(--surface)] px-5 py-3">
+                        <p className="text-xs font-semibold uppercase tracking-[0.12em] text-[#5496CC]">Avance real por concepto</p>
                       </div>
-                      <div className={`rounded-xl p-4 ${report.blockers ? 'border border-amber-500/20 bg-amber-500/10' : 'bg-[var(--surface)]'}`}>
-                        <p className={`text-xs font-semibold uppercase tracking-wide ${report.blockers ? 'text-amber-600' : 'text-[var(--muted)]'}`}>Bloqueos / pendientes</p>
-                        <p className="mt-2 whitespace-pre-wrap text-sm leading-6 text-[var(--foreground)]">{report.blockers || 'Sin bloqueos o pendientes registrados.'}</p>
-                      </div>
+                      <ReportProgressTable rows={progress?.items ?? []} />
                     </div>
 
                     {report.images.length ? (
-                      <div className="mt-4">
+                      <div className="border-t border-[var(--border)] p-5">
                         <div className="mb-2 flex items-center gap-2 text-xs font-semibold uppercase tracking-wide text-[var(--muted)]"><FileImage size={15} /> Evidencia fotográfica</div>
                         <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
                           {report.images.map((image) => (
@@ -683,7 +786,7 @@ export default function DailyReportsPage() {
 
       {open ? (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/55 p-4">
-          <div className="max-h-[94vh] w-full max-w-3xl overflow-y-auto rounded-2xl bg-[var(--surface)] p-6 shadow-2xl">
+          <div className="max-h-[94vh] w-full max-w-6xl overflow-y-auto rounded-2xl bg-[var(--surface)] p-6 shadow-2xl">
             <div className="mb-5 flex items-center justify-between">
               <div>
                 <p className="text-xs font-semibold uppercase tracking-wide text-[#5496CC]">Bitácora de obra</p>
@@ -720,6 +823,19 @@ export default function DailyReportsPage() {
                 <span className="flex items-center gap-2 text-sm font-semibold"><ReceiptText size={16} className="text-[#5496CC]" /> Factura / referencia entregada por el cliente</span>
                 <input value={clientInvoice} onChange={(event) => setClientInvoice(event.target.value)} placeholder="Ej. FAC-4582, orden, referencia o folio del cliente" className="w-full rounded-xl border border-[var(--border)] bg-transparent px-4 py-3 outline-none focus:border-[#5496CC]" />
               </label>
+
+              {quoteId ? (
+                <div className="overflow-hidden rounded-2xl border border-[var(--border)]">
+                  <div className="flex flex-col gap-1 border-b border-[var(--border)] bg-[var(--surface-soft)] px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
+                    <div>
+                      <p className="text-xs font-semibold uppercase tracking-[0.12em] text-[#5496CC]">Avance real que verá el cliente</p>
+                      <p className="mt-1 text-xs text-[var(--muted)]">Se toma automáticamente del módulo Avance de obra según la fecha del reporte.</p>
+                    </div>
+                    <span className="rounded-full bg-[#5496CC]/10 px-3 py-1 text-xs font-bold text-[#5496CC]">{selectedProgress ? `${selectedProgress.percent}%` : 'Sin avance'}</span>
+                  </div>
+                  <ReportProgressTable rows={selectedProgress?.items ?? []} />
+                </div>
+              ) : null}
 
               <label className="block space-y-2"><span className="text-sm font-semibold">Actividades realizadas *</span><textarea required rows={5} value={summary} onChange={(event) => setSummary(event.target.value)} placeholder="Describe los trabajos realizados durante la jornada..." className="w-full rounded-xl border border-[var(--border)] bg-transparent px-4 py-3" /></label>
               <label className="block space-y-2"><span className="text-sm font-semibold">Bloqueos / pendientes</span><textarea rows={3} value={blockers} onChange={(event) => setBlockers(event.target.value)} className="w-full rounded-xl border border-[var(--border)] bg-transparent px-4 py-3" /></label>
@@ -761,6 +877,59 @@ export default function DailyReportsPage() {
         </div>
       ) : null}
     </AppShell>
+  )
+}
+
+function ReportProgressTable({ rows }: { rows: ProgressItem[] }) {
+  const totals = progressTotals(rows)
+
+  return (
+    <div className="overflow-x-auto">
+      <table className="w-full min-w-[1450px] text-left text-sm">
+        <thead className="bg-[var(--surface-soft)] text-xs uppercase tracking-wide text-[var(--muted)]">
+          <tr>
+            <th className="px-4 py-3">Concepto</th>
+            <th className="px-4 py-3">UM</th>
+            <th className="px-4 py-3 text-right">P.O</th>
+            <th className="px-4 py-3 text-right">Cantidad</th>
+            <th className="px-4 py-3 text-right">Total</th>
+            <th className="px-4 py-3 text-right">Acumulado Anterior</th>
+            <th className="px-4 py-3 text-right">Ejecución Anterior</th>
+            <th className="px-4 py-3 text-right">Ejecutado</th>
+            <th className="px-4 py-3 text-right">Total por ejecutar</th>
+          </tr>
+        </thead>
+        <tbody className="divide-y divide-[var(--border)]">
+          {rows.length ? rows.map((row) => (
+            <tr key={row.id} className="hover:bg-[var(--surface-soft)]">
+              <td className="px-4 py-4 font-semibold">{row.concept}</td>
+              <td className="px-4 py-4">{row.unit || '—'}</td>
+              <td className="px-4 py-4 text-right">{money(row.po)}</td>
+              <td className="px-4 py-4 text-right">{quantity(row.quantity)}</td>
+              <td className="px-4 py-4 text-right font-semibold">{money(row.total)}</td>
+              <td className="px-4 py-4 text-right">{money(row.accumulatedPrevious)}</td>
+              <td className="px-4 py-4 text-right">{money(row.previousExecution)}</td>
+              <td className="px-4 py-4 text-right font-semibold text-[#5496CC]">{money(row.executed)}</td>
+              <td className="px-4 py-4 text-right font-semibold">{money(row.totalToExecute)}</td>
+            </tr>
+          )) : (
+            <tr><td colSpan={9} className="px-5 py-8 text-center text-sm text-[var(--muted)]">Todavía no hay tabla de avance por conceptos para este proyecto.</td></tr>
+          )}
+        </tbody>
+        {rows.length ? (
+          <tfoot className="border-t border-[var(--border)] bg-[var(--surface-soft)] font-bold">
+            <tr>
+              <td className="px-4 py-4" colSpan={4}>Totales</td>
+              <td className="px-4 py-4 text-right">{money(totals.total)}</td>
+              <td className="px-4 py-4 text-right">{money(totals.accumulatedPrevious)}</td>
+              <td className="px-4 py-4 text-right">{money(totals.previousExecution)}</td>
+              <td className="px-4 py-4 text-right text-[#5496CC]">{money(totals.executed)}</td>
+              <td className="px-4 py-4 text-right">{money(totals.totalToExecute)}</td>
+            </tr>
+          </tfoot>
+        ) : null}
+      </table>
+    </div>
   )
 }
 
