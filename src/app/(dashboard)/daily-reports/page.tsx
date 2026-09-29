@@ -223,18 +223,40 @@ export default function DailyReportsPage() {
         <>
           <style>{`
             @media print {
-              @page { size: A4; margin: 14mm; }
-              html, body { background: #fff !important; color: #111827 !important; }
+              @page { size: A4; margin: 12mm; }
+              html, body {
+                margin: 0 !important;
+                padding: 0 !important;
+                background: #fff !important;
+                color: #111827 !important;
+              }
               body * { visibility: hidden !important; }
-              #daily-report-print, #daily-report-print * { visibility: visible !important; }
+              #daily-report-print, #daily-report-print * {
+                visibility: visible !important;
+                -webkit-print-color-adjust: exact !important;
+                print-color-adjust: exact !important;
+                box-shadow: none !important;
+                outline: none !important;
+              }
               #daily-report-print {
                 display: block !important;
                 position: absolute !important;
                 inset: 0 !important;
                 width: 100% !important;
                 margin: 0 !important;
+                padding: 0 !important;
+                border: 0 !important;
                 background: #fff !important;
                 color: #111827 !important;
+              }
+              #daily-report-print section,
+              #daily-report-print section > div,
+              #daily-report-print footer {
+                border-color: #e5e7eb !important;
+              }
+              #daily-report-print .print-clean-card {
+                border: 0 !important;
+                background: #f8fafc !important;
               }
             }
           `}</style>
@@ -255,7 +277,7 @@ export default function DailyReportsPage() {
               </header>
 
               <section className="mt-5 grid grid-cols-2 gap-4 text-sm">
-                <div className="rounded-xl border border-slate-200 p-4">
+                <div className="print-clean-card rounded-xl bg-slate-50 p-4">
                   <p className="text-xs font-bold uppercase tracking-wide text-slate-500">Datos de NEDVI</p>
                   <div className="mt-3 space-y-1.5">
                     <p><strong>Razón social:</strong> NEDVI</p>
@@ -264,7 +286,7 @@ export default function DailyReportsPage() {
                     <p><strong>Nestor Ortiz:</strong> Nestor.ortiz@nedviconstrucciones.com</p>
                   </div>
                 </div>
-                <div className="rounded-xl border border-slate-200 p-4">
+                <div className="print-clean-card rounded-xl bg-slate-50 p-4">
                   <p className="text-xs font-bold uppercase tracking-wide text-slate-500">Datos del cliente</p>
                   <div className="mt-3 space-y-1.5">
                     <p><strong>Cliente:</strong> {printableProject.client}</p>
@@ -277,7 +299,7 @@ export default function DailyReportsPage() {
                 </div>
               </section>
 
-              <section className="mt-5 rounded-xl border border-slate-200 p-4">
+              <section className="print-clean-card mt-5 rounded-xl bg-slate-50 p-4">
                 <p className="text-xs font-bold uppercase tracking-wide text-slate-500">Información del proyecto</p>
                 <div className="mt-3 grid grid-cols-2 gap-x-6 gap-y-2 text-sm">
                   <p><strong>Proyecto:</strong> {printableProject.project}</p>
@@ -289,7 +311,7 @@ export default function DailyReportsPage() {
                 </div>
               </section>
 
-              <section className="mt-5 rounded-xl border border-[#5496CC]/40 bg-[#5496CC]/5 p-4">
+              <section className="mt-5 rounded-xl bg-[#5496CC]/5 p-4">
                 <div className="flex items-start justify-between gap-4">
                   <div>
                     <p className="text-xs font-bold uppercase tracking-wide text-[#5496CC]">Proceso / avance de obra</p>
@@ -306,12 +328,12 @@ export default function DailyReportsPage() {
 
               <section className="mt-5">
                 <p className="text-xs font-bold uppercase tracking-wide text-slate-500">Actividades realizadas</p>
-                <div className="mt-2 min-h-28 rounded-xl border border-slate-200 p-4 text-sm leading-6 whitespace-pre-wrap">{printReport.summary}</div>
+                <div className="mt-2 min-h-28 bg-slate-50 p-4 text-sm leading-6 whitespace-pre-wrap">{printReport.summary}</div>
               </section>
 
               <section className="mt-5">
                 <p className="text-xs font-bold uppercase tracking-wide text-slate-500">Bloqueos / pendientes</p>
-                <div className="mt-2 min-h-20 rounded-xl border border-slate-200 p-4 text-sm leading-6 whitespace-pre-wrap">{printReport.blockers || 'Sin bloqueos o pendientes registrados.'}</div>
+                <div className="mt-2 min-h-20 bg-slate-50 p-4 text-sm leading-6 whitespace-pre-wrap">{printReport.blockers || 'Sin bloqueos o pendientes registrados.'}</div>
               </section>
 
               <footer className="mt-8 border-t border-slate-200 pt-4 text-xs text-slate-500">
