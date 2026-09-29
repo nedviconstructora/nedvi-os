@@ -18,6 +18,7 @@ import {
   FolderKanban,
   HardHat,
   LayoutDashboard,
+  Ruler,
   Settings2,
   ShoppingCart,
   Truck,
@@ -54,6 +55,7 @@ const navigationGroups: NavigationGroup[] = [
     items: [
       { label: 'Clientes', href: '/crm', icon: UsersRound },
       { label: 'Oportunidades', href: '/opportunities', icon: ClipboardList },
+      { label: 'Levantamiento', href: '/site-surveys', icon: Ruler },
       { label: 'Cotizaciones', href: '/quotes', icon: FileText },
     ],
   },
