@@ -486,7 +486,7 @@ export default function SiteSurveysPage() {
 
   <div class="signatures">
     <div class="signature">Firma de quien realizó el levantamiento (VISITA)<strong>${escapeHtml(survey.performedBy || '')}</strong></div>
-    <div class="signature">Firma del departamento de presupuestos<strong>Departamento de Presupuestos</strong></div>
+    <div class="signature">Firma del cliente<strong>${escapeHtml(survey.clientName)}</strong></div>
   </div>
   <div class="footer">NEDVI Constructora · Documento de levantamiento de obra</div>
   <script>window.onload = () => { setTimeout(() => window.print(), 350) }</script>
