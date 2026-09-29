@@ -90,9 +90,9 @@ const navigationGroups: NavigationGroup[] = [
     label: 'Recursos Humanos',
     icon: UsersRound,
     items: [
-      { label: 'Personal', href: '/personnel', icon: UserRound },
-      { label: 'Asistencias', href: '/hr-attendance', icon: CalendarDays },
-      { label: 'Nómina', href: '/payroll', icon: Wallet },
+      { label: 'Personal', icon: UserRound, comingSoon: true },
+      { label: 'Asistencias', icon: CalendarDays, comingSoon: true },
+      { label: 'Nómina', icon: Wallet, comingSoon: true },
     ],
   },
   {
