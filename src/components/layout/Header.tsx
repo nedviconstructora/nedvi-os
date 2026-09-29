@@ -13,6 +13,7 @@ type HeaderProps = {
   onOpenMenu: () => void
   isDark: boolean
   onToggleTheme: () => void
+  showCompanyLogo?: boolean
 }
 
 function BrandMark() {
@@ -24,7 +25,7 @@ function BrandMark() {
   )
 }
 
-export function Header({ onOpenMenu, isDark, onToggleTheme }: HeaderProps) {
+export function Header({ onOpenMenu, isDark, onToggleTheme, showCompanyLogo = false }: HeaderProps) {
   return (
     <header className="flex h-[88px] shrink-0 items-center justify-between border-b border-[var(--border)] bg-[var(--surface)]/95 px-5 text-[var(--foreground)] backdrop-blur-xl transition-colors duration-300 sm:px-8">
       <div className="flex min-w-0 items-center gap-4">
@@ -59,6 +60,15 @@ export function Header({ onOpenMenu, isDark, onToggleTheme }: HeaderProps) {
       </div>
 
       <div className="flex items-center gap-1 sm:gap-2">
+        {showCompanyLogo ? (
+          <div className="mr-2 hidden items-center gap-2 sm:flex" aria-label="NEDVI Constructora">
+            <span className="flex h-10 w-12 items-center justify-center rounded-xl bg-[#5496CC] p-1.5 shadow-sm">
+              <img src="/logo-blanco.svg" alt="NEDVI Constructora" className="h-full w-full object-contain" />
+            </span>
+            <span className="hidden text-xs font-semibold tracking-[0.08em] text-[var(--foreground)] xl:block">NEDVI</span>
+          </div>
+        ) : null}
+
         <button
           type="button"
           onClick={onToggleTheme}
