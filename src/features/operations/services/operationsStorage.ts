@@ -6,6 +6,11 @@ export type OperationProject = {
   project: string
   client: string
   owner: string
+  contact: string
+  phone: string
+  email: string
+  address: string
+  rfc: string
 }
 
 export type ProgressRecord = {
@@ -92,13 +97,22 @@ export function readOperationProjects(): OperationProject[] {
         typeof quote.project === 'string' &&
         typeof quote.client === 'string',
     )
-    .map((quote) => ({
-      id: quote.id as string,
-      folio: quote.folio as string,
-      project: quote.project as string,
-      client: quote.client as string,
-      owner: typeof quote.owner === 'string' ? quote.owner : '',
-    }))
+    .map((quote) => {
+      const customerInfo = isRecord(quote.customerInfo) ? quote.customerInfo : {}
+
+      return {
+        id: quote.id as string,
+        folio: quote.folio as string,
+        project: quote.project as string,
+        client: quote.client as string,
+        owner: typeof quote.owner === 'string' ? quote.owner : '',
+        contact: typeof customerInfo.contact === 'string' ? customerInfo.contact : '',
+        phone: typeof customerInfo.phone === 'string' ? customerInfo.phone : '',
+        email: typeof customerInfo.email === 'string' ? customerInfo.email : '',
+        address: typeof customerInfo.address === 'string' ? customerInfo.address : '',
+        rfc: typeof customerInfo.rfc === 'string' ? customerInfo.rfc : '',
+      }
+    })
 }
 
 export function readProgressRecords(): ProgressRecord[] {
