@@ -13,6 +13,16 @@ import {
   writeProgressRecords,
 } from '@/features/operations/services/operationsStorage'
 
+const UM_OPTIONS = [
+  'Kilómetros',
+  'Metros Cuadrados',
+  'Metros Cúbicos',
+  'Metros Lineales',
+  'Piezas',
+  'Litros',
+  'Otros',
+] as const
+
 type DraftProgressItem = {
   id: string
   concept: string
@@ -61,7 +71,7 @@ function newDraftItem(): DraftProgressItem {
   return {
     id: crypto.randomUUID(),
     concept: '',
-    unit: '',
+    unit: 'Piezas',
     po: '',
     quantity: '',
     accumulatedPrevious: '0',
@@ -74,7 +84,7 @@ function draftFromPrevious(item: ProgressItem): DraftProgressItem {
   return {
     id: crypto.randomUUID(),
     concept: item.concept,
-    unit: item.unit,
+    unit: item.unit || 'Piezas',
     po: String(item.po),
     quantity: String(item.quantity),
     accumulatedPrevious: String(item.accumulatedPrevious + item.executed),
@@ -92,6 +102,10 @@ function itemRemaining(item: DraftProgressItem) {
     0,
     itemTotal(item) - Math.max(0, numberValue(item.accumulatedPrevious)) - Math.max(0, numberValue(item.executed)),
   )
+}
+
+function hasStandardUm(value: string) {
+  return UM_OPTIONS.some((option) => option === value)
 }
 
 export default function SiteProgressPage() {
@@ -407,12 +421,17 @@ export default function SiteProgressPage() {
 
               <div className="overflow-x-auto rounded-2xl border border-[var(--border)]">
                 <table className="w-full min-w-[1500px] text-left text-sm">
-                  <thead className="bg-[var(--surface-soft)] text-xs uppercase tracking-wide text-[var(--muted)]"><tr><th className="px-3 py-3">Concepto</th><th className="px-3 py-3">Unidad</th><th className="px-3 py-3">P.O</th><th className="px-3 py-3">Cantidad</th><th className="px-3 py-3">Total</th><th className="px-3 py-3">Acumulado Anterior</th><th className="px-3 py-3">Ejecución Anterior</th><th className="px-3 py-3">Ejecutado</th><th className="px-3 py-3">Total por ejecutar</th><th className="w-12"></th></tr></thead>
+                  <thead className="bg-[var(--surface-soft)] text-xs uppercase tracking-wide text-[var(--muted)]"><tr><th className="px-3 py-3">Concepto</th><th className="px-3 py-3">UM</th><th className="px-3 py-3">P.O</th><th className="px-3 py-3">Cantidad</th><th className="px-3 py-3">Total</th><th className="px-3 py-3">Acumulado Anterior</th><th className="px-3 py-3">Ejecución Anterior</th><th className="px-3 py-3">Ejecutado</th><th className="px-3 py-3">Total por ejecutar</th><th className="w-12"></th></tr></thead>
                   <tbody className="divide-y divide-[var(--border)]">
                     {items.map((item) => (
                       <tr key={item.id}>
                         <td className="p-2"><input required value={item.concept} onChange={(e) => updateItem(item.id, 'concept', e.target.value)} placeholder="Ej. Muro de block" className="table-input min-w-[230px]" /></td>
-                        <td className="p-2"><input value={item.unit} onChange={(e) => updateItem(item.id, 'unit', e.target.value)} placeholder="m², pza..." className="table-input min-w-[100px]" /></td>
+                        <td className="p-2">
+                          <select value={item.unit} onChange={(e) => updateItem(item.id, 'unit', e.target.value)} className="table-input min-w-[170px]">
+                            {!hasStandardUm(item.unit) && item.unit ? <option value={item.unit}>{item.unit} (anterior)</option> : null}
+                            {UM_OPTIONS.map((option) => <option key={option} value={option}>{option}</option>)}
+                          </select>
+                        </td>
                         <td className="p-2"><input type="number" min="0" step="0.01" value={item.po} onChange={(e) => updateItem(item.id, 'po', e.target.value)} className="table-input min-w-[120px]" /></td>
                         <td className="p-2"><input type="number" min="0" step="0.01" value={item.quantity} onChange={(e) => updateItem(item.id, 'quantity', e.target.value)} className="table-input min-w-[110px]" /></td>
                         <td className="p-2 text-right font-semibold">{money(itemTotal(item))}</td>
@@ -460,7 +479,7 @@ function ProgressTable({ rows, emptyMessage = 'Sin conceptos registrados.' }: { 
         <thead className="bg-[var(--surface-soft)] text-xs uppercase tracking-wide text-[var(--muted)]">
           <tr>
             <th className="px-4 py-3">Concepto</th>
-            <th className="px-4 py-3">Unidad</th>
+            <th className="px-4 py-3">UM</th>
             <th className="px-4 py-3 text-right">P.O</th>
             <th className="px-4 py-3 text-right">Cantidad</th>
             <th className="px-4 py-3 text-right">Total</th>
