@@ -204,6 +204,32 @@ export default function SiteProgressPage() {
     : undefined
   const viewingRecords = viewingQuoteId ? recordsByProject.get(viewingQuoteId) ?? [] : []
 
+  const liveProgress = useMemo(() => {
+    const totalContract = items.reduce((sum, item) => sum + itemTotal(item), 0)
+    const accumulatedPrevious = items.reduce(
+      (sum, item) => sum + Math.max(0, numberValue(item.accumulatedPrevious)),
+      0,
+    )
+    const currentExecuted = items.reduce(
+      (sum, item) => sum + Math.max(0, numberValue(item.executed)),
+      0,
+    )
+    const totalAccumulated = accumulatedPrevious + currentExecuted
+    const remaining = Math.max(0, totalContract - totalAccumulated)
+    const percent = totalContract > 0
+      ? Math.min(100, Math.round((totalAccumulated / totalContract) * 100))
+      : 0
+
+    return {
+      totalContract,
+      accumulatedPrevious,
+      currentExecuted,
+      totalAccumulated,
+      remaining,
+      percent,
+    }
+  }, [items])
+
   function openNew(project?: OperationProject) {
     const selectedProjectId = project?.id ?? ''
     const latest = latestByProject.get(selectedProjectId)
@@ -419,6 +445,25 @@ export default function SiteProgressPage() {
                 <label className="space-y-2"><span className="text-sm font-semibold">Fecha</span><input type="date" required value={date} onChange={(event) => setDate(event.target.value)} className="w-full rounded-xl border border-[var(--border)] bg-transparent px-4 py-3" /></label>
               </div>
 
+              <div className="rounded-2xl border border-[#5496CC]/25 bg-[#5496CC]/[0.07] p-4">
+                <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
+                  <div>
+                    <p className="text-xs font-semibold uppercase tracking-[0.14em] text-[#5496CC]">Avance calculado en tiempo real</p>
+                    <p className="mt-1 text-sm text-[var(--muted)]">Se actualiza automáticamente conforme llenas Cantidad, P.O, Acumulado Anterior y Ejecutado.</p>
+                  </div>
+                  <p className="text-3xl font-bold text-[#5496CC]">{liveProgress.percent}%</p>
+                </div>
+                <div className="mt-4 h-3 overflow-hidden rounded-full bg-[var(--surface-soft)]">
+                  <div className="h-full rounded-full bg-[#5496CC] transition-[width] duration-300" style={{ width: `${liveProgress.percent}%` }} />
+                </div>
+                <div className="mt-4 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+                  <LiveMetric label="Importe total" value={money(liveProgress.totalContract)} />
+                  <LiveMetric label="Acumulado anterior" value={money(liveProgress.accumulatedPrevious)} />
+                  <LiveMetric label="Ejecutado actual" value={money(liveProgress.currentExecuted)} />
+                  <LiveMetric label="Total por ejecutar" value={money(liveProgress.remaining)} />
+                </div>
+              </div>
+
               <div className="overflow-x-auto rounded-2xl border border-[var(--border)]">
                 <table className="w-full min-w-[1500px] text-left text-sm">
                   <thead className="bg-[var(--surface-soft)] text-xs uppercase tracking-wide text-[var(--muted)]"><tr><th className="px-3 py-3">Concepto</th><th className="px-3 py-3">UM</th><th className="px-3 py-3">Cantidad</th><th className="px-3 py-3">P.O</th><th className="px-3 py-3">Total</th><th className="px-3 py-3">Acumulado Anterior</th><th className="px-3 py-3">Ejecución Anterior</th><th className="px-3 py-3">Ejecutado</th><th className="px-3 py-3">Total por ejecutar</th><th className="w-12"></th></tr></thead>
@@ -521,6 +566,15 @@ function ProgressTable({ rows, emptyMessage = 'Sin conceptos registrados.' }: { 
           </tfoot>
         ) : null}
       </table>
+    </div>
+  )
+}
+
+function LiveMetric({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="rounded-xl border border-[var(--border)] bg-[var(--surface)]/70 px-4 py-3">
+      <p className="text-[11px] font-semibold uppercase tracking-wide text-[var(--muted)]">{label}</p>
+      <p className="mt-1 text-sm font-bold text-[var(--foreground)]">{value}</p>
     </div>
   )
 }
