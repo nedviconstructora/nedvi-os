@@ -1,7 +1,7 @@
 'use client'
 
 import { FormEvent, useEffect, useMemo, useState } from 'react'
-import { FileText, Plus, Printer, Search, Trash2, X } from 'lucide-react'
+import { Eye, FileText, Plus, Printer, Search, Trash2, X } from 'lucide-react'
 import { AppShell } from '@/components/layout/AppShell'
 import {
   DAILY_REPORTS_STORAGE_KEY,
@@ -32,13 +32,13 @@ function formatDate(value: string) {
 }
 
 function escapeHtml(value: string | number) {
-  return String(value).replace(/[&<>'"]/g, (character) => {
+  return String(value).replace(/[&<>'\"]/g, (character) => {
     const entities: Record<string, string> = {
       '&': '&amp;',
       '<': '&lt;',
       '>': '&gt;',
       "'": '&#39;',
-      '"': '&quot;',
+      '\"': '&quot;',
     }
     return entities[character] ?? character
   })
@@ -54,6 +54,7 @@ export default function DailyReportsPage() {
   const [progressRecords, setProgressRecords] = useState<ProgressRecord[]>([])
   const [search, setSearch] = useState('')
   const [open, setOpen] = useState(false)
+  const [viewingQuoteId, setViewingQuoteId] = useState<string | null>(null)
   const [quoteId, setQuoteId] = useState('')
   const [date, setDate] = useState(today())
   const [weather, setWeather] = useState('')
@@ -101,25 +102,6 @@ export default function DailyReportsPage() {
     [projects],
   )
 
-  const filtered = useMemo(() => {
-    const query = search.trim().toLowerCase()
-    if (!query) return reports
-
-    return reports.filter((report) => {
-      const project = projectById.get(report.quoteId)
-      return [
-        report.folio,
-        project?.project ?? '',
-        project?.client ?? '',
-        report.author,
-        report.summary,
-      ]
-        .join(' ')
-        .toLowerCase()
-        .includes(query)
-    })
-  }, [reports, search, projectById])
-
   function progressForReport(report: DailyReport) {
     const matches = progressRecords
       .filter((record) => record.quoteId === report.quoteId && record.date <= report.date)
@@ -131,6 +113,54 @@ export default function DailyReportsPage() {
       .filter((record) => record.quoteId === report.quoteId)
       .sort((a, b) => b.date.localeCompare(a.date))[0]
   }
+
+  const reportGroups = useMemo(() => {
+    const query = search.trim().toLowerCase()
+
+    return projects
+      .map((project) => {
+        const projectReports = reports
+          .filter((report) => report.quoteId === project.id)
+          .sort((a, b) => b.date.localeCompare(a.date))
+
+        const searchable = [
+          project.folio,
+          project.project,
+          project.client,
+          project.owner,
+          ...projectReports.flatMap((report) => [
+            report.author,
+            report.summary,
+            report.blockers,
+            report.weather,
+            report.date,
+          ]),
+        ]
+          .join(' ')
+          .toLowerCase()
+
+        return {
+          project,
+          reports: projectReports,
+          latest: projectReports[0],
+        }
+      })
+      .filter((group) => group.reports.length > 0)
+      .filter((group) => !query || [group.project.project, group.project.client, group.project.folio, group.project.owner, ...group.reports.map((report) => `${report.author} ${report.summary} ${report.blockers} ${report.weather} ${report.date}`)].join(' ').toLowerCase().includes(query))
+      .sort((a, b) => (b.latest?.date ?? '').localeCompare(a.latest?.date ?? ''))
+  }, [projects, reports, search])
+
+  const viewingGroup = useMemo(() => {
+    if (!viewingQuoteId) return undefined
+    const project = projectById.get(viewingQuoteId)
+    if (!project) return undefined
+
+    const projectReports = reports
+      .filter((report) => report.quoteId === viewingQuoteId)
+      .sort((a, b) => b.date.localeCompare(a.date))
+
+    return { project, reports: projectReports }
+  }, [viewingQuoteId, projectById, reports])
 
   function resetForm() {
     setQuoteId('')
@@ -171,6 +201,10 @@ export default function DailyReportsPage() {
     const next = reports.filter((report) => report.id !== id)
     setReports(next)
     writeDailyReports(next)
+
+    if (viewingQuoteId && !next.some((report) => report.quoteId === viewingQuoteId)) {
+      setViewingQuoteId(null)
+    }
   }
 
   function printPdf(report: DailyReport) {
@@ -344,7 +378,7 @@ export default function DailyReportsPage() {
           <div>
             <p className="text-xs font-semibold uppercase tracking-[0.16em] text-[#5496CC]">Operaciones / Obra</p>
             <h1 className="mt-2 text-3xl font-bold text-[var(--foreground)]">Reportes diarios</h1>
-            <p className="mt-2 text-sm text-[var(--muted)]">Bitácora diaria de actividades, personal, clima, avance y bloqueos de obra.</p>
+            <p className="mt-2 text-sm text-[var(--muted)]">Bitácora diaria agrupada por proyecto para consultar el historial completo sin saturar la vista.</p>
           </div>
           <button onClick={() => setOpen(true)} className="inline-flex h-11 items-center gap-2 rounded-xl bg-[#5496CC] px-4 text-sm font-semibold text-white"><Plus size={16} /> Nuevo reporte</button>
         </header>
@@ -358,68 +392,125 @@ export default function DailyReportsPage() {
         <div className="rounded-2xl border border-[var(--border)] bg-[var(--surface)] p-4">
           <div className="relative max-w-xl">
             <Search size={17} className="absolute left-4 top-1/2 -translate-y-1/2 text-[var(--muted)]" />
-            <input value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Buscar por proyecto, folio, autor o actividad..." className="w-full rounded-xl border border-[var(--border)] bg-transparent py-3 pl-11 pr-4 text-sm outline-none focus:border-[#5496CC]" />
+            <input value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Buscar cliente, proyecto, folio o actividad..." className="w-full rounded-xl border border-[var(--border)] bg-transparent py-3 pl-11 pr-4 text-sm outline-none focus:border-[#5496CC]" />
           </div>
         </div>
 
-        <div className="space-y-4">
-          {filtered.length === 0 ? (
-            <div className="rounded-2xl border border-[var(--border)] bg-[var(--surface)] px-6 py-16 text-center">
-              <FileText className="mx-auto text-[#5496CC]" size={32} />
-              <h2 className="mt-4 text-lg font-bold">Todavía no hay reportes diarios</h2>
-              <p className="mt-2 text-sm text-[var(--muted)]">Crea el primer reporte para documentar la jornada de obra.</p>
+        {reportGroups.length === 0 ? (
+          <div className="rounded-2xl border border-[var(--border)] bg-[var(--surface)] px-6 py-16 text-center">
+            <FileText className="mx-auto text-[#5496CC]" size={32} />
+            <h2 className="mt-4 text-lg font-bold">Todavía no hay reportes diarios</h2>
+            <p className="mt-2 text-sm text-[var(--muted)]">Crea el primer reporte para documentar la jornada de obra.</p>
+          </div>
+        ) : (
+          <div className="overflow-hidden rounded-2xl border border-[var(--border)] bg-[var(--surface)] shadow-sm">
+            <div className="overflow-x-auto">
+              <table className="w-full min-w-[980px] text-left text-sm">
+                <thead className="border-b border-[var(--border)] bg-[var(--surface-soft)] text-xs uppercase tracking-wide text-[var(--muted)]">
+                  <tr>
+                    <th className="px-5 py-4">Proyecto / Cliente</th>
+                    <th className="px-5 py-4">Último reporte</th>
+                    <th className="px-5 py-4">Avance</th>
+                    <th className="px-5 py-4">Reportes</th>
+                    <th className="px-5 py-4">Responsable</th>
+                    <th className="px-5 py-4 text-right">Acción</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-[var(--border)]">
+                  {reportGroups.map(({ project, reports: projectReports, latest }) => {
+                    const latestProgress = latest ? progressForReport(latest) : undefined
+
+                    return (
+                      <tr key={project.id} className="hover:bg-[var(--surface-soft)]">
+                        <td className="px-5 py-4">
+                          <p className="font-semibold text-[var(--foreground)]">{project.project}</p>
+                          <p className="mt-1 text-xs text-[var(--muted)]">{project.client} · {project.folio}</p>
+                        </td>
+                        <td className="px-5 py-4">
+                          <p className="font-medium text-[var(--foreground)]">{latest ? formatDate(latest.date) : 'Sin fecha'}</p>
+                          <p className="mt-1 text-xs text-[var(--muted)]">{latest?.author || 'Sin autor'}</p>
+                        </td>
+                        <td className="px-5 py-4">
+                          <span className="inline-flex rounded-full bg-[#5496CC]/10 px-2.5 py-1 text-xs font-semibold text-[#5496CC]">
+                            {latestProgress ? `${latestProgress.percent}%` : 'Sin registrar'}
+                          </span>
+                        </td>
+                        <td className="px-5 py-4 font-semibold text-[var(--foreground)]">{projectReports.length}</td>
+                        <td className="px-5 py-4 text-[var(--foreground)]">{project.owner || 'Sin responsable'}</td>
+                        <td className="px-5 py-4 text-right">
+                          <button
+                            type="button"
+                            onClick={() => setViewingQuoteId(project.id)}
+                            className="inline-flex items-center gap-2 rounded-lg border border-[#5496CC]/40 px-3 py-2 text-xs font-semibold text-[#5496CC] transition hover:bg-[#5496CC]/10"
+                          >
+                            <Eye size={15} />
+                            Ver reportes
+                          </button>
+                        </td>
+                      </tr>
+                    )
+                  })}
+                </tbody>
+              </table>
             </div>
-          ) : (
-            filtered.map((report) => {
-              const project = projectById.get(report.quoteId)
-              const progress = progressForReport(report)
-
-              return (
-                <article key={report.id} className="rounded-2xl border border-[var(--border)] bg-[var(--surface)] p-5 shadow-sm">
-                  <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-                    <div>
-                      <p className="text-xs font-semibold text-[#5496CC]">{report.folio} · {report.date}</p>
-                      <h2 className="mt-1 text-lg font-bold">{project?.project ?? 'Proyecto'}</h2>
-                      <p className="mt-1 text-sm text-[var(--muted)]">{project?.client ?? ''} · {report.author || 'Sin autor'}</p>
-                    </div>
-                    <div className="flex gap-2">
-                      <button onClick={() => printPdf(report)} className="inline-flex items-center gap-2 rounded-lg border border-[#5496CC]/40 px-3 py-2 text-xs font-semibold text-[#5496CC] hover:bg-[#5496CC]/10"><Printer size={15} /> PDF</button>
-                      <button onClick={() => remove(report.id)} className="rounded-lg p-2 text-red-500 hover:bg-red-500/10"><Trash2 size={16} /></button>
-                    </div>
-                  </div>
-
-                  <div className="mt-4 grid gap-3 sm:grid-cols-4">
-                    <Info label="Clima" value={report.weather || 'Sin registrar'} />
-                    <Info label="Personal" value={`${report.workers} personas`} />
-                    <Info label="Responsable" value={project?.owner || 'Sin responsable'} />
-                    <Info label="Avance de obra" value={progress ? `${progress.percent}%` : 'Sin registrar'} />
-                  </div>
-
-                  {progress ? (
-                    <div className="mt-4 rounded-xl border border-[#5496CC]/20 bg-[#5496CC]/10 p-4">
-                      <p className="text-xs font-semibold uppercase tracking-wide text-[#5496CC]">Proceso actual de la obra</p>
-                      <p className="mt-2 text-sm font-semibold">{progress.percent}% · {progress.milestone || 'Avance registrado'}</p>
-                      {progress.notes ? <p className="mt-1 text-sm text-[var(--muted)]">{progress.notes}</p> : null}
-                    </div>
-                  ) : null}
-
-                  <div className="mt-4 rounded-xl bg-[var(--surface-soft)] p-4">
-                    <p className="text-xs font-semibold uppercase tracking-wide text-[var(--muted)]">Actividades realizadas</p>
-                    <p className="mt-2 whitespace-pre-wrap text-sm leading-6">{report.summary}</p>
-                  </div>
-
-                  {report.blockers ? (
-                    <div className="mt-3 rounded-xl border border-amber-500/20 bg-amber-500/10 p-4">
-                      <p className="text-xs font-semibold uppercase tracking-wide text-amber-600">Bloqueos / pendientes</p>
-                      <p className="mt-2 whitespace-pre-wrap text-sm">{report.blockers}</p>
-                    </div>
-                  ) : null}
-                </article>
-              )
-            })
-          )}
-        </div>
+          </div>
+        )}
       </div>
+
+      {viewingGroup ? (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4">
+          <div className="max-h-[94vh] w-full max-w-6xl overflow-y-auto rounded-2xl bg-[var(--surface)] shadow-2xl">
+            <div className="sticky top-0 z-10 flex items-start justify-between gap-4 border-b border-[var(--border)] bg-[var(--surface)] p-5">
+              <div>
+                <p className="text-xs font-semibold uppercase tracking-[0.14em] text-[#5496CC]">Historial de reportes diarios</p>
+                <h2 className="mt-1 text-xl font-bold text-[var(--foreground)]">{viewingGroup.project.project}</h2>
+                <p className="mt-1 text-sm text-[var(--muted)]">{viewingGroup.project.client} · {viewingGroup.project.folio} · {viewingGroup.reports.length} reporte{viewingGroup.reports.length === 1 ? '' : 's'}</p>
+              </div>
+              <button type="button" onClick={() => setViewingQuoteId(null)} className="rounded-lg p-2 text-[var(--muted)] hover:bg-[var(--surface-soft)]" aria-label="Cerrar historial"><X size={19} /></button>
+            </div>
+
+            <div className="space-y-4 p-5">
+              {viewingGroup.reports.map((report) => {
+                const progress = progressForReport(report)
+
+                return (
+                  <article key={report.id} className="rounded-2xl border border-[var(--border)] bg-[var(--surface-soft)] p-5">
+                    <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+                      <div>
+                        <p className="text-xs font-semibold text-[#5496CC]">{formatDate(report.date)}</p>
+                        <h3 className="mt-1 text-base font-bold text-[var(--foreground)]">Reporte diario</h3>
+                        <p className="mt-1 text-sm text-[var(--muted)]">Elaboró: {report.author || 'Sin registrar'}</p>
+                      </div>
+                      <div className="flex flex-wrap gap-2">
+                        <button type="button" onClick={() => printPdf(report)} className="inline-flex items-center gap-2 rounded-lg border border-[#5496CC]/40 px-3 py-2 text-xs font-semibold text-[#5496CC] hover:bg-[#5496CC]/10"><Printer size={15} /> PDF</button>
+                        <button type="button" onClick={() => remove(report.id)} className="inline-flex items-center gap-2 rounded-lg border border-red-500/20 px-3 py-2 text-xs font-semibold text-red-500 hover:bg-red-500/10"><Trash2 size={15} /> Eliminar</button>
+                      </div>
+                    </div>
+
+                    <div className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+                      <Info label="Clima" value={report.weather || 'Sin registrar'} />
+                      <Info label="Personal" value={`${report.workers} personas`} />
+                      <Info label="Avance de obra" value={progress ? `${progress.percent}%` : 'Sin registrar'} />
+                      <Info label="Proceso" value={progress?.milestone || 'Avance registrado'} />
+                    </div>
+
+                    <div className="mt-4 grid gap-4 lg:grid-cols-[1.3fr_1fr]">
+                      <div className="rounded-xl bg-[var(--surface)] p-4">
+                        <p className="text-xs font-semibold uppercase tracking-wide text-[var(--muted)]">Actividades realizadas</p>
+                        <p className="mt-2 whitespace-pre-wrap text-sm leading-6 text-[var(--foreground)]">{report.summary}</p>
+                      </div>
+                      <div className={`rounded-xl p-4 ${report.blockers ? 'border border-amber-500/20 bg-amber-500/10' : 'bg-[var(--surface)]'}`}>
+                        <p className={`text-xs font-semibold uppercase tracking-wide ${report.blockers ? 'text-amber-600' : 'text-[var(--muted)]'}`}>Bloqueos / pendientes</p>
+                        <p className="mt-2 whitespace-pre-wrap text-sm leading-6 text-[var(--foreground)]">{report.blockers || 'Sin bloqueos o pendientes registrados.'}</p>
+                      </div>
+                    </div>
+                  </article>
+                )
+              })}
+            </div>
+          </div>
+        </div>
+      ) : null}
 
       {open ? (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/55 p-4">
