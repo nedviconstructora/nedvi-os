@@ -13,6 +13,19 @@ export type OperationProject = {
   rfc: string
 }
 
+export type ProgressItem = {
+  id: string
+  concept: string
+  unit: string
+  po: number
+  quantity: number
+  total: number
+  accumulatedPrevious: number
+  previousExecution: number
+  executed: number
+  totalToExecute: number
+}
+
 export type ProgressRecord = {
   id: string
   quoteId: string
@@ -21,6 +34,7 @@ export type ProgressRecord = {
   percent: number
   milestone: string
   notes: string
+  items: ProgressItem[]
 }
 
 export type DailyReportImage = {
@@ -95,6 +109,10 @@ function writeArray<T>(key: string, values: T[]) {
   window.localStorage.setItem(key, JSON.stringify(values))
 }
 
+function numberValue(value: unknown) {
+  return typeof value === 'number' && Number.isFinite(value) ? value : 0
+}
+
 export function readOperationProjects(): OperationProject[] {
   return readArray(QUOTES_STORAGE_KEY)
     .filter(isRecord)
@@ -143,6 +161,31 @@ export function readProgressRecords(): ProgressRecord[] {
       percent: Math.max(0, Math.min(100, item.percent as number)),
       milestone: typeof item.milestone === 'string' ? item.milestone : '',
       notes: typeof item.notes === 'string' ? item.notes : '',
+      items: Array.isArray(item.items)
+        ? item.items
+            .filter(isRecord)
+            .filter((row) => typeof row.id === 'string')
+            .map((row) => {
+              const po = Math.max(0, numberValue(row.po))
+              const quantity = Math.max(0, numberValue(row.quantity))
+              const total = Math.max(0, numberValue(row.total) || po * quantity)
+              const accumulatedPrevious = Math.max(0, numberValue(row.accumulatedPrevious))
+              const previousExecution = Math.max(0, numberValue(row.previousExecution))
+              const executed = Math.max(0, numberValue(row.executed))
+              return {
+                id: row.id as string,
+                concept: typeof row.concept === 'string' ? row.concept : '',
+                unit: typeof row.unit === 'string' ? row.unit : '',
+                po,
+                quantity,
+                total,
+                accumulatedPrevious,
+                previousExecution,
+                executed,
+                totalToExecute: Math.max(0, total - accumulatedPrevious - executed),
+              }
+            })
+        : [],
     }))
 }
 
