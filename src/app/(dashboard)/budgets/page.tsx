@@ -7,6 +7,7 @@ import {
   Download,
   Eye,
   Pencil,
+  Plus,
   Search,
   WalletCards,
   X,
@@ -161,6 +162,7 @@ export default function BudgetsPage() {
   const [projects, setProjects] = useState<SavedQuote[]>([])
   const [budgets, setBudgets] = useState<BudgetRecord[]>([])
   const [search, setSearch] = useState('')
+  const [projectPickerOpen, setProjectPickerOpen] = useState(false)
   const [editingProject, setEditingProject] = useState<SavedQuote | null>(null)
   const [viewingProject, setViewingProject] = useState<SavedQuote | null>(null)
   const [form, setForm] = useState<BudgetForm>(emptyForm())
@@ -215,6 +217,11 @@ export default function BudgetsPage() {
     )
   }, [projects, search])
 
+  const projectsWithoutBudget = useMemo(
+    () => projects.filter((project) => !budgetByQuoteId.has(project.id)),
+    [projects, budgetByQuoteId],
+  )
+
   const totalMXN = projects
     .filter((project) => project.currency !== 'USD')
     .reduce((sum, project) => sum + project.total, 0)
@@ -227,6 +234,7 @@ export default function BudgetsPage() {
 
   function openBudget(project: SavedQuote) {
     const saved = budgetByQuoteId.get(project.id)
+    setProjectPickerOpen(false)
     setEditingProject(project)
     setForm(
       saved
@@ -334,16 +342,27 @@ export default function BudgetsPage() {
   return (
     <AppShell>
       <div className="mx-auto w-full max-w-[1600px] space-y-6 print:hidden">
-        <header>
-          <p className="text-xs font-semibold uppercase tracking-[0.16em] text-[#5496CC]">
-            Proyectos
-          </p>
-          <h1 className="mt-2 text-3xl font-bold tracking-tight text-[var(--foreground)]">
-            Presupuestos
-          </h1>
-          <p className="mt-2 max-w-2xl text-sm text-[var(--muted)]">
-            Controla el presupuesto aprobado de cada proyecto y distribúyelo por categoría.
-          </p>
+        <header className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
+          <div>
+            <p className="text-xs font-semibold uppercase tracking-[0.16em] text-[#5496CC]">
+              Proyectos
+            </p>
+            <h1 className="mt-2 text-3xl font-bold tracking-tight text-[var(--foreground)]">
+              Presupuestos
+            </h1>
+            <p className="mt-2 max-w-2xl text-sm text-[var(--muted)]">
+              Controla el presupuesto aprobado de cada proyecto y distribúyelo por categoría.
+            </p>
+          </div>
+          <button
+            type="button"
+            onClick={() => setProjectPickerOpen(true)}
+            disabled={!projects.length}
+            className="inline-flex h-11 items-center gap-2 rounded-xl bg-[#5496CC] px-4 text-sm font-semibold text-white transition hover:bg-[#4687bd] disabled:cursor-not-allowed disabled:opacity-50"
+          >
+            <Plus size={16} />
+            Agregar presupuesto
+          </button>
         </header>
 
         <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
@@ -491,6 +510,59 @@ export default function BudgetsPage() {
           )}
         </div>
       </div>
+
+      {projectPickerOpen ? (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/55 p-4 print:hidden">
+          <div className="max-h-[88vh] w-full max-w-3xl overflow-y-auto rounded-2xl bg-[var(--surface)] p-6 shadow-2xl">
+            <div className="flex items-start justify-between gap-4 border-b border-[var(--border)] pb-5">
+              <div>
+                <p className="text-xs font-semibold uppercase tracking-[0.14em] text-[#5496CC]">Presupuestos</p>
+                <h2 className="mt-1 text-xl font-bold text-[var(--foreground)]">Agregar presupuesto</h2>
+                <p className="mt-1 text-sm text-[var(--muted)]">Selecciona el proyecto al que quieres asignar un nuevo presupuesto.</p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setProjectPickerOpen(false)}
+                className="rounded-lg p-2 text-[var(--muted)] hover:bg-[var(--surface-soft)]"
+                aria-label="Cerrar selector de proyecto"
+              >
+                <X size={18} />
+              </button>
+            </div>
+
+            <div className="mt-5 space-y-3">
+              {projectsWithoutBudget.length ? (
+                projectsWithoutBudget.map((project) => {
+                  const currency: Currency = project.currency === 'USD' ? 'USD' : 'MXN'
+                  return (
+                    <button
+                      key={project.id}
+                      type="button"
+                      onClick={() => openBudget(project)}
+                      className="flex w-full flex-col gap-3 rounded-2xl border border-[var(--border)] p-4 text-left transition hover:border-[#5496CC]/60 hover:bg-[#5496CC]/5 sm:flex-row sm:items-center sm:justify-between"
+                    >
+                      <div>
+                        <p className="font-semibold text-[var(--foreground)]">{project.project}</p>
+                        <p className="mt-1 text-xs text-[var(--muted)]">{project.folio} · {project.client} · {project.owner || 'Sin responsable'}</p>
+                      </div>
+                      <div className="shrink-0 sm:text-right">
+                        <p className="text-xs uppercase tracking-wide text-[var(--muted)]">Aprobado</p>
+                        <p className="mt-1 font-bold text-[#5496CC]">{money(project.total, currency)}</p>
+                      </div>
+                    </button>
+                  )
+                })
+              ) : (
+                <div className="rounded-2xl border border-dashed border-[var(--border)] px-5 py-10 text-center">
+                  <WalletCards className="mx-auto text-[#5496CC]" size={30} />
+                  <h3 className="mt-3 font-bold text-[var(--foreground)]">Todos los proyectos ya tienen presupuesto</h3>
+                  <p className="mt-2 text-sm text-[var(--muted)]">Puedes editar cualquiera de ellos desde la tabla principal.</p>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      ) : null}
 
       {viewingProject && viewingBudget ? (
         <>
