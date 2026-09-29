@@ -23,6 +23,12 @@ import {
   X,
 } from 'lucide-react'
 import { AppShell } from '@/components/layout/AppShell'
+import {
+  CRM_STORAGE_KEY,
+  CRM_UPDATED_EVENT,
+  readCustomers,
+} from '@/features/crm/services/customerStorage'
+import type { Customer } from '@/features/crm/types/customer'
 
 type ExecutionTime = 'Jornada normal' | 'Fin de semana' | 'Extraordinaria'
 
@@ -158,6 +164,7 @@ function dataUrlFromFile(file: File) {
 
 export default function SiteSurveysPage() {
   const [surveys, setSurveys] = useState<SiteSurvey[]>([])
+  const [customers, setCustomers] = useState<Customer[]>([])
   const [search, setSearch] = useState('')
   const [open, setOpen] = useState(false)
   const [editingId, setEditingId] = useState<string | null>(null)
@@ -167,6 +174,29 @@ export default function SiteSurveysPage() {
   useEffect(() => {
     setSurveys(readSurveys())
   }, [])
+
+  useEffect(() => {
+    const loadCustomers = () => setCustomers(readCustomers())
+    const handleStorage = (event: StorageEvent) => {
+      if (event.key === CRM_STORAGE_KEY) loadCustomers()
+    }
+
+    loadCustomers()
+    window.addEventListener(CRM_UPDATED_EVENT, loadCustomers)
+    window.addEventListener('storage', handleStorage)
+    window.addEventListener('focus', loadCustomers)
+
+    return () => {
+      window.removeEventListener(CRM_UPDATED_EVENT, loadCustomers)
+      window.removeEventListener('storage', handleStorage)
+      window.removeEventListener('focus', loadCustomers)
+    }
+  }, [])
+
+  const customerOptions = useMemo(
+    () => [...customers].sort((a, b) => a.company.localeCompare(b.company, 'es')),
+    [customers],
+  )
 
   const filtered = useMemo(() => {
     const query = search.trim().toLowerCase()
@@ -195,9 +225,10 @@ export default function SiteSurveysPage() {
   }
 
   function openEdit(survey: SiteSurvey) {
+    const clientStillExists = customers.some((customer) => customer.company === survey.clientName)
     setEditingId(survey.id)
     setForm({
-      clientName: survey.clientName,
+      clientName: clientStillExists ? survey.clientName : '',
       date: survey.date,
       location: survey.location,
       requestedBy: survey.requestedBy,
@@ -274,7 +305,12 @@ export default function SiteSurveysPage() {
 
   function saveSurvey(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
-    if (!form.clientName.trim() || !form.description.trim()) return
+    const selectedCustomer = customers.find((customer) => customer.company === form.clientName)
+    if (!selectedCustomer) {
+      window.alert('Selecciona un cliente registrado en Clientes.')
+      return
+    }
+    if (!form.description.trim()) return
 
     const now = new Date().toISOString()
     let next: SiteSurvey[]
@@ -285,7 +321,7 @@ export default function SiteSurveysPage() {
           ? {
               ...survey,
               ...form,
-              clientName: form.clientName.trim(),
+              clientName: selectedCustomer.company,
               location: form.location.trim(),
               requestedBy: form.requestedBy.trim(),
               performedBy: form.performedBy.trim(),
@@ -300,7 +336,7 @@ export default function SiteSurveysPage() {
         {
           id: crypto.randomUUID(),
           ...form,
-          clientName: form.clientName.trim(),
+          clientName: selectedCustomer.company,
           location: form.location.trim(),
           requestedBy: form.requestedBy.trim(),
           performedBy: form.performedBy.trim(),
@@ -501,7 +537,17 @@ export default function SiteSurveysPage() {
               <section className="rounded-2xl border border-[var(--border)] p-5">
                 <h3 className="mb-4 font-bold text-[var(--foreground)]">Datos generales</h3>
                 <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-                  <Field label="Nombre del cliente *"><input required value={form.clientName} onChange={(e) => setForm({ ...form, clientName: e.target.value })} className="survey-input" /></Field>
+                  <Field label="Nombre del cliente *">
+                    <select required value={form.clientName} onChange={(e) => setForm({ ...form, clientName: e.target.value })} className="survey-input">
+                      <option value="">Seleccionar cliente registrado</option>
+                      {customerOptions.map((customer) => (
+                        <option key={customer.id} value={customer.company}>
+                          {customer.company}{customer.folio ? ` — ${customer.folio}` : ''}
+                        </option>
+                      ))}
+                    </select>
+                    {customerOptions.length === 0 ? <span className="block text-xs text-amber-500">Primero registra un cliente en Comercial y Ventas → Clientes.</span> : null}
+                  </Field>
                   <Field label="Fecha"><input type="date" value={form.date} onChange={(e) => setForm({ ...form, date: e.target.value })} className="survey-input" /></Field>
                   <Field label="Ciudad / Zona"><input value={form.location} onChange={(e) => setForm({ ...form, location: e.target.value })} placeholder="Ej. Tijuana, Ensenada, Tecate..." className="survey-input" /></Field>
                   <Field label="Solicita"><input value={form.requestedBy} onChange={(e) => setForm({ ...form, requestedBy: e.target.value })} placeholder="Quién solicita el levantamiento" className="survey-input" /></Field>
