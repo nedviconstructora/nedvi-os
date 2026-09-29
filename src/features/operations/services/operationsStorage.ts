@@ -23,16 +23,25 @@ export type ProgressRecord = {
   notes: string
 }
 
+export type DailyReportImage = {
+  id: string
+  name: string
+  dataUrl: string
+}
+
 export type DailyReport = {
   id: string
   quoteId: string
   folio: string
   date: string
+  projectName: string
+  clientInvoice: string
   weather: string
   workers: number
   summary: string
   blockers: string
   author: string
+  images: DailyReportImage[]
 }
 
 export type Crew = {
@@ -156,11 +165,29 @@ export function readDailyReports(): DailyReport[] {
       quoteId: item.quoteId as string,
       folio: item.folio as string,
       date: item.date as string,
+      projectName: typeof item.projectName === 'string' ? item.projectName : '',
+      clientInvoice: typeof item.clientInvoice === 'string' ? item.clientInvoice : '',
       weather: typeof item.weather === 'string' ? item.weather : '',
       workers: typeof item.workers === 'number' ? item.workers : 0,
       summary: typeof item.summary === 'string' ? item.summary : '',
       blockers: typeof item.blockers === 'string' ? item.blockers : '',
       author: typeof item.author === 'string' ? item.author : '',
+      images: Array.isArray(item.images)
+        ? item.images
+            .filter(isRecord)
+            .filter(
+              (image) =>
+                typeof image.id === 'string' &&
+                typeof image.name === 'string' &&
+                typeof image.dataUrl === 'string' &&
+                image.dataUrl.startsWith('data:image/'),
+            )
+            .map((image) => ({
+              id: image.id as string,
+              name: image.name as string,
+              dataUrl: image.dataUrl as string,
+            }))
+        : [],
     }))
 }
 
