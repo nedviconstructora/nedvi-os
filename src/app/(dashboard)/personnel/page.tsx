@@ -283,6 +283,17 @@ export default function PersonnelPage() {
   )
 }
 
+function StatusBadge({ status }: { status: EmployeeStatus }) {
+  const classes =
+    status === 'Activo'
+      ? 'bg-emerald-500/10 text-emerald-500'
+      : status === 'Vacaciones'
+        ? 'bg-amber-500/10 text-amber-500'
+        : 'bg-slate-500/10 text-slate-400'
+
+  return <span className={`inline-flex rounded-full px-2.5 py-1 text-xs font-semibold ${classes}`}>{status}</span>
+}
+
 function Metric({ label, value }: { label: string; value: string }) { return <div className="rounded-2xl border border-[var(--border)] bg-[var(--surface)] p-5"><BriefcaseBusiness className="text-[#5496CC]" size={19} /><p className="mt-3 text-2xl font-bold">{value}</p><p className="mt-1 text-sm text-[var(--muted)]">{label}</p></div> }
 function Detail({ label, value }: { label: string; value: string }) { return <div className="rounded-xl border border-[var(--border)] p-3"><p className="text-xs text-[var(--muted)]">{label}</p><p className="mt-1 break-words text-sm font-semibold">{value}</p></div> }
 function Field({ label, children }: { label: string; children: React.ReactNode }) { return <label className="block space-y-2"><span className="text-sm font-semibold">{label}</span>{children}</label> }
