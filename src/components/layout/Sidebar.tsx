@@ -70,9 +70,9 @@ const navigationGroups: NavigationGroup[] = [
     label: 'Compras y Suministros',
     icon: ShoppingCart,
     items: [
-      { label: 'Requisiciones', icon: ClipboardList, comingSoon: true },
-      { label: 'Órdenes de compra', icon: ShoppingCart, comingSoon: true },
-      { label: 'Proveedores', icon: Truck, comingSoon: true },
+      { label: 'Requisiciones', href: '/requisitions', icon: ClipboardList },
+      { label: 'Órdenes de compra', href: '/purchase-orders', icon: ShoppingCart },
+      { label: 'Proveedores', href: '/suppliers', icon: Truck },
     ],
   },
   {
