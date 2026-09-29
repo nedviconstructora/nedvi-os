@@ -1,12 +1,24 @@
 'use client'
 
-import { FormEvent, useEffect, useMemo, useState } from 'react'
-import { Eye, FileText, Plus, Printer, Search, Trash2, X } from 'lucide-react'
+import { ChangeEvent, FormEvent, useEffect, useMemo, useState } from 'react'
+import {
+  Eye,
+  FileImage,
+  FileText,
+  ImagePlus,
+  Plus,
+  Printer,
+  ReceiptText,
+  Search,
+  Trash2,
+  X,
+} from 'lucide-react'
 import { AppShell } from '@/components/layout/AppShell'
 import {
   DAILY_REPORTS_STORAGE_KEY,
   PROGRESS_STORAGE_KEY,
   type DailyReport,
+  type DailyReportImage,
   type OperationProject,
   type ProgressRecord,
   readDailyReports,
@@ -14,6 +26,8 @@ import {
   readProgressRecords,
   writeDailyReports,
 } from '@/features/operations/services/operationsStorage'
+
+const MAX_REPORT_IMAGES = 6
 
 function today() {
   return new Date().toISOString().slice(0, 10)
@@ -48,6 +62,48 @@ function textBlock(value: string) {
   return escapeHtml(value).replace(/\n/g, '<br />')
 }
 
+function fileToDataUrl(file: File) {
+  return new Promise<string>((resolve, reject) => {
+    const reader = new FileReader()
+    reader.onload = () => resolve(typeof reader.result === 'string' ? reader.result : '')
+    reader.onerror = () => reject(reader.error ?? new Error('No se pudo leer la imagen.'))
+    reader.readAsDataURL(file)
+  })
+}
+
+async function prepareReportImage(file: File): Promise<DailyReportImage> {
+  const source = await fileToDataUrl(file)
+
+  const image = await new Promise<HTMLImageElement>((resolve, reject) => {
+    const preview = new Image()
+    preview.onload = () => resolve(preview)
+    preview.onerror = () => reject(new Error(`No se pudo procesar ${file.name}.`))
+    preview.src = source
+  })
+
+  const maxSide = 1200
+  const longestSide = Math.max(image.naturalWidth, image.naturalHeight)
+  const scale = longestSide > maxSide ? maxSide / longestSide : 1
+  const width = Math.max(1, Math.round(image.naturalWidth * scale))
+  const height = Math.max(1, Math.round(image.naturalHeight * scale))
+  const canvas = document.createElement('canvas')
+  canvas.width = width
+  canvas.height = height
+
+  const context = canvas.getContext('2d')
+  if (!context) {
+    return { id: crypto.randomUUID(), name: file.name, dataUrl: source }
+  }
+
+  context.drawImage(image, 0, 0, width, height)
+
+  return {
+    id: crypto.randomUUID(),
+    name: file.name,
+    dataUrl: canvas.toDataURL('image/jpeg', 0.72),
+  }
+}
+
 export default function DailyReportsPage() {
   const [projects, setProjects] = useState<OperationProject[]>([])
   const [reports, setReports] = useState<DailyReport[]>([])
@@ -56,12 +112,16 @@ export default function DailyReportsPage() {
   const [open, setOpen] = useState(false)
   const [viewingQuoteId, setViewingQuoteId] = useState<string | null>(null)
   const [quoteId, setQuoteId] = useState('')
+  const [projectName, setProjectName] = useState('')
+  const [clientInvoice, setClientInvoice] = useState('')
   const [date, setDate] = useState(today())
   const [weather, setWeather] = useState('')
   const [workers, setWorkers] = useState('')
   const [summary, setSummary] = useState('')
   const [blockers, setBlockers] = useState('')
   const [author, setAuthor] = useState('Pedro Garcia')
+  const [images, setImages] = useState<DailyReportImage[]>([])
+  const [processingImages, setProcessingImages] = useState(false)
 
   function loadData() {
     const currentProjects = readOperationProjects()
@@ -123,12 +183,24 @@ export default function DailyReportsPage() {
           .filter((report) => report.quoteId === project.id)
           .sort((a, b) => b.date.localeCompare(a.date))
 
+        return {
+          project,
+          reports: projectReports,
+          latest: projectReports[0],
+        }
+      })
+      .filter((group) => group.reports.length > 0)
+      .filter((group) => {
+        if (!query) return true
+
         const searchable = [
-          project.folio,
-          project.project,
-          project.client,
-          project.owner,
-          ...projectReports.flatMap((report) => [
+          group.project.project,
+          group.project.client,
+          group.project.folio,
+          group.project.owner,
+          ...group.reports.flatMap((report) => [
+            report.projectName,
+            report.clientInvoice,
             report.author,
             report.summary,
             report.blockers,
@@ -139,14 +211,8 @@ export default function DailyReportsPage() {
           .join(' ')
           .toLowerCase()
 
-        return {
-          project,
-          reports: projectReports,
-          latest: projectReports[0],
-        }
+        return searchable.includes(query)
       })
-      .filter((group) => group.reports.length > 0)
-      .filter((group) => !query || [group.project.project, group.project.client, group.project.folio, group.project.owner, ...group.reports.map((report) => `${report.author} ${report.summary} ${report.blockers} ${report.weather} ${report.date}`)].join(' ').toLowerCase().includes(query))
       .sort((a, b) => (b.latest?.date ?? '').localeCompare(a.latest?.date ?? ''))
   }, [projects, reports, search])
 
@@ -164,12 +230,57 @@ export default function DailyReportsPage() {
 
   function resetForm() {
     setQuoteId('')
+    setProjectName('')
+    setClientInvoice('')
     setDate(today())
     setWeather('')
     setWorkers('')
     setSummary('')
     setBlockers('')
     setAuthor('Pedro Garcia')
+    setImages([])
+    setProcessingImages(false)
+  }
+
+  function handleProjectChange(value: string) {
+    setQuoteId(value)
+    const project = projects.find((item) => item.id === value)
+    setProjectName(project?.project ?? '')
+  }
+
+  async function handleImages(event: ChangeEvent<HTMLInputElement>) {
+    const selected = Array.from(event.target.files ?? []).filter((file) =>
+      file.type.startsWith('image/'),
+    )
+    event.target.value = ''
+
+    if (!selected.length) return
+
+    const available = MAX_REPORT_IMAGES - images.length
+    if (available <= 0) {
+      window.alert(`Puedes agregar hasta ${MAX_REPORT_IMAGES} imágenes por reporte.`)
+      return
+    }
+
+    const files = selected.slice(0, available)
+    setProcessingImages(true)
+
+    try {
+      const prepared = await Promise.all(files.map(prepareReportImage))
+      setImages((current) => [...current, ...prepared].slice(0, MAX_REPORT_IMAGES))
+
+      if (selected.length > available) {
+        window.alert(`Se agregaron ${available} imágenes. El máximo es ${MAX_REPORT_IMAGES} por reporte.`)
+      }
+    } catch {
+      window.alert('No se pudieron procesar una o más imágenes. Intenta con archivos JPG o PNG.')
+    } finally {
+      setProcessingImages(false)
+    }
+  }
+
+  function removeSelectedImage(imageId: string) {
+    setImages((current) => current.filter((image) => image.id !== imageId))
   }
 
   function save(event: FormEvent<HTMLFormElement>) {
@@ -182,18 +293,26 @@ export default function DailyReportsPage() {
       quoteId: project.id,
       folio: project.folio,
       date,
+      projectName: projectName.trim() || project.project,
+      clientInvoice: clientInvoice.trim(),
       weather: weather.trim(),
       workers: Number(workers || 0),
       summary: summary.trim(),
       blockers: blockers.trim(),
       author: author.trim(),
+      images,
     }
 
     const next = [report, ...reports]
-    setReports(next)
-    writeDailyReports(next)
-    setOpen(false)
-    resetForm()
+
+    try {
+      writeDailyReports(next)
+      setReports(next)
+      setOpen(false)
+      resetForm()
+    } catch {
+      window.alert('No se pudo guardar el reporte. Reduce la cantidad o tamaño de las imágenes e inténtalo nuevamente.')
+    }
   }
 
   function remove(id: string) {
@@ -222,6 +341,22 @@ export default function DailyReportsPage() {
 
     const logoUrl = `${window.location.origin}/icon.png`
     const title = `Reporte_Diario_${report.folio}_${report.date}`
+    const reportProjectName = report.projectName || project.project
+    const imageSection = report.images.length
+      ? `<section class="section photo-section">
+          <p class="section-title">Evidencia fotográfica</p>
+          <div class="photos">
+            ${report.images
+              .map(
+                (image, index) => `<figure class="photo-card">
+                  <img src="${escapeHtml(image.dataUrl)}" alt="Evidencia ${index + 1}" />
+                  <figcaption>${escapeHtml(image.name || `Imagen ${index + 1}`)}</figcaption>
+                </figure>`,
+              )
+              .join('')}
+          </div>
+        </section>`
+      : ''
 
     printWindow.document.open()
     printWindow.document.write(`<!doctype html>
@@ -271,11 +406,16 @@ export default function DailyReportsPage() {
     .progress-notes { margin: 9px 0 0; color: #4c5668; }
     .text-box { min-height: 74px; padding: 13px 14px; border-radius: 8px; background: #f8fafc; }
     .text-box p { margin: 0; }
+    .photos { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
+    .photo-card { margin: 0; padding: 0; break-inside: avoid; page-break-inside: avoid; }
+    .photo-card img { display: block; width: 100%; height: 205px; object-fit: cover; border-radius: 8px; background: #eef2f6; }
+    .photo-card figcaption { margin-top: 4px; color: #7a8494; font-size: 8px; overflow-wrap: anywhere; }
     .footer { margin-top: 18px; padding-top: 10px; border-top: 1px solid #e5e7eb; color: #7b8493; font-size: 9px; }
     strong { color: #111827; }
     @media print {
       html, body { background: #ffffff !important; }
       body { margin: 0 !important; }
+      .photo-section { break-before: auto; }
     }
   </style>
 </head>
@@ -283,7 +423,7 @@ export default function DailyReportsPage() {
   <main class="document">
     <header class="header">
       <div class="brand">
-        <img id="nedvi-logo" class="logo" src="${escapeHtml(logoUrl)}" alt="NEDVI Constructora" />
+        <img class="logo" src="${escapeHtml(logoUrl)}" alt="NEDVI Constructora" />
         <div>
           <h1>NEDVI CONSTRUCTORA</h1>
           <p class="subtitle">Reporte diario de obra</p>
@@ -317,12 +457,14 @@ export default function DailyReportsPage() {
     <section class="card section">
       <p class="section-title">Información del proyecto</p>
       <div class="rows">
-        <p><strong>Proyecto:</strong> ${escapeHtml(project.project)}</p>
+        <p><strong>Nombre del proyecto:</strong> ${escapeHtml(reportProjectName)}</p>
         <p><strong>Responsable:</strong> ${escapeHtml(project.owner || 'Sin responsable')}</p>
+        <p><strong>Factura / referencia cliente:</strong> ${escapeHtml(report.clientInvoice || 'Sin registrar')}</p>
         <p><strong>Elaboró:</strong> ${escapeHtml(report.author || 'Sin registrar')}</p>
         <p><strong>Personal en obra:</strong> ${escapeHtml(report.workers)} personas</p>
         <p><strong>Clima:</strong> ${escapeHtml(report.weather || 'Sin registrar')}</p>
         <p><strong>Fecha:</strong> ${escapeHtml(formatDate(report.date))}</p>
+        <p><strong>Evidencia:</strong> ${escapeHtml(report.images.length)} imagen${report.images.length === 1 ? '' : 'es'}</p>
       </div>
     </section>
 
@@ -349,6 +491,8 @@ export default function DailyReportsPage() {
       <div class="text-box"><p>${textBlock(report.blockers || 'Sin bloqueos o pendientes registrados.')}</p></div>
     </section>
 
+    ${imageSection}
+
     <footer class="footer">Documento generado desde NEDVI OS · Reporte diario de obra ${escapeHtml(report.folio)}</footer>
   </main>
 </body>
@@ -362,13 +506,25 @@ export default function DailyReportsPage() {
       }, 100)
     }
 
-    const logo = printWindow.document.getElementById('nedvi-logo') as HTMLImageElement | null
-    if (logo && !logo.complete) {
-      logo.addEventListener('load', startPrint, { once: true })
-      logo.addEventListener('error', startPrint, { once: true })
-    } else {
+    const printableImages = Array.from(printWindow.document.images)
+    if (!printableImages.length) {
       startPrint()
+      return
     }
+
+    Promise.all(
+      printableImages.map(
+        (image) =>
+          new Promise<void>((resolve) => {
+            if (image.complete) {
+              resolve()
+              return
+            }
+            image.addEventListener('load', () => resolve(), { once: true })
+            image.addEventListener('error', () => resolve(), { once: true })
+          }),
+      ),
+    ).then(startPrint)
   }
 
   return (
@@ -378,7 +534,7 @@ export default function DailyReportsPage() {
           <div>
             <p className="text-xs font-semibold uppercase tracking-[0.16em] text-[#5496CC]">Operaciones / Obra</p>
             <h1 className="mt-2 text-3xl font-bold text-[var(--foreground)]">Reportes diarios</h1>
-            <p className="mt-2 text-sm text-[var(--muted)]">Bitácora diaria agrupada por proyecto para consultar el historial completo sin saturar la vista.</p>
+            <p className="mt-2 text-sm text-[var(--muted)]">Bitácora diaria agrupada por proyecto con datos del cliente, factura y evidencia fotográfica.</p>
           </div>
           <button onClick={() => setOpen(true)} className="inline-flex h-11 items-center gap-2 rounded-xl bg-[#5496CC] px-4 text-sm font-semibold text-white"><Plus size={16} /> Nuevo reporte</button>
         </header>
@@ -386,13 +542,13 @@ export default function DailyReportsPage() {
         <div className="grid gap-4 sm:grid-cols-3">
           <Metric label="Reportes" value={reports.length.toString()} />
           <Metric label="Proyectos con reporte" value={new Set(reports.map((report) => report.quoteId)).size.toString()} />
-          <Metric label="Personal reportado" value={reports.reduce((sum, report) => sum + report.workers, 0).toString()} />
+          <Metric label="Imágenes registradas" value={reports.reduce((sum, report) => sum + report.images.length, 0).toString()} />
         </div>
 
         <div className="rounded-2xl border border-[var(--border)] bg-[var(--surface)] p-4">
           <div className="relative max-w-xl">
             <Search size={17} className="absolute left-4 top-1/2 -translate-y-1/2 text-[var(--muted)]" />
-            <input value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Buscar cliente, proyecto, folio o actividad..." className="w-full rounded-xl border border-[var(--border)] bg-transparent py-3 pl-11 pr-4 text-sm outline-none focus:border-[#5496CC]" />
+            <input value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Buscar cliente, proyecto, factura, folio o actividad..." className="w-full rounded-xl border border-[var(--border)] bg-transparent py-3 pl-11 pr-4 text-sm outline-none focus:border-[#5496CC]" />
           </div>
         </div>
 
@@ -405,13 +561,14 @@ export default function DailyReportsPage() {
         ) : (
           <div className="overflow-hidden rounded-2xl border border-[var(--border)] bg-[var(--surface)] shadow-sm">
             <div className="overflow-x-auto">
-              <table className="w-full min-w-[980px] text-left text-sm">
+              <table className="w-full min-w-[1040px] text-left text-sm">
                 <thead className="border-b border-[var(--border)] bg-[var(--surface-soft)] text-xs uppercase tracking-wide text-[var(--muted)]">
                   <tr>
                     <th className="px-5 py-4">Proyecto / Cliente</th>
                     <th className="px-5 py-4">Último reporte</th>
                     <th className="px-5 py-4">Avance</th>
                     <th className="px-5 py-4">Reportes</th>
+                    <th className="px-5 py-4">Evidencia</th>
                     <th className="px-5 py-4">Responsable</th>
                     <th className="px-5 py-4 text-right">Acción</th>
                   </tr>
@@ -419,11 +576,12 @@ export default function DailyReportsPage() {
                 <tbody className="divide-y divide-[var(--border)]">
                   {reportGroups.map(({ project, reports: projectReports, latest }) => {
                     const latestProgress = latest ? progressForReport(latest) : undefined
+                    const imageCount = projectReports.reduce((sum, report) => sum + report.images.length, 0)
 
                     return (
                       <tr key={project.id} className="hover:bg-[var(--surface-soft)]">
                         <td className="px-5 py-4">
-                          <p className="font-semibold text-[var(--foreground)]">{project.project}</p>
+                          <p className="font-semibold text-[var(--foreground)]">{latest?.projectName || project.project}</p>
                           <p className="mt-1 text-xs text-[var(--muted)]">{project.client} · {project.folio}</p>
                         </td>
                         <td className="px-5 py-4">
@@ -436,15 +594,11 @@ export default function DailyReportsPage() {
                           </span>
                         </td>
                         <td className="px-5 py-4 font-semibold text-[var(--foreground)]">{projectReports.length}</td>
+                        <td className="px-5 py-4 text-[var(--foreground)]">{imageCount} imagen{imageCount === 1 ? '' : 'es'}</td>
                         <td className="px-5 py-4 text-[var(--foreground)]">{project.owner || 'Sin responsable'}</td>
                         <td className="px-5 py-4 text-right">
-                          <button
-                            type="button"
-                            onClick={() => setViewingQuoteId(project.id)}
-                            className="inline-flex items-center gap-2 rounded-lg border border-[#5496CC]/40 px-3 py-2 text-xs font-semibold text-[#5496CC] transition hover:bg-[#5496CC]/10"
-                          >
-                            <Eye size={15} />
-                            Ver reportes
+                          <button type="button" onClick={() => setViewingQuoteId(project.id)} className="inline-flex items-center gap-2 rounded-lg border border-[#5496CC]/40 px-3 py-2 text-xs font-semibold text-[#5496CC] transition hover:bg-[#5496CC]/10">
+                            <Eye size={15} /> Ver reportes
                           </button>
                         </td>
                       </tr>
@@ -478,7 +632,7 @@ export default function DailyReportsPage() {
                     <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
                       <div>
                         <p className="text-xs font-semibold text-[#5496CC]">{formatDate(report.date)}</p>
-                        <h3 className="mt-1 text-base font-bold text-[var(--foreground)]">Reporte diario</h3>
+                        <h3 className="mt-1 text-base font-bold text-[var(--foreground)]">{report.projectName || viewingGroup.project.project}</h3>
                         <p className="mt-1 text-sm text-[var(--muted)]">Elaboró: {report.author || 'Sin registrar'}</p>
                       </div>
                       <div className="flex flex-wrap gap-2">
@@ -487,11 +641,12 @@ export default function DailyReportsPage() {
                       </div>
                     </div>
 
-                    <div className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+                    <div className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
                       <Info label="Clima" value={report.weather || 'Sin registrar'} />
                       <Info label="Personal" value={`${report.workers} personas`} />
                       <Info label="Avance de obra" value={progress ? `${progress.percent}%` : 'Sin registrar'} />
-                      <Info label="Proceso" value={progress?.milestone || 'Avance registrado'} />
+                      <Info label="Factura / referencia" value={report.clientInvoice || 'Sin registrar'} />
+                      <Info label="Imágenes" value={report.images.length.toString()} />
                     </div>
 
                     <div className="mt-4 grid gap-4 lg:grid-cols-[1.3fr_1fr]">
@@ -504,6 +659,20 @@ export default function DailyReportsPage() {
                         <p className="mt-2 whitespace-pre-wrap text-sm leading-6 text-[var(--foreground)]">{report.blockers || 'Sin bloqueos o pendientes registrados.'}</p>
                       </div>
                     </div>
+
+                    {report.images.length ? (
+                      <div className="mt-4">
+                        <div className="mb-2 flex items-center gap-2 text-xs font-semibold uppercase tracking-wide text-[var(--muted)]"><FileImage size={15} /> Evidencia fotográfica</div>
+                        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+                          {report.images.map((image) => (
+                            <figure key={image.id} className="overflow-hidden rounded-xl bg-[var(--surface)]">
+                              <img src={image.dataUrl} alt={image.name} className="h-44 w-full object-cover" />
+                              <figcaption className="truncate px-3 py-2 text-xs text-[var(--muted)]">{image.name}</figcaption>
+                            </figure>
+                          ))}
+                        </div>
+                      </div>
+                    ) : null}
                   </article>
                 )
               })}
@@ -514,22 +683,27 @@ export default function DailyReportsPage() {
 
       {open ? (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/55 p-4">
-          <div className="max-h-[92vh] w-full max-w-3xl overflow-y-auto rounded-2xl bg-[var(--surface)] p-6 shadow-2xl">
+          <div className="max-h-[94vh] w-full max-w-3xl overflow-y-auto rounded-2xl bg-[var(--surface)] p-6 shadow-2xl">
             <div className="mb-5 flex items-center justify-between">
               <div>
                 <p className="text-xs font-semibold uppercase tracking-wide text-[#5496CC]">Bitácora de obra</p>
                 <h2 className="text-xl font-bold">Nuevo reporte diario</h2>
               </div>
-              <button type="button" onClick={() => setOpen(false)}><X size={18} /></button>
+              <button type="button" onClick={() => { setOpen(false); resetForm() }}><X size={18} /></button>
             </div>
 
             <form onSubmit={save} className="space-y-4">
               <label className="block space-y-2">
-                <span className="text-sm font-semibold">Proyecto</span>
-                <select required value={quoteId} onChange={(event) => setQuoteId(event.target.value)} className="w-full rounded-xl border border-[var(--border)] bg-transparent px-4 py-3">
+                <span className="text-sm font-semibold">Proyecto vinculado</span>
+                <select required value={quoteId} onChange={(event) => handleProjectChange(event.target.value)} className="w-full rounded-xl border border-[var(--border)] bg-transparent px-4 py-3">
                   <option value="">Seleccionar proyecto</option>
                   {projects.map((project) => <option key={project.id} value={project.id}>{project.folio} — {project.project}</option>)}
                 </select>
+              </label>
+
+              <label className="block space-y-2">
+                <span className="text-sm font-semibold">Nombre del proyecto *</span>
+                <input required value={projectName} onChange={(event) => setProjectName(event.target.value)} placeholder="Nombre que aparecerá en el reporte y PDF" className="w-full rounded-xl border border-[var(--border)] bg-transparent px-4 py-3 outline-none focus:border-[#5496CC]" />
               </label>
 
               <div className="grid gap-4 sm:grid-cols-2">
@@ -542,12 +716,45 @@ export default function DailyReportsPage() {
                 <label className="space-y-2"><span className="text-sm font-semibold">Elaboró</span><input value={author} onChange={(event) => setAuthor(event.target.value)} className="w-full rounded-xl border border-[var(--border)] bg-transparent px-4 py-3" /></label>
               </div>
 
+              <label className="block space-y-2">
+                <span className="flex items-center gap-2 text-sm font-semibold"><ReceiptText size={16} className="text-[#5496CC]" /> Factura / referencia entregada por el cliente</span>
+                <input value={clientInvoice} onChange={(event) => setClientInvoice(event.target.value)} placeholder="Ej. FAC-4582, orden, referencia o folio del cliente" className="w-full rounded-xl border border-[var(--border)] bg-transparent px-4 py-3 outline-none focus:border-[#5496CC]" />
+              </label>
+
               <label className="block space-y-2"><span className="text-sm font-semibold">Actividades realizadas *</span><textarea required rows={5} value={summary} onChange={(event) => setSummary(event.target.value)} placeholder="Describe los trabajos realizados durante la jornada..." className="w-full rounded-xl border border-[var(--border)] bg-transparent px-4 py-3" /></label>
               <label className="block space-y-2"><span className="text-sm font-semibold">Bloqueos / pendientes</span><textarea rows={3} value={blockers} onChange={(event) => setBlockers(event.target.value)} className="w-full rounded-xl border border-[var(--border)] bg-transparent px-4 py-3" /></label>
 
+              <div className="rounded-2xl border border-dashed border-[#5496CC]/40 bg-[#5496CC]/5 p-4">
+                <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                  <div>
+                    <p className="flex items-center gap-2 text-sm font-semibold text-[var(--foreground)]"><ImagePlus size={17} className="text-[#5496CC]" /> Evidencia fotográfica</p>
+                    <p className="mt-1 text-xs text-[var(--muted)]">Agrega hasta {MAX_REPORT_IMAGES} imágenes. Se optimizan antes de guardar.</p>
+                  </div>
+                  <label className="inline-flex cursor-pointer items-center justify-center gap-2 rounded-xl bg-[#5496CC] px-4 py-2.5 text-sm font-semibold text-white">
+                    <ImagePlus size={16} />
+                    {processingImages ? 'Procesando...' : 'Agregar imágenes'}
+                    <input type="file" accept="image/*" multiple disabled={processingImages || images.length >= MAX_REPORT_IMAGES} onChange={handleImages} className="hidden" />
+                  </label>
+                </div>
+
+                {images.length ? (
+                  <div className="mt-4 grid gap-3 sm:grid-cols-2 md:grid-cols-3">
+                    {images.map((image) => (
+                      <div key={image.id} className="relative overflow-hidden rounded-xl bg-[var(--surface)]">
+                        <img src={image.dataUrl} alt={image.name} className="h-32 w-full object-cover" />
+                        <div className="flex items-center justify-between gap-2 px-3 py-2">
+                          <span className="min-w-0 truncate text-xs text-[var(--muted)]">{image.name}</span>
+                          <button type="button" onClick={() => removeSelectedImage(image.id)} className="shrink-0 rounded-md p-1 text-red-500 hover:bg-red-500/10" aria-label={`Quitar ${image.name}`}><X size={14} /></button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                ) : null}
+              </div>
+
               <div className="flex justify-end gap-3">
-                <button type="button" onClick={() => setOpen(false)} className="rounded-xl border border-[var(--border)] px-5 py-3 font-semibold">Cancelar</button>
-                <button type="submit" className="rounded-xl bg-[#5496CC] px-5 py-3 font-semibold text-white">Guardar reporte</button>
+                <button type="button" onClick={() => { setOpen(false); resetForm() }} className="rounded-xl border border-[var(--border)] px-5 py-3 font-semibold">Cancelar</button>
+                <button type="submit" disabled={processingImages} className="rounded-xl bg-[#5496CC] px-5 py-3 font-semibold text-white disabled:cursor-not-allowed disabled:opacity-60">Guardar reporte</button>
               </div>
             </form>
           </div>
@@ -571,7 +778,7 @@ function Info({ label, value }: { label: string; value: string }) {
   return (
     <div className="rounded-xl border border-[var(--border)] p-3">
       <p className="text-xs text-[var(--muted)]">{label}</p>
-      <p className="mt-1 text-sm font-semibold">{value}</p>
+      <p className="mt-1 break-words text-sm font-semibold">{value}</p>
     </div>
   )
 }
