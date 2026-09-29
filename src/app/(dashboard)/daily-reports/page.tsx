@@ -31,13 +31,29 @@ function formatDate(value: string) {
   }).format(date)
 }
 
+function escapeHtml(value: string | number) {
+  return String(value).replace(/[&<>'"]/g, (character) => {
+    const entities: Record<string, string> = {
+      '&': '&amp;',
+      '<': '&lt;',
+      '>': '&gt;',
+      "'": '&#39;',
+      '"': '&quot;',
+    }
+    return entities[character] ?? character
+  })
+}
+
+function textBlock(value: string) {
+  return escapeHtml(value).replace(/\n/g, '<br />')
+}
+
 export default function DailyReportsPage() {
   const [projects, setProjects] = useState<OperationProject[]>([])
   const [reports, setReports] = useState<DailyReport[]>([])
   const [progressRecords, setProgressRecords] = useState<ProgressRecord[]>([])
   const [search, setSearch] = useState('')
   const [open, setOpen] = useState(false)
-  const [printReport, setPrintReport] = useState<DailyReport | null>(null)
   const [quoteId, setQuoteId] = useState('')
   const [date, setDate] = useState(today())
   const [weather, setWeather] = useState('')
@@ -60,6 +76,7 @@ export default function DailyReportsPage() {
 
   useEffect(() => {
     loadData()
+
     const handleStorage = (event: StorageEvent) => {
       if (
         event.key === 'nedvi_quotes' ||
@@ -69,8 +86,10 @@ export default function DailyReportsPage() {
         loadData()
       }
     }
+
     window.addEventListener('storage', handleStorage)
     window.addEventListener('focus', loadData)
+
     return () => {
       window.removeEventListener('storage', handleStorage)
       window.removeEventListener('focus', loadData)
@@ -85,9 +104,16 @@ export default function DailyReportsPage() {
   const filtered = useMemo(() => {
     const query = search.trim().toLowerCase()
     if (!query) return reports
+
     return reports.filter((report) => {
       const project = projectById.get(report.quoteId)
-      return [report.folio, project?.project ?? '', project?.client ?? '', report.author, report.summary]
+      return [
+        report.folio,
+        project?.project ?? '',
+        project?.client ?? '',
+        report.author,
+        report.summary,
+      ]
         .join(' ')
         .toLowerCase()
         .includes(query)
@@ -148,28 +174,172 @@ export default function DailyReportsPage() {
   }
 
   function printPdf(report: DailyReport) {
-    setPrintReport(report)
+    const project = projectById.get(report.quoteId)
+    if (!project) return
 
-    window.setTimeout(() => {
-      const previousTitle = document.title
-      document.title = `Reporte_Diario_${report.folio}_${report.date}`
+    const progress = progressForReport(report)
+    const progressPercent = Math.max(0, Math.min(100, progress?.percent ?? 0))
+    const printWindow = window.open('', '_blank', 'width=1000,height=800')
 
-      const restoreTitle = () => {
-        document.title = previousTitle
-        window.removeEventListener('afterprint', restoreTitle)
-      }
+    if (!printWindow) {
+      window.alert('Permite las ventanas emergentes para generar el PDF del reporte.')
+      return
+    }
 
-      window.addEventListener('afterprint', restoreTitle)
-      window.print()
-    }, 120)
+    const logoUrl = `${window.location.origin}/icon.png`
+    const title = `Reporte_Diario_${report.folio}_${report.date}`
+
+    printWindow.document.open()
+    printWindow.document.write(`<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>${escapeHtml(title)}</title>
+  <style>
+    @page { size: A4; margin: 0; }
+    * { box-sizing: border-box; }
+    html, body { margin: 0; padding: 0; background: #ffffff; color: #172033; }
+    body {
+      width: 210mm;
+      min-height: 297mm;
+      padding: 12mm 14mm;
+      font-family: Arial, Helvetica, sans-serif;
+      font-size: 11px;
+      line-height: 1.45;
+      -webkit-print-color-adjust: exact;
+      print-color-adjust: exact;
+    }
+    .document { width: 100%; margin: 0; background: #ffffff; }
+    .header { display: flex; align-items: center; justify-content: space-between; gap: 24px; padding-bottom: 14px; border-bottom: 2px solid #5496CC; }
+    .brand { display: flex; align-items: center; gap: 14px; }
+    .logo { width: 48px; height: 48px; object-fit: contain; }
+    h1 { margin: 0; font-size: 20px; line-height: 1.15; color: #101827; }
+    .subtitle { margin: 5px 0 0; color: #657083; }
+    .folio { text-align: right; }
+    .folio strong { color: #5496CC; font-size: 12px; }
+    .folio p { margin: 4px 0 0; }
+    .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-top: 14px; }
+    .card { padding: 13px 14px; border: 0; border-radius: 10px; background: #f7f9fb; }
+    .section { margin-top: 14px; }
+    .section-title { margin: 0 0 8px; color: #697386; font-size: 9px; font-weight: 700; letter-spacing: .07em; text-transform: uppercase; }
+    .rows { display: grid; grid-template-columns: 1fr 1fr; gap: 5px 20px; }
+    .rows p, .card p { margin: 0 0 5px; }
+    .rows p:last-child, .card p:last-child { margin-bottom: 0; }
+    .progress-card { margin-top: 14px; padding: 13px 14px; border-radius: 10px; background: #f5f9fd; }
+    .progress-head { display: flex; justify-content: space-between; gap: 16px; }
+    .progress-label { margin: 0; color: #5496CC; font-size: 9px; font-weight: 700; letter-spacing: .07em; text-transform: uppercase; }
+    .progress-value { margin: 6px 0 0; font-size: 17px; font-weight: 700; }
+    .progress-milestone { margin: 3px 0 0; font-weight: 600; }
+    .progress-date { color: #7a8494; font-size: 9px; white-space: nowrap; }
+    .bar { margin-top: 10px; height: 7px; overflow: hidden; border-radius: 999px; background: #e5eaf0; }
+    .bar > div { height: 100%; border-radius: inherit; background: #5496CC; }
+    .progress-notes { margin: 9px 0 0; color: #4c5668; }
+    .text-box { min-height: 74px; padding: 13px 14px; border-radius: 8px; background: #f8fafc; }
+    .text-box p { margin: 0; }
+    .footer { margin-top: 18px; padding-top: 10px; border-top: 1px solid #e5e7eb; color: #7b8493; font-size: 9px; }
+    strong { color: #111827; }
+    @media print {
+      html, body { background: #ffffff !important; }
+      body { margin: 0 !important; }
+    }
+  </style>
+</head>
+<body>
+  <main class="document">
+    <header class="header">
+      <div class="brand">
+        <img id="nedvi-logo" class="logo" src="${escapeHtml(logoUrl)}" alt="NEDVI Constructora" />
+        <div>
+          <h1>NEDVI CONSTRUCTORA</h1>
+          <p class="subtitle">Reporte diario de obra</p>
+        </div>
+      </div>
+      <div class="folio">
+        <strong>${escapeHtml(report.folio)}</strong>
+        <p>${escapeHtml(formatDate(report.date))}</p>
+      </div>
+    </header>
+
+    <section class="grid-2">
+      <div class="card">
+        <p class="section-title">Datos de NEDVI</p>
+        <p><strong>Razón social:</strong> NEDVI</p>
+        <p><strong>RFC:</strong> NED260326S59</p>
+        <p><strong>Victor Muciño:</strong> victorm@nedviconstructora.com</p>
+        <p><strong>Nestor Ortiz:</strong> Nestor.ortiz@nedviconstrucciones.com</p>
+      </div>
+      <div class="card">
+        <p class="section-title">Datos del cliente</p>
+        <p><strong>Cliente:</strong> ${escapeHtml(project.client)}</p>
+        <p><strong>Contacto:</strong> ${escapeHtml(project.contact || 'Sin registrar')}</p>
+        <p><strong>Teléfono:</strong> ${escapeHtml(project.phone || 'Sin registrar')}</p>
+        <p><strong>Correo:</strong> ${escapeHtml(project.email || 'Sin registrar')}</p>
+        <p><strong>RFC:</strong> ${escapeHtml(project.rfc || 'Sin registrar')}</p>
+        <p><strong>Dirección:</strong> ${escapeHtml(project.address || 'Sin registrar')}</p>
+      </div>
+    </section>
+
+    <section class="card section">
+      <p class="section-title">Información del proyecto</p>
+      <div class="rows">
+        <p><strong>Proyecto:</strong> ${escapeHtml(project.project)}</p>
+        <p><strong>Responsable:</strong> ${escapeHtml(project.owner || 'Sin responsable')}</p>
+        <p><strong>Elaboró:</strong> ${escapeHtml(report.author || 'Sin registrar')}</p>
+        <p><strong>Personal en obra:</strong> ${escapeHtml(report.workers)} personas</p>
+        <p><strong>Clima:</strong> ${escapeHtml(report.weather || 'Sin registrar')}</p>
+        <p><strong>Fecha:</strong> ${escapeHtml(formatDate(report.date))}</p>
+      </div>
+    </section>
+
+    <section class="progress-card">
+      <div class="progress-head">
+        <div>
+          <p class="progress-label">Proceso / avance de obra</p>
+          <p class="progress-value">${progress ? `${escapeHtml(progress.percent)}%` : 'Sin avance registrado'}</p>
+          <p class="progress-milestone">${escapeHtml(progress?.milestone || 'No hay hito registrado para este proyecto.')}</p>
+        </div>
+        ${progress ? `<div class="progress-date">Actualizado: ${escapeHtml(formatDate(progress.date))}</div>` : ''}
+      </div>
+      <div class="bar"><div style="width:${progressPercent}%"></div></div>
+      ${progress?.notes ? `<p class="progress-notes">${textBlock(progress.notes)}</p>` : ''}
+    </section>
+
+    <section class="section">
+      <p class="section-title">Actividades realizadas</p>
+      <div class="text-box"><p>${textBlock(report.summary)}</p></div>
+    </section>
+
+    <section class="section">
+      <p class="section-title">Bloqueos / pendientes</p>
+      <div class="text-box"><p>${textBlock(report.blockers || 'Sin bloqueos o pendientes registrados.')}</p></div>
+    </section>
+
+    <footer class="footer">Documento generado desde NEDVI OS · Reporte diario de obra ${escapeHtml(report.folio)}</footer>
+  </main>
+</body>
+</html>`)
+    printWindow.document.close()
+
+    const startPrint = () => {
+      window.setTimeout(() => {
+        printWindow.focus()
+        printWindow.print()
+      }, 100)
+    }
+
+    const logo = printWindow.document.getElementById('nedvi-logo') as HTMLImageElement | null
+    if (logo && !logo.complete) {
+      logo.addEventListener('load', startPrint, { once: true })
+      logo.addEventListener('error', startPrint, { once: true })
+    } else {
+      startPrint()
+    }
   }
-
-  const printableProject = printReport ? projectById.get(printReport.quoteId) : undefined
-  const printableProgress = printReport ? progressForReport(printReport) : undefined
 
   return (
     <AppShell>
-      <div className="mx-auto w-full max-w-[1600px] space-y-6 print:hidden">
+      <div className="mx-auto w-full max-w-[1600px] space-y-6">
         <header className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
           <div>
             <p className="text-xs font-semibold uppercase tracking-[0.16em] text-[#5496CC]">Operaciones / Obra</p>
@@ -186,166 +356,131 @@ export default function DailyReportsPage() {
         </div>
 
         <div className="rounded-2xl border border-[var(--border)] bg-[var(--surface)] p-4">
-          <div className="relative max-w-xl"><Search size={17} className="absolute left-4 top-1/2 -translate-y-1/2 text-[var(--muted)]" /><input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Buscar por proyecto, folio, autor o actividad..." className="w-full rounded-xl border border-[var(--border)] bg-transparent py-3 pl-11 pr-4 text-sm outline-none focus:border-[#5496CC]" /></div>
+          <div className="relative max-w-xl">
+            <Search size={17} className="absolute left-4 top-1/2 -translate-y-1/2 text-[var(--muted)]" />
+            <input value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Buscar por proyecto, folio, autor o actividad..." className="w-full rounded-xl border border-[var(--border)] bg-transparent py-3 pl-11 pr-4 text-sm outline-none focus:border-[#5496CC]" />
+          </div>
         </div>
 
         <div className="space-y-4">
-          {filtered.length === 0 ? <div className="rounded-2xl border border-[var(--border)] bg-[var(--surface)] px-6 py-16 text-center"><FileText className="mx-auto text-[#5496CC]" size={32} /><h2 className="mt-4 text-lg font-bold">Todavía no hay reportes diarios</h2><p className="mt-2 text-sm text-[var(--muted)]">Crea el primer reporte para documentar la jornada de obra.</p></div> : filtered.map((report) => {
-            const project = projectById.get(report.quoteId)
-            const progress = progressForReport(report)
-            return <article key={report.id} className="rounded-2xl border border-[var(--border)] bg-[var(--surface)] p-5 shadow-sm">
-              <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-                <div><p className="text-xs font-semibold text-[#5496CC]">{report.folio} · {report.date}</p><h2 className="mt-1 text-lg font-bold">{project?.project ?? 'Proyecto'}</h2><p className="mt-1 text-sm text-[var(--muted)]">{project?.client ?? ''} · {report.author || 'Sin autor'}</p></div>
-                <div className="flex gap-2">
-                  <button onClick={() => printPdf(report)} className="inline-flex items-center gap-2 rounded-lg border border-[#5496CC]/40 px-3 py-2 text-xs font-semibold text-[#5496CC] hover:bg-[#5496CC]/10"><Printer size={15} /> PDF</button>
-                  <button onClick={() => remove(report.id)} className="rounded-lg p-2 text-red-500 hover:bg-red-500/10"><Trash2 size={16} /></button>
-                </div>
-              </div>
-              <div className="mt-4 grid gap-3 sm:grid-cols-4"><Info label="Clima" value={report.weather || 'Sin registrar'} /><Info label="Personal" value={`${report.workers} personas`} /><Info label="Responsable" value={project?.owner || 'Sin responsable'} /><Info label="Avance de obra" value={progress ? `${progress.percent}%` : 'Sin registrar'} /></div>
-              {progress ? <div className="mt-4 rounded-xl border border-[#5496CC]/20 bg-[#5496CC]/10 p-4"><p className="text-xs font-semibold uppercase tracking-wide text-[#5496CC]">Proceso actual de la obra</p><p className="mt-2 text-sm font-semibold">{progress.percent}% · {progress.milestone || 'Avance registrado'}</p>{progress.notes ? <p className="mt-1 text-sm text-[var(--muted)]">{progress.notes}</p> : null}</div> : null}
-              <div className="mt-4 rounded-xl bg-[var(--surface-soft)] p-4"><p className="text-xs font-semibold uppercase tracking-wide text-[var(--muted)]">Actividades realizadas</p><p className="mt-2 whitespace-pre-wrap text-sm leading-6">{report.summary}</p></div>
-              {report.blockers ? <div className="mt-3 rounded-xl border border-amber-500/20 bg-amber-500/10 p-4"><p className="text-xs font-semibold uppercase tracking-wide text-amber-600">Bloqueos / pendientes</p><p className="mt-2 whitespace-pre-wrap text-sm">{report.blockers}</p></div> : null}
-            </article>
-          })}
+          {filtered.length === 0 ? (
+            <div className="rounded-2xl border border-[var(--border)] bg-[var(--surface)] px-6 py-16 text-center">
+              <FileText className="mx-auto text-[#5496CC]" size={32} />
+              <h2 className="mt-4 text-lg font-bold">Todavía no hay reportes diarios</h2>
+              <p className="mt-2 text-sm text-[var(--muted)]">Crea el primer reporte para documentar la jornada de obra.</p>
+            </div>
+          ) : (
+            filtered.map((report) => {
+              const project = projectById.get(report.quoteId)
+              const progress = progressForReport(report)
+
+              return (
+                <article key={report.id} className="rounded-2xl border border-[var(--border)] bg-[var(--surface)] p-5 shadow-sm">
+                  <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+                    <div>
+                      <p className="text-xs font-semibold text-[#5496CC]">{report.folio} · {report.date}</p>
+                      <h2 className="mt-1 text-lg font-bold">{project?.project ?? 'Proyecto'}</h2>
+                      <p className="mt-1 text-sm text-[var(--muted)]">{project?.client ?? ''} · {report.author || 'Sin autor'}</p>
+                    </div>
+                    <div className="flex gap-2">
+                      <button onClick={() => printPdf(report)} className="inline-flex items-center gap-2 rounded-lg border border-[#5496CC]/40 px-3 py-2 text-xs font-semibold text-[#5496CC] hover:bg-[#5496CC]/10"><Printer size={15} /> PDF</button>
+                      <button onClick={() => remove(report.id)} className="rounded-lg p-2 text-red-500 hover:bg-red-500/10"><Trash2 size={16} /></button>
+                    </div>
+                  </div>
+
+                  <div className="mt-4 grid gap-3 sm:grid-cols-4">
+                    <Info label="Clima" value={report.weather || 'Sin registrar'} />
+                    <Info label="Personal" value={`${report.workers} personas`} />
+                    <Info label="Responsable" value={project?.owner || 'Sin responsable'} />
+                    <Info label="Avance de obra" value={progress ? `${progress.percent}%` : 'Sin registrar'} />
+                  </div>
+
+                  {progress ? (
+                    <div className="mt-4 rounded-xl border border-[#5496CC]/20 bg-[#5496CC]/10 p-4">
+                      <p className="text-xs font-semibold uppercase tracking-wide text-[#5496CC]">Proceso actual de la obra</p>
+                      <p className="mt-2 text-sm font-semibold">{progress.percent}% · {progress.milestone || 'Avance registrado'}</p>
+                      {progress.notes ? <p className="mt-1 text-sm text-[var(--muted)]">{progress.notes}</p> : null}
+                    </div>
+                  ) : null}
+
+                  <div className="mt-4 rounded-xl bg-[var(--surface-soft)] p-4">
+                    <p className="text-xs font-semibold uppercase tracking-wide text-[var(--muted)]">Actividades realizadas</p>
+                    <p className="mt-2 whitespace-pre-wrap text-sm leading-6">{report.summary}</p>
+                  </div>
+
+                  {report.blockers ? (
+                    <div className="mt-3 rounded-xl border border-amber-500/20 bg-amber-500/10 p-4">
+                      <p className="text-xs font-semibold uppercase tracking-wide text-amber-600">Bloqueos / pendientes</p>
+                      <p className="mt-2 whitespace-pre-wrap text-sm">{report.blockers}</p>
+                    </div>
+                  ) : null}
+                </article>
+              )
+            })
+          )}
         </div>
       </div>
 
-      {open ? <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/55 p-4 print:hidden"><div className="max-h-[92vh] w-full max-w-3xl overflow-y-auto rounded-2xl bg-[var(--surface)] p-6 shadow-2xl"><div className="mb-5 flex items-center justify-between"><div><p className="text-xs font-semibold uppercase tracking-wide text-[#5496CC]">Bitácora de obra</p><h2 className="text-xl font-bold">Nuevo reporte diario</h2></div><button onClick={() => setOpen(false)}><X size={18} /></button></div><form onSubmit={save} className="space-y-4">
-        <label className="block space-y-2"><span className="text-sm font-semibold">Proyecto</span><select required value={quoteId} onChange={(e) => setQuoteId(e.target.value)} className="w-full rounded-xl border border-[var(--border)] bg-transparent px-4 py-3"><option value="">Seleccionar proyecto</option>{projects.map((project) => <option key={project.id} value={project.id}>{project.folio} — {project.project}</option>)}</select></label>
-        <div className="grid gap-4 sm:grid-cols-2"><label className="space-y-2"><span className="text-sm font-semibold">Fecha</span><input type="date" required value={date} onChange={(e) => setDate(e.target.value)} className="w-full rounded-xl border border-[var(--border)] bg-transparent px-4 py-3" /></label><label className="space-y-2"><span className="text-sm font-semibold">Clima</span><input value={weather} onChange={(e) => setWeather(e.target.value)} placeholder="Ej. Soleado, 26°C" className="w-full rounded-xl border border-[var(--border)] bg-transparent px-4 py-3" /></label></div>
-        <div className="grid gap-4 sm:grid-cols-2"><label className="space-y-2"><span className="text-sm font-semibold">Personal en obra</span><input type="number" min="0" value={workers} onChange={(e) => setWorkers(e.target.value)} className="w-full rounded-xl border border-[var(--border)] bg-transparent px-4 py-3" /></label><label className="space-y-2"><span className="text-sm font-semibold">Elaboró</span><input value={author} onChange={(e) => setAuthor(e.target.value)} className="w-full rounded-xl border border-[var(--border)] bg-transparent px-4 py-3" /></label></div>
-        <label className="block space-y-2"><span className="text-sm font-semibold">Actividades realizadas *</span><textarea required rows={5} value={summary} onChange={(e) => setSummary(e.target.value)} placeholder="Describe los trabajos realizados durante la jornada..." className="w-full rounded-xl border border-[var(--border)] bg-transparent px-4 py-3" /></label>
-        <label className="block space-y-2"><span className="text-sm font-semibold">Bloqueos / pendientes</span><textarea rows={3} value={blockers} onChange={(e) => setBlockers(e.target.value)} className="w-full rounded-xl border border-[var(--border)] bg-transparent px-4 py-3" /></label>
-        <div className="flex justify-end gap-3"><button type="button" onClick={() => setOpen(false)} className="rounded-xl border border-[var(--border)] px-5 py-3 font-semibold">Cancelar</button><button type="submit" className="rounded-xl bg-[#5496CC] px-5 py-3 font-semibold text-white">Guardar reporte</button></div>
-      </form></div></div> : null}
-
-      {printReport && printableProject ? (
-        <>
-          <style>{`
-            @media print {
-              @page { size: A4; margin: 12mm; }
-              html, body {
-                margin: 0 !important;
-                padding: 0 !important;
-                background: #fff !important;
-                color: #111827 !important;
-              }
-              body * { visibility: hidden !important; }
-              #daily-report-print, #daily-report-print * {
-                visibility: visible !important;
-                -webkit-print-color-adjust: exact !important;
-                print-color-adjust: exact !important;
-                box-shadow: none !important;
-                outline: none !important;
-              }
-              #daily-report-print {
-                display: block !important;
-                position: absolute !important;
-                inset: 0 !important;
-                width: 100% !important;
-                margin: 0 !important;
-                padding: 0 !important;
-                border: 0 !important;
-                background: #fff !important;
-                color: #111827 !important;
-              }
-              #daily-report-print section,
-              #daily-report-print section > div,
-              #daily-report-print footer {
-                border-color: #e5e7eb !important;
-              }
-              #daily-report-print .print-clean-card {
-                border: 0 !important;
-                background: #f8fafc !important;
-              }
-            }
-          `}</style>
-          <section id="daily-report-print" className="hidden bg-white text-slate-900 print:block">
-            <div className="mx-auto max-w-4xl bg-white">
-              <header className="flex items-center justify-between border-b-2 border-[#5496CC] pb-5">
-                <div className="flex items-center gap-4">
-                  <img src="/icon.png" alt="NEDVI Constructora" className="h-16 w-16 object-contain" />
-                  <div>
-                    <h1 className="text-2xl font-bold tracking-tight">NEDVI CONSTRUCTORA</h1>
-                    <p className="mt-1 text-sm text-slate-600">Reporte diario de obra</p>
-                  </div>
-                </div>
-                <div className="text-right text-sm">
-                  <p className="font-bold text-[#5496CC]">{printReport.folio}</p>
-                  <p>{formatDate(printReport.date)}</p>
-                </div>
-              </header>
-
-              <section className="mt-5 grid grid-cols-2 gap-4 text-sm">
-                <div className="print-clean-card rounded-xl bg-slate-50 p-4">
-                  <p className="text-xs font-bold uppercase tracking-wide text-slate-500">Datos de NEDVI</p>
-                  <div className="mt-3 space-y-1.5">
-                    <p><strong>Razón social:</strong> NEDVI</p>
-                    <p><strong>RFC:</strong> NED260326S59</p>
-                    <p><strong>Victor Muciño:</strong> victorm@nedviconstructora.com</p>
-                    <p><strong>Nestor Ortiz:</strong> Nestor.ortiz@nedviconstrucciones.com</p>
-                  </div>
-                </div>
-                <div className="print-clean-card rounded-xl bg-slate-50 p-4">
-                  <p className="text-xs font-bold uppercase tracking-wide text-slate-500">Datos del cliente</p>
-                  <div className="mt-3 space-y-1.5">
-                    <p><strong>Cliente:</strong> {printableProject.client}</p>
-                    <p><strong>Contacto:</strong> {printableProject.contact || 'Sin registrar'}</p>
-                    <p><strong>Teléfono:</strong> {printableProject.phone || 'Sin registrar'}</p>
-                    <p><strong>Correo:</strong> {printableProject.email || 'Sin registrar'}</p>
-                    <p><strong>RFC:</strong> {printableProject.rfc || 'Sin registrar'}</p>
-                    <p><strong>Dirección:</strong> {printableProject.address || 'Sin registrar'}</p>
-                  </div>
-                </div>
-              </section>
-
-              <section className="print-clean-card mt-5 rounded-xl bg-slate-50 p-4">
-                <p className="text-xs font-bold uppercase tracking-wide text-slate-500">Información del proyecto</p>
-                <div className="mt-3 grid grid-cols-2 gap-x-6 gap-y-2 text-sm">
-                  <p><strong>Proyecto:</strong> {printableProject.project}</p>
-                  <p><strong>Responsable:</strong> {printableProject.owner || 'Sin responsable'}</p>
-                  <p><strong>Elaboró:</strong> {printReport.author || 'Sin registrar'}</p>
-                  <p><strong>Personal en obra:</strong> {printReport.workers} personas</p>
-                  <p><strong>Clima:</strong> {printReport.weather || 'Sin registrar'}</p>
-                  <p><strong>Fecha:</strong> {formatDate(printReport.date)}</p>
-                </div>
-              </section>
-
-              <section className="mt-5 rounded-xl bg-[#5496CC]/5 p-4">
-                <div className="flex items-start justify-between gap-4">
-                  <div>
-                    <p className="text-xs font-bold uppercase tracking-wide text-[#5496CC]">Proceso / avance de obra</p>
-                    <p className="mt-2 text-lg font-bold">{printableProgress ? `${printableProgress.percent}%` : 'Sin avance registrado'}</p>
-                    <p className="mt-1 text-sm font-semibold">{printableProgress?.milestone || 'No hay hito registrado para este proyecto.'}</p>
-                  </div>
-                  {printableProgress ? <div className="text-right text-xs text-slate-500">Actualizado: {formatDate(printableProgress.date)}</div> : null}
-                </div>
-                <div className="mt-3 h-2.5 overflow-hidden rounded-full bg-slate-200">
-                  <div className="h-full rounded-full bg-[#5496CC]" style={{ width: `${printableProgress?.percent ?? 0}%` }} />
-                </div>
-                {printableProgress?.notes ? <p className="mt-3 text-sm leading-6 text-slate-700">{printableProgress.notes}</p> : null}
-              </section>
-
-              <section className="mt-5">
-                <p className="text-xs font-bold uppercase tracking-wide text-slate-500">Actividades realizadas</p>
-                <div className="mt-2 min-h-28 bg-slate-50 p-4 text-sm leading-6 whitespace-pre-wrap">{printReport.summary}</div>
-              </section>
-
-              <section className="mt-5">
-                <p className="text-xs font-bold uppercase tracking-wide text-slate-500">Bloqueos / pendientes</p>
-                <div className="mt-2 min-h-20 bg-slate-50 p-4 text-sm leading-6 whitespace-pre-wrap">{printReport.blockers || 'Sin bloqueos o pendientes registrados.'}</div>
-              </section>
-
-              <footer className="mt-8 border-t border-slate-200 pt-4 text-xs text-slate-500">
-                Documento generado desde NEDVI OS · Reporte diario de obra {printReport.folio}
-              </footer>
+      {open ? (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/55 p-4">
+          <div className="max-h-[92vh] w-full max-w-3xl overflow-y-auto rounded-2xl bg-[var(--surface)] p-6 shadow-2xl">
+            <div className="mb-5 flex items-center justify-between">
+              <div>
+                <p className="text-xs font-semibold uppercase tracking-wide text-[#5496CC]">Bitácora de obra</p>
+                <h2 className="text-xl font-bold">Nuevo reporte diario</h2>
+              </div>
+              <button type="button" onClick={() => setOpen(false)}><X size={18} /></button>
             </div>
-          </section>
-        </>
+
+            <form onSubmit={save} className="space-y-4">
+              <label className="block space-y-2">
+                <span className="text-sm font-semibold">Proyecto</span>
+                <select required value={quoteId} onChange={(event) => setQuoteId(event.target.value)} className="w-full rounded-xl border border-[var(--border)] bg-transparent px-4 py-3">
+                  <option value="">Seleccionar proyecto</option>
+                  {projects.map((project) => <option key={project.id} value={project.id}>{project.folio} — {project.project}</option>)}
+                </select>
+              </label>
+
+              <div className="grid gap-4 sm:grid-cols-2">
+                <label className="space-y-2"><span className="text-sm font-semibold">Fecha</span><input type="date" required value={date} onChange={(event) => setDate(event.target.value)} className="w-full rounded-xl border border-[var(--border)] bg-transparent px-4 py-3" /></label>
+                <label className="space-y-2"><span className="text-sm font-semibold">Clima</span><input value={weather} onChange={(event) => setWeather(event.target.value)} placeholder="Ej. Soleado, 26°C" className="w-full rounded-xl border border-[var(--border)] bg-transparent px-4 py-3" /></label>
+              </div>
+
+              <div className="grid gap-4 sm:grid-cols-2">
+                <label className="space-y-2"><span className="text-sm font-semibold">Personal en obra</span><input type="number" min="0" value={workers} onChange={(event) => setWorkers(event.target.value)} className="w-full rounded-xl border border-[var(--border)] bg-transparent px-4 py-3" /></label>
+                <label className="space-y-2"><span className="text-sm font-semibold">Elaboró</span><input value={author} onChange={(event) => setAuthor(event.target.value)} className="w-full rounded-xl border border-[var(--border)] bg-transparent px-4 py-3" /></label>
+              </div>
+
+              <label className="block space-y-2"><span className="text-sm font-semibold">Actividades realizadas *</span><textarea required rows={5} value={summary} onChange={(event) => setSummary(event.target.value)} placeholder="Describe los trabajos realizados durante la jornada..." className="w-full rounded-xl border border-[var(--border)] bg-transparent px-4 py-3" /></label>
+              <label className="block space-y-2"><span className="text-sm font-semibold">Bloqueos / pendientes</span><textarea rows={3} value={blockers} onChange={(event) => setBlockers(event.target.value)} className="w-full rounded-xl border border-[var(--border)] bg-transparent px-4 py-3" /></label>
+
+              <div className="flex justify-end gap-3">
+                <button type="button" onClick={() => setOpen(false)} className="rounded-xl border border-[var(--border)] px-5 py-3 font-semibold">Cancelar</button>
+                <button type="submit" className="rounded-xl bg-[#5496CC] px-5 py-3 font-semibold text-white">Guardar reporte</button>
+              </div>
+            </form>
+          </div>
+        </div>
       ) : null}
     </AppShell>
   )
 }
 
-function Metric({ label, value }: { label: string; value: string }) { return <div className="rounded-2xl border border-[var(--border)] bg-[var(--surface)] p-5"><FileText className="text-[#5496CC]" size={19} /><p className="mt-3 text-2xl font-bold">{value}</p><p className="mt-1 text-sm text-[var(--muted)]">{label}</p></div> }
-function Info({ label, value }: { label: string; value: string }) { return <div className="rounded-xl border border-[var(--border)] p-3"><p className="text-xs text-[var(--muted)]">{label}</p><p className="mt-1 text-sm font-semibold">{value}</p></div> }
+function Metric({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="rounded-2xl border border-[var(--border)] bg-[var(--surface)] p-5">
+      <FileText className="text-[#5496CC]" size={19} />
+      <p className="mt-3 text-2xl font-bold">{value}</p>
+      <p className="mt-1 text-sm text-[var(--muted)]">{label}</p>
+    </div>
+  )
+}
+
+function Info({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="rounded-xl border border-[var(--border)] p-3">
+      <p className="text-xs text-[var(--muted)]">{label}</p>
+      <p className="mt-1 text-sm font-semibold">{value}</p>
+    </div>
+  )
+}
