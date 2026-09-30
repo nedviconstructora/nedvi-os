@@ -113,6 +113,21 @@ function numberValue(value: unknown) {
   return typeof value === 'number' && Number.isFinite(value) ? value : 0
 }
 
+function progressPercentFromItems(items: ProgressItem[], fallback = 0) {
+  if (!items.length) return Math.max(0, Math.min(100, fallback))
+
+  const totalContract = items.reduce((sum, item) => sum + Math.max(0, item.total), 0)
+  if (totalContract <= 0) return Math.max(0, Math.min(100, fallback))
+
+  const totalAccumulated = items.reduce(
+    (sum, item) => sum + Math.max(0, item.accumulatedPrevious) + Math.max(0, item.executed),
+    0,
+  )
+
+  const rawPercent = (totalAccumulated / totalContract) * 100
+  return Math.max(0, Math.min(100, Math.round(rawPercent * 100) / 100))
+}
+
 export function readOperationProjects(): OperationProject[] {
   return readArray(QUOTES_STORAGE_KEY)
     .filter(isRecord)
@@ -153,15 +168,8 @@ export function readProgressRecords(): ProgressRecord[] {
         typeof item.date === 'string' &&
         typeof item.percent === 'number',
     )
-    .map((item) => ({
-      id: item.id as string,
-      quoteId: item.quoteId as string,
-      folio: item.folio as string,
-      date: item.date as string,
-      percent: Math.max(0, Math.min(100, item.percent as number)),
-      milestone: typeof item.milestone === 'string' ? item.milestone : '',
-      notes: typeof item.notes === 'string' ? item.notes : '',
-      items: Array.isArray(item.items)
+    .map((item) => {
+      const items: ProgressItem[] = Array.isArray(item.items)
         ? item.items
             .filter(isRecord)
             .filter((row) => typeof row.id === 'string')
@@ -172,6 +180,7 @@ export function readProgressRecords(): ProgressRecord[] {
               const accumulatedPrevious = Math.max(0, numberValue(row.accumulatedPrevious))
               const previousExecution = Math.max(0, numberValue(row.previousExecution))
               const executed = Math.max(0, numberValue(row.executed))
+
               return {
                 id: row.id as string,
                 concept: typeof row.concept === 'string' ? row.concept : '',
@@ -185,11 +194,28 @@ export function readProgressRecords(): ProgressRecord[] {
                 totalToExecute: Math.max(0, total - accumulatedPrevious - executed),
               }
             })
-        : [],
-    }))
+        : []
+
+      const storedPercent = Math.max(0, Math.min(100, item.percent as number))
+
+      return {
+        id: item.id as string,
+        quoteId: item.quoteId as string,
+        folio: item.folio as string,
+        date: item.date as string,
+        percent: progressPercentFromItems(items, storedPercent),
+        milestone: typeof item.milestone === 'string' ? item.milestone : '',
+        notes: typeof item.notes === 'string' ? item.notes : '',
+        items,
+      }
+    })
 }
 
 export function writeProgressRecords(records: ProgressRecord[]) {
+  for (const record of records) {
+    record.percent = progressPercentFromItems(record.items, record.percent)
+  }
+
   writeArray(PROGRESS_STORAGE_KEY, records)
 }
 
