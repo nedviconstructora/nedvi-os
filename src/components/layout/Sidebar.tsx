@@ -60,7 +60,7 @@ const navigationGroups: NavigationGroup[] = [
     ],
   },
   {
-    label: 'Proyectos',
+    label: 'Gestión de Proyectos',
     icon: FolderKanban,
     items: [
       { label: 'Proyectos', href: '/projects', icon: HardHat },
