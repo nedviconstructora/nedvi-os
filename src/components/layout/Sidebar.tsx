@@ -150,13 +150,13 @@ export function Sidebar({ collapsed, mobileOpen, onToggleCollapse, onCloseMobile
   }, [activeGroupLabel])
 
   const primaryItemClasses = (active: boolean) =>
-    `group relative flex h-11 w-full items-center gap-3 rounded-xl bg-[#8FDEEB] px-3 text-left text-[13px] font-medium text-black transition duration-200 hover:brightness-95 ${
+    `group relative flex h-11 w-full items-center gap-3 rounded-xl bg-[#A7E4EC] px-3 text-left text-[13px] font-medium text-black transition duration-200 hover:brightness-95 ${
       active ? 'ring-1 ring-black/25 shadow-sm' : ''
     } ${collapsed ? 'lg:justify-center lg:px-0' : ''}`
 
   return (
     <aside
-      className={`fixed inset-y-0 left-0 z-40 flex w-[280px] flex-col border-r border-black/10 bg-[#18C0CC] transition-[width,transform] duration-300 ease-out lg:relative lg:z-0 lg:translate-x-0 ${
+      className={`fixed inset-y-0 left-0 z-40 flex w-[280px] flex-col border-r border-black/10 bg-[#4BC3D6] transition-[width,transform] duration-300 ease-out lg:relative lg:z-0 lg:translate-x-0 ${
         collapsed ? 'lg:w-20' : 'lg:w-[280px]'
       } ${mobileOpen ? 'translate-x-0' : '-translate-x-full'}`}
       aria-label="Navegación principal"
@@ -194,7 +194,7 @@ export function Sidebar({ collapsed, mobileOpen, onToggleCollapse, onCloseMobile
                   type="button"
                   onClick={() => setOpenGroups((current) => ({ ...current, [group.label]: !current[group.label] }))}
                   title={collapsed ? group.label : undefined}
-                  className={`group flex h-11 w-full items-center gap-3 rounded-xl bg-[#8FDEEB] px-3 text-left text-[13px] font-medium text-black transition duration-200 hover:brightness-95 ${
+                  className={`group flex h-11 w-full items-center gap-3 rounded-xl bg-[#A7E4EC] px-3 text-left text-[13px] font-medium text-black transition duration-200 hover:brightness-95 ${
                     groupActive ? 'ring-1 ring-black/25 shadow-sm' : isOpen ? 'ring-1 ring-black/10' : ''
                   } ${collapsed ? 'lg:justify-center lg:px-0' : ''}`}
                   aria-expanded={isOpen}
@@ -213,7 +213,7 @@ export function Sidebar({ collapsed, mobileOpen, onToggleCollapse, onCloseMobile
 
                         if (item.href) {
                           return (
-                            <Link key={item.label} href={item.href} onClick={onCloseMobile} className={`group/sub relative flex min-h-9 items-center gap-2.5 rounded-lg bg-[#CDF4FA] px-3 py-2 text-[12px] font-medium text-black transition hover:brightness-95 ${active ? 'ring-1 ring-black/25 shadow-sm' : ''}`}>
+                            <Link key={item.label} href={item.href} onClick={onCloseMobile} className={`group/sub relative flex min-h-9 items-center gap-2.5 rounded-lg bg-[#E9F8FA] px-3 py-2 text-[12px] font-medium text-black transition hover:brightness-95 ${active ? 'ring-1 ring-black/25 shadow-sm' : ''}`}>
                               {active ? <span className="absolute -left-[13px] h-4 w-0.5 rounded-r-full bg-black" /> : null}
                               {ItemIcon ? <ItemIcon size={14} strokeWidth={1.8} className="text-black" /> : null}
                               <span className="truncate">{item.label}</span>
@@ -222,7 +222,7 @@ export function Sidebar({ collapsed, mobileOpen, onToggleCollapse, onCloseMobile
                         }
 
                         return (
-                          <button key={item.label} type="button" disabled title={`${item.label} - Próximamente`} className="flex min-h-9 w-full cursor-not-allowed items-center gap-2.5 rounded-lg bg-[#CDF4FA] px-3 py-2 text-left text-[12px] font-medium text-black opacity-50">
+                          <button key={item.label} type="button" disabled title={`${item.label} - Próximamente`} className="flex min-h-9 w-full cursor-not-allowed items-center gap-2.5 rounded-lg bg-[#E9F8FA] px-3 py-2 text-left text-[12px] font-medium text-black opacity-50">
                             {ItemIcon ? <ItemIcon size={14} strokeWidth={1.7} /> : null}
                             <span className="min-w-0 flex-1 truncate">{item.label}</span>
                             {item.comingSoon ? <span className="rounded-md border border-black/10 bg-black/5 px-1.5 py-0.5 text-[8px] font-semibold uppercase tracking-[0.08em] text-black/60">Pronto</span> : null}
@@ -250,7 +250,7 @@ export function Sidebar({ collapsed, mobileOpen, onToggleCollapse, onCloseMobile
         </button>
 
         <div className="my-5 border-t border-black/15" />
-        <button type="button" title={collapsed ? 'Coral' : undefined} className={`group relative flex h-11 w-full items-center gap-3 rounded-xl border border-black/15 bg-[#8FDEEB] px-3 text-left text-[13px] font-medium text-black transition hover:brightness-95 ${collapsed ? 'lg:justify-center lg:px-0' : ''}`}>
+        <button type="button" title={collapsed ? 'Coral' : undefined} className={`group relative flex h-11 w-full items-center gap-3 rounded-xl border border-black/15 bg-[#A7E4EC] px-3 text-left text-[13px] font-medium text-black transition hover:brightness-95 ${collapsed ? 'lg:justify-center lg:px-0' : ''}`}>
           <Bot size={18} strokeWidth={1.8} className="text-black" />
           <span className={`whitespace-nowrap transition-opacity duration-200 ${collapsed ? 'lg:pointer-events-none lg:w-0 lg:opacity-0' : 'opacity-100'}`}>Coral</span>
           <span className={`ml-auto rounded-md bg-black/10 px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wider text-black/70 ${collapsed ? 'lg:hidden' : ''}`}>AI</span>
@@ -259,7 +259,7 @@ export function Sidebar({ collapsed, mobileOpen, onToggleCollapse, onCloseMobile
 
       <div className="border-t border-black/15 p-3">
         <div className={`flex items-center gap-3 rounded-xl px-2 py-2 ${collapsed ? 'lg:justify-center lg:px-0' : ''}`}>
-          <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-[#CDF4FA] text-[10px] font-bold text-black">PG</span>
+          <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-[#E9F8FA] text-[10px] font-bold text-black">PG</span>
           <div className={`min-w-0 transition-opacity duration-200 ${collapsed ? 'lg:pointer-events-none lg:w-0 lg:opacity-0' : 'opacity-100'}`}>
             <p className="truncate text-xs font-medium text-black">Pedro Garcia</p>
             <p className="truncate text-[11px] text-black/70">Administrador</p>
@@ -267,7 +267,7 @@ export function Sidebar({ collapsed, mobileOpen, onToggleCollapse, onCloseMobile
         </div>
       </div>
 
-      <button type="button" onClick={onToggleCollapse} className="absolute -right-3 top-[86px] hidden h-6 w-6 items-center justify-center rounded-full border border-black/15 bg-[#CDF4FA] text-black shadow-lg transition hover:brightness-95 lg:flex" aria-label={collapsed ? 'Expandir menú lateral' : 'Contraer menú lateral'}>
+      <button type="button" onClick={onToggleCollapse} className="absolute -right-3 top-[86px] hidden h-6 w-6 items-center justify-center rounded-full border border-black/15 bg-[#E9F8FA] text-black shadow-lg transition hover:brightness-95 lg:flex" aria-label={collapsed ? 'Expandir menú lateral' : 'Contraer menú lateral'}>
         {collapsed ? <ChevronRight size={13} /> : <ChevronLeft size={13} />}
       </button>
     </aside>
