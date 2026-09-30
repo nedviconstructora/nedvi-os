@@ -120,11 +120,11 @@ const navigationGroups: NavigationGroup[] = [
 
 function BrandMark() {
   return (
-    <span className="flex h-16 w-16 shrink-0 items-center justify-center overflow-hidden rounded-2xl border border-white/15 bg-[#343A40] shadow-lg">
+    <span className="flex h-16 w-16 shrink-0 items-center justify-center">
       <img
-        src="/logo-blanco.svg"
+        src="/icon.png"
         alt="NEDVI Constructora"
-        className="h-[60px] w-[60px] scale-[1.35] object-contain"
+        className="h-14 w-14 rounded-xl object-contain"
       />
     </span>
   )
