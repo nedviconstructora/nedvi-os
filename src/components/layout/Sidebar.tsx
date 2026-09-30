@@ -120,11 +120,11 @@ const navigationGroups: NavigationGroup[] = [
 
 function BrandMark() {
   return (
-    <span className="flex h-11 w-11 shrink-0 items-center justify-center bg-transparent">
+    <span className="flex h-14 w-14 shrink-0 items-center justify-center bg-transparent">
       <img
         src="/logo-blanco.svg"
         alt="NEDVI Constructora"
-        className="h-10 w-10 object-contain"
+        className="h-[52px] w-[52px] object-contain"
       />
     </span>
   )
@@ -161,11 +161,11 @@ export function Sidebar({ collapsed, mobileOpen, onToggleCollapse, onCloseMobile
       } ${mobileOpen ? 'translate-x-0' : '-translate-x-full'}`}
       aria-label="Navegación principal"
     >
-      <div className={`flex h-[88px] shrink-0 items-center border-b border-white/[0.06] px-5 ${collapsed ? 'lg:justify-center lg:px-0' : 'justify-between'}`}>
-        <div className={`flex items-center gap-3 overflow-hidden ${collapsed ? 'lg:w-11' : ''}`}>
+      <div className={`flex h-[104px] shrink-0 items-center border-b border-white/[0.06] px-5 ${collapsed ? 'lg:justify-center lg:px-0' : 'justify-between'}`}>
+        <div className={`flex items-center gap-4 overflow-hidden ${collapsed ? 'lg:w-14' : ''}`}>
           <BrandMark />
-          <span className={`whitespace-nowrap text-[17px] font-semibold tracking-[-0.04em] text-white transition-opacity duration-200 ${collapsed ? 'lg:pointer-events-none lg:w-0 lg:opacity-0' : 'opacity-100'}`}>
-            NEDVI <span className="font-normal text-white/90">OS</span>
+          <span className={`whitespace-nowrap text-[26px] font-bold tracking-[-0.045em] text-white transition-opacity duration-200 ${collapsed ? 'lg:pointer-events-none lg:w-0 lg:opacity-0' : 'opacity-100'}`}>
+            NEDVI <span className="font-medium text-white/90">OS</span>
           </span>
         </div>
         <button type="button" onClick={onCloseMobile} className="rounded-lg p-2 text-[#9CA3AF] transition hover:bg-white/[0.06] hover:text-white lg:hidden" aria-label="Cerrar navegación">
@@ -267,7 +267,7 @@ export function Sidebar({ collapsed, mobileOpen, onToggleCollapse, onCloseMobile
         </div>
       </div>
 
-      <button type="button" onClick={onToggleCollapse} className="absolute -right-3 top-[68px] hidden h-6 w-6 items-center justify-center rounded-full border border-white/[0.1] bg-[#20232A] text-[#9CA3AF] shadow-lg transition hover:bg-[#2a2e38] hover:text-white lg:flex" aria-label={collapsed ? 'Expandir menú lateral' : 'Contraer menú lateral'}>
+      <button type="button" onClick={onToggleCollapse} className="absolute -right-3 top-[82px] hidden h-6 w-6 items-center justify-center rounded-full border border-white/[0.1] bg-[#20232A] text-[#9CA3AF] shadow-lg transition hover:bg-[#2a2e38] hover:text-white lg:flex" aria-label={collapsed ? 'Expandir menú lateral' : 'Contraer menú lateral'}>
         {collapsed ? <ChevronRight size={13} /> : <ChevronLeft size={13} />}
       </button>
     </aside>
