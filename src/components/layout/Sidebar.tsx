@@ -150,35 +150,35 @@ export function Sidebar({ collapsed, mobileOpen, onToggleCollapse, onCloseMobile
   }, [activeGroupLabel])
 
   const primaryItemClasses = (active: boolean) =>
-    `group relative flex h-11 w-full items-center gap-3 rounded-xl px-3 text-left text-[13px] font-medium transition duration-200 ${
-      active ? 'bg-[#343A40] text-white' : 'text-[#9CA3AF] hover:bg-white/5 hover:text-white'
+    `group relative flex h-11 w-full items-center gap-3 rounded-xl bg-[#1FDEFF] px-3 text-left text-[13px] font-medium text-black transition duration-200 hover:brightness-95 ${
+      active ? 'ring-1 ring-black/25 shadow-sm' : ''
     } ${collapsed ? 'lg:justify-center lg:px-0' : ''}`
 
   return (
     <aside
-      className={`fixed inset-y-0 left-0 z-40 flex w-[280px] flex-col border-r border-white/[0.06] bg-[#17181C] transition-[width,transform] duration-300 ease-out lg:relative lg:z-0 lg:translate-x-0 ${
+      className={`fixed inset-y-0 left-0 z-40 flex w-[280px] flex-col border-r border-black/10 bg-[#1BA1B3] transition-[width,transform] duration-300 ease-out lg:relative lg:z-0 lg:translate-x-0 ${
         collapsed ? 'lg:w-20' : 'lg:w-[280px]'
       } ${mobileOpen ? 'translate-x-0' : '-translate-x-full'}`}
       aria-label="Navegación principal"
     >
-      <div className={`flex h-[112px] shrink-0 items-center border-b border-white/[0.06] px-4 ${collapsed ? 'lg:justify-center lg:px-0' : 'justify-between'}`}>
+      <div className={`flex h-[112px] shrink-0 items-center border-b border-black/10 px-4 ${collapsed ? 'lg:justify-center lg:px-0' : 'justify-between'}`}>
         <div className={`flex items-center gap-3 overflow-hidden ${collapsed ? 'lg:w-16' : ''}`}>
           <BrandMark />
-          <span className={`whitespace-nowrap text-[27px] font-bold tracking-[-0.045em] text-white transition-opacity duration-200 ${collapsed ? 'lg:pointer-events-none lg:w-0 lg:opacity-0' : 'opacity-100'}`}>
-            NEDVI <span className="font-medium text-white/90">OS</span>
+          <span className={`whitespace-nowrap text-[27px] font-bold tracking-[-0.045em] text-black transition-opacity duration-200 ${collapsed ? 'lg:pointer-events-none lg:w-0 lg:opacity-0' : 'opacity-100'}`}>
+            NEDVI <span className="font-medium text-black/80">OS</span>
           </span>
         </div>
-        <button type="button" onClick={onCloseMobile} className="rounded-lg p-2 text-[#9CA3AF] transition hover:bg-white/[0.06] hover:text-white lg:hidden" aria-label="Cerrar navegación">
+        <button type="button" onClick={onCloseMobile} className="rounded-lg p-2 text-black/70 transition hover:bg-black/10 hover:text-black lg:hidden" aria-label="Cerrar navegación">
           <X size={18} strokeWidth={1.8} />
         </button>
       </div>
 
       <nav className="flex-1 overflow-y-auto px-3 py-5" aria-label="Módulos de NEDVI OS">
-        <p className={`mb-3 px-3 text-[10px] font-semibold uppercase tracking-[0.16em] text-[#646873] transition-opacity ${collapsed ? 'lg:text-center lg:opacity-0' : ''}`}>Sistema</p>
+        <p className={`mb-3 px-3 text-[10px] font-semibold uppercase tracking-[0.16em] text-black/70 transition-opacity ${collapsed ? 'lg:text-center lg:opacity-0' : ''}`}>Sistema</p>
 
         <Link href="/dashboard" title={collapsed ? 'Dashboard' : undefined} onClick={onCloseMobile} className={primaryItemClasses(isPathActive('/dashboard'))}>
-          {isPathActive('/dashboard') ? <span className="absolute left-0 h-5 w-0.5 rounded-r-full bg-[#163DFF]" /> : null}
-          <LayoutDashboard size={18} strokeWidth={isPathActive('/dashboard') ? 2 : 1.8} className={isPathActive('/dashboard') ? 'text-[#6F88FF]' : 'text-[#7D81D8] group-hover:text-white'} />
+          {isPathActive('/dashboard') ? <span className="absolute left-0 h-5 w-0.5 rounded-r-full bg-black" /> : null}
+          <LayoutDashboard size={18} strokeWidth={isPathActive('/dashboard') ? 2 : 1.8} className="text-black" />
           <span className={`whitespace-nowrap transition-opacity duration-200 ${collapsed ? 'lg:pointer-events-none lg:w-0 lg:opacity-0' : 'opacity-100'}`}>Dashboard</span>
         </Link>
 
@@ -194,38 +194,38 @@ export function Sidebar({ collapsed, mobileOpen, onToggleCollapse, onCloseMobile
                   type="button"
                   onClick={() => setOpenGroups((current) => ({ ...current, [group.label]: !current[group.label] }))}
                   title={collapsed ? group.label : undefined}
-                  className={`group flex h-11 w-full items-center gap-3 rounded-xl px-3 text-left text-[13px] font-medium transition duration-200 ${
-                    groupActive ? 'bg-[#343A40] text-white' : isOpen ? 'bg-white/[0.025] text-[#d5d7df]' : 'text-[#9CA3AF] hover:bg-white/5 hover:text-white'
+                  className={`group flex h-11 w-full items-center gap-3 rounded-xl bg-[#1FDEFF] px-3 text-left text-[13px] font-medium text-black transition duration-200 hover:brightness-95 ${
+                    groupActive ? 'ring-1 ring-black/25 shadow-sm' : isOpen ? 'ring-1 ring-black/10' : ''
                   } ${collapsed ? 'lg:justify-center lg:px-0' : ''}`}
                   aria-expanded={isOpen}
                 >
-                  <GroupIcon size={18} strokeWidth={groupActive ? 2 : 1.8} className={groupActive ? 'text-[#6F88FF]' : 'text-[#7D81D8] group-hover:text-white'} />
+                  <GroupIcon size={18} strokeWidth={groupActive ? 2 : 1.8} className="text-black" />
                   <span className={`min-w-0 flex-1 truncate whitespace-nowrap transition-opacity duration-200 ${collapsed ? 'lg:pointer-events-none lg:w-0 lg:opacity-0' : 'opacity-100'}`}>{group.label}</span>
-                  <ChevronDown size={14} className={`shrink-0 text-[#646873] transition-transform duration-200 ${isOpen ? 'rotate-180' : ''} ${collapsed ? 'lg:hidden' : ''}`} />
+                  <ChevronDown size={14} className={`shrink-0 text-black/70 transition-transform duration-200 ${isOpen ? 'rotate-180' : ''} ${collapsed ? 'lg:hidden' : ''}`} />
                 </button>
 
                 <div className={`grid transition-[grid-template-rows,opacity] duration-200 ${isOpen ? 'grid-rows-[1fr] opacity-100' : 'grid-rows-[0fr] opacity-0'} ${collapsed ? 'lg:hidden' : ''}`}>
                   <div className="overflow-hidden">
-                    <div className="ml-5 mt-1 space-y-1 border-l border-white/[0.06] pl-3">
+                    <div className="ml-5 mt-1 space-y-1 border-l border-black/15 pl-3">
                       {group.items.map((item) => {
                         const ItemIcon = item.icon
                         const active = isPathActive(item.href)
 
                         if (item.href) {
                           return (
-                            <Link key={item.label} href={item.href} onClick={onCloseMobile} className={`group/sub relative flex min-h-9 items-center gap-2.5 rounded-lg px-3 py-2 text-[12px] font-medium transition ${active ? 'bg-[#343A40] text-white' : 'text-[#858A96] hover:bg-white/[0.04] hover:text-white'}`}>
-                              {active ? <span className="absolute -left-[13px] h-4 w-0.5 rounded-r-full bg-[#163DFF]" /> : null}
-                              {ItemIcon ? <ItemIcon size={14} strokeWidth={1.8} className={active ? 'text-[#7187ff]' : 'text-[#646873]'} /> : null}
+                            <Link key={item.label} href={item.href} onClick={onCloseMobile} className={`group/sub relative flex min-h-9 items-center gap-2.5 rounded-lg bg-[#5DF0E3] px-3 py-2 text-[12px] font-medium text-black transition hover:brightness-95 ${active ? 'ring-1 ring-black/25 shadow-sm' : ''}`}>
+                              {active ? <span className="absolute -left-[13px] h-4 w-0.5 rounded-r-full bg-black" /> : null}
+                              {ItemIcon ? <ItemIcon size={14} strokeWidth={1.8} className="text-black" /> : null}
                               <span className="truncate">{item.label}</span>
                             </Link>
                           )
                         }
 
                         return (
-                          <button key={item.label} type="button" disabled title={`${item.label} - Próximamente`} className="flex min-h-9 w-full cursor-not-allowed items-center gap-2.5 rounded-lg px-3 py-2 text-left text-[12px] font-medium text-[#646873] opacity-65">
+                          <button key={item.label} type="button" disabled title={`${item.label} - Próximamente`} className="flex min-h-9 w-full cursor-not-allowed items-center gap-2.5 rounded-lg bg-[#5DF0E3] px-3 py-2 text-left text-[12px] font-medium text-black opacity-50">
                             {ItemIcon ? <ItemIcon size={14} strokeWidth={1.7} /> : null}
                             <span className="min-w-0 flex-1 truncate">{item.label}</span>
-                            {item.comingSoon ? <span className="rounded-md border border-white/[0.06] bg-white/[0.03] px-1.5 py-0.5 text-[8px] font-semibold uppercase tracking-[0.08em] text-[#565B66]">Pronto</span> : null}
+                            {item.comingSoon ? <span className="rounded-md border border-black/10 bg-black/5 px-1.5 py-0.5 text-[8px] font-semibold uppercase tracking-[0.08em] text-black/60">Pronto</span> : null}
                           </button>
                         )
                       })}
@@ -237,10 +237,10 @@ export function Sidebar({ collapsed, mobileOpen, onToggleCollapse, onCloseMobile
           })}
         </div>
 
-        <div className="my-4 border-t border-white/[0.06]" />
+        <div className="my-4 border-t border-black/15" />
 
         <Link href="/agenda" title={collapsed ? 'Agenda' : undefined} onClick={onCloseMobile} className={primaryItemClasses(isPathActive('/agenda'))}>
-          <CalendarDays size={18} strokeWidth={isPathActive('/agenda') ? 2 : 1.8} className={isPathActive('/agenda') ? 'text-[#6F88FF]' : 'text-[#7D81D8] group-hover:text-white'} />
+          <CalendarDays size={18} strokeWidth={isPathActive('/agenda') ? 2 : 1.8} className="text-black" />
           <span className={`whitespace-nowrap transition-opacity duration-200 ${collapsed ? 'lg:pointer-events-none lg:w-0 lg:opacity-0' : 'opacity-100'}`}>Agenda</span>
         </Link>
 
@@ -249,25 +249,25 @@ export function Sidebar({ collapsed, mobileOpen, onToggleCollapse, onCloseMobile
           <span className={`whitespace-nowrap transition-opacity duration-200 ${collapsed ? 'lg:pointer-events-none lg:w-0 lg:opacity-0' : 'opacity-100'}`}>Configuración</span>
         </button>
 
-        <div className="my-5 border-t border-white/[0.06]" />
-        <button type="button" title={collapsed ? 'Coral' : undefined} className={`group relative flex h-11 w-full items-center gap-3 rounded-xl border border-[#163DFF]/20 bg-[#163DFF]/[0.07] px-3 text-left text-[13px] font-medium text-[#d9deff] transition hover:border-[#163DFF]/40 hover:bg-[#163DFF]/[0.13] ${collapsed ? 'lg:justify-center lg:px-0' : ''}`}>
-          <Bot size={18} strokeWidth={1.8} className="text-[#6f88ff]" />
+        <div className="my-5 border-t border-black/15" />
+        <button type="button" title={collapsed ? 'Coral' : undefined} className={`group relative flex h-11 w-full items-center gap-3 rounded-xl border border-black/15 bg-[#1FDEFF] px-3 text-left text-[13px] font-medium text-black transition hover:brightness-95 ${collapsed ? 'lg:justify-center lg:px-0' : ''}`}>
+          <Bot size={18} strokeWidth={1.8} className="text-black" />
           <span className={`whitespace-nowrap transition-opacity duration-200 ${collapsed ? 'lg:pointer-events-none lg:w-0 lg:opacity-0' : 'opacity-100'}`}>Coral</span>
-          <span className={`ml-auto rounded-md bg-[#163DFF]/20 px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wider text-[#91a2ff] ${collapsed ? 'lg:hidden' : ''}`}>AI</span>
+          <span className={`ml-auto rounded-md bg-black/10 px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wider text-black/70 ${collapsed ? 'lg:hidden' : ''}`}>AI</span>
         </button>
       </nav>
 
-      <div className="border-t border-white/[0.06] p-3">
+      <div className="border-t border-black/15 p-3">
         <div className={`flex items-center gap-3 rounded-xl px-2 py-2 ${collapsed ? 'lg:justify-center lg:px-0' : ''}`}>
-          <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-[#2c3346] text-[10px] font-bold text-[#b7c2ff]">PG</span>
+          <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-[#5DF0E3] text-[10px] font-bold text-black">PG</span>
           <div className={`min-w-0 transition-opacity duration-200 ${collapsed ? 'lg:pointer-events-none lg:w-0 lg:opacity-0' : 'opacity-100'}`}>
-            <p className="truncate text-xs font-medium text-white">Pedro Garcia</p>
-            <p className="truncate text-[11px] text-[#646873]">Administrador</p>
+            <p className="truncate text-xs font-medium text-black">Pedro Garcia</p>
+            <p className="truncate text-[11px] text-black/70">Administrador</p>
           </div>
         </div>
       </div>
 
-      <button type="button" onClick={onToggleCollapse} className="absolute -right-3 top-[86px] hidden h-6 w-6 items-center justify-center rounded-full border border-white/[0.1] bg-[#20232A] text-[#9CA3AF] shadow-lg transition hover:bg-[#2a2e38] hover:text-white lg:flex" aria-label={collapsed ? 'Expandir menú lateral' : 'Contraer menú lateral'}>
+      <button type="button" onClick={onToggleCollapse} className="absolute -right-3 top-[86px] hidden h-6 w-6 items-center justify-center rounded-full border border-black/15 bg-[#5DF0E3] text-black shadow-lg transition hover:brightness-95 lg:flex" aria-label={collapsed ? 'Expandir menú lateral' : 'Contraer menú lateral'}>
         {collapsed ? <ChevronRight size={13} /> : <ChevronLeft size={13} />}
       </button>
     </aside>
