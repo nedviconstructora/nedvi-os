@@ -5,6 +5,8 @@ import { useEffect, useState } from 'react'
 import { usePathname } from 'next/navigation'
 import { Header } from '@/components/layout/Header'
 import { Sidebar } from '@/components/layout/Sidebar'
+import { canAccessPath } from '@/config/roles'
+import { currentUser } from '@/data/currentUser'
 import { syncQuoteProjectsIntoProjectStorage } from '@/features/projects/services/quoteProjectSync'
 
 type AppShellProps = {
@@ -72,6 +74,7 @@ export function AppShell({ children }: AppShellProps) {
   }
 
   const isDark = theme === 'dark'
+  const hasRouteAccess = canAccessPath(currentUser.role, pathname)
   const isHumanResourcesRoute =
     pathname === '/personnel' || pathname === '/hr-attendance' || pathname === '/payroll'
 
@@ -107,7 +110,19 @@ export function AppShell({ children }: AppShellProps) {
           </div>
 
           <main className="min-w-0 flex-1 bg-[var(--background)] p-5 transition-colors duration-300 sm:p-8 print:bg-white print:p-0">
-            {children}
+            {hasRouteAccess ? (
+              children
+            ) : (
+              <div className="mx-auto flex min-h-[55vh] max-w-2xl items-center justify-center">
+                <div className="w-full rounded-2xl border border-[var(--border)] bg-[var(--surface)] p-8 text-center shadow-sm">
+                  <p className="text-xs font-semibold uppercase tracking-[0.16em] text-[#5496CC]">Acceso restringido</p>
+                  <h1 className="mt-3 text-2xl font-bold text-[var(--foreground)]">No tienes permiso para abrir este módulo</h1>
+                  <p className="mt-3 text-sm leading-6 text-[var(--muted)]">
+                    Tu rol actual es {currentUser.role}. Solicita acceso a Administración si necesitas entrar a este apartado.
+                  </p>
+                </div>
+              </div>
+            )}
           </main>
         </div>
       </div>
