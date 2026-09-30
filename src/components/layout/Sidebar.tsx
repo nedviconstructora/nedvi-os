@@ -150,7 +150,7 @@ export function Sidebar({ collapsed, mobileOpen, onToggleCollapse, onCloseMobile
   }, [activeGroupLabel])
 
   const primaryItemClasses = (active: boolean) =>
-    `group relative flex h-11 w-full items-center gap-3 rounded-xl bg-[#82D6E0] px-3 text-left text-[13px] font-medium text-black transition duration-200 hover:brightness-95 ${
+    `group relative flex h-11 w-full items-center gap-3 rounded-xl bg-[#8FDEEB] px-3 text-left text-[13px] font-medium text-black transition duration-200 hover:brightness-95 ${
       active ? 'ring-1 ring-black/25 shadow-sm' : ''
     } ${collapsed ? 'lg:justify-center lg:px-0' : ''}`
 
@@ -194,7 +194,7 @@ export function Sidebar({ collapsed, mobileOpen, onToggleCollapse, onCloseMobile
                   type="button"
                   onClick={() => setOpenGroups((current) => ({ ...current, [group.label]: !current[group.label] }))}
                   title={collapsed ? group.label : undefined}
-                  className={`group flex h-11 w-full items-center gap-3 rounded-xl bg-[#82D6E0] px-3 text-left text-[13px] font-medium text-black transition duration-200 hover:brightness-95 ${
+                  className={`group flex h-11 w-full items-center gap-3 rounded-xl bg-[#8FDEEB] px-3 text-left text-[13px] font-medium text-black transition duration-200 hover:brightness-95 ${
                     groupActive ? 'ring-1 ring-black/25 shadow-sm' : isOpen ? 'ring-1 ring-black/10' : ''
                   } ${collapsed ? 'lg:justify-center lg:px-0' : ''}`}
                   aria-expanded={isOpen}
@@ -250,7 +250,7 @@ export function Sidebar({ collapsed, mobileOpen, onToggleCollapse, onCloseMobile
         </button>
 
         <div className="my-5 border-t border-black/15" />
-        <button type="button" title={collapsed ? 'Coral' : undefined} className={`group relative flex h-11 w-full items-center gap-3 rounded-xl border border-black/15 bg-[#82D6E0] px-3 text-left text-[13px] font-medium text-black transition hover:brightness-95 ${collapsed ? 'lg:justify-center lg:px-0' : ''}`}>
+        <button type="button" title={collapsed ? 'Coral' : undefined} className={`group relative flex h-11 w-full items-center gap-3 rounded-xl border border-black/15 bg-[#8FDEEB] px-3 text-left text-[13px] font-medium text-black transition hover:brightness-95 ${collapsed ? 'lg:justify-center lg:px-0' : ''}`}>
           <Bot size={18} strokeWidth={1.8} className="text-black" />
           <span className={`whitespace-nowrap transition-opacity duration-200 ${collapsed ? 'lg:pointer-events-none lg:w-0 lg:opacity-0' : 'opacity-100'}`}>Coral</span>
           <span className={`ml-auto rounded-md bg-black/10 px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wider text-black/70 ${collapsed ? 'lg:hidden' : ''}`}>AI</span>
