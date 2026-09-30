@@ -55,6 +55,12 @@ function numberValue(value: string | number) {
   return Number.isFinite(parsed) ? parsed : 0
 }
 
+function progressPercent(totalAccumulated: number, totalContract: number) {
+  if (totalContract <= 0) return 0
+  const percent = (Math.max(0, totalAccumulated) / totalContract) * 100
+  return Math.max(0, Math.min(100, Math.round(percent * 100) / 100))
+}
+
 function money(value: number) {
   return new Intl.NumberFormat('es-MX', {
     style: 'currency',
@@ -194,9 +200,9 @@ export default function SiteProgressPage() {
 
   const average = projects.length
     ? Math.round(
-        projects.reduce((sum, project) => sum + (latestByProject.get(project.id)?.percent ?? 0), 0) /
-          projects.length,
-      )
+        (projects.reduce((sum, project) => sum + (latestByProject.get(project.id)?.percent ?? 0), 0) /
+          projects.length) * 100,
+      ) / 100
     : 0
 
   const viewingProject = viewingQuoteId
@@ -216,9 +222,7 @@ export default function SiteProgressPage() {
     )
     const totalAccumulated = accumulatedPrevious + currentExecuted
     const remaining = Math.max(0, totalContract - totalAccumulated)
-    const percent = totalContract > 0
-      ? Math.min(100, Math.round((totalAccumulated / totalContract) * 100))
-      : 0
+    const percent = progressPercent(totalAccumulated, totalContract)
 
     return {
       totalContract,
@@ -296,7 +300,7 @@ export default function SiteProgressPage() {
       (sum, item) => sum + item.accumulatedPrevious + item.executed,
       0,
     )
-    const percent = totalContract > 0 ? Math.min(100, Math.round((totalAccumulated / totalContract) * 100)) : 0
+    const percent = progressPercent(totalAccumulated, totalContract)
 
     const record: ProgressRecord = {
       id: crypto.randomUUID(),
@@ -310,8 +314,8 @@ export default function SiteProgressPage() {
     }
 
     const next = [record, ...records]
-    setRecords(next)
     writeProgressRecords(next)
+    setRecords(readProgressRecords())
     setOpen(false)
   }
 
