@@ -8,6 +8,7 @@ import {
   Search,
   Sun,
 } from 'lucide-react'
+import { currentUser } from '@/data/currentUser'
 
 type HeaderProps = {
   onOpenMenu: () => void
@@ -93,11 +94,11 @@ export function Header({ onOpenMenu, isDark, onToggleTheme, showCompanyLogo = fa
 
         <div className="flex items-center gap-2.5 pl-1">
           <span className="flex h-9 w-9 items-center justify-center rounded-full bg-[#343A40] text-[10px] font-bold text-white ring-2 ring-[var(--surface)]">
-            PG
+            {currentUser.initials}
           </span>
           <div className="hidden min-w-0 lg:block">
-            <p className="max-w-28 truncate text-xs font-medium text-[var(--foreground)]">Pedro Garcia</p>
-            <p className="text-[10px] text-[var(--muted)]">Admin</p>
+            <p className="max-w-28 truncate text-xs font-medium text-[var(--foreground)]">{currentUser.name}</p>
+            <p className="text-[10px] text-[var(--muted)]">{currentUser.role}</p>
           </div>
         </div>
 
