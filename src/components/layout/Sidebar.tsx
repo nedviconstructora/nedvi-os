@@ -152,7 +152,7 @@ export function Sidebar({ collapsed, mobileOpen, onToggleCollapse, onCloseMobile
   const primaryItemClasses = (active: boolean) =>
     `group relative flex h-11 w-full items-center gap-3 rounded-xl bg-[#7DC6FF] px-3 text-left text-[13px] font-medium text-black transition duration-200 hover:brightness-95 ${
       active ? 'ring-1 ring-black/25 shadow-sm' : ''
-    } ${collapsed ? 'lg:justify-center lg:px-0' : ''}`
+    } ${collapsed ? 'lg:justify-center lg:gap-0 lg:px-0' : ''}`
 
   return (
     <aside
@@ -162,9 +162,9 @@ export function Sidebar({ collapsed, mobileOpen, onToggleCollapse, onCloseMobile
       aria-label="Navegación principal"
     >
       <div className={`flex h-[112px] shrink-0 items-center border-b border-black/10 px-4 ${collapsed ? 'lg:justify-center lg:px-0' : 'justify-between'}`}>
-        <div className={`flex items-center gap-3 overflow-hidden ${collapsed ? 'lg:w-16' : ''}`}>
+        <div className={`flex items-center gap-3 overflow-hidden ${collapsed ? 'lg:w-16 lg:gap-0' : ''}`}>
           <BrandMark />
-          <span className={`whitespace-nowrap text-[27px] font-bold tracking-[-0.045em] text-black transition-opacity duration-200 ${collapsed ? 'lg:pointer-events-none lg:w-0 lg:opacity-0' : 'opacity-100'}`}>
+          <span className={`whitespace-nowrap text-[27px] font-bold tracking-[-0.045em] text-black transition-opacity duration-200 ${collapsed ? 'lg:hidden' : 'opacity-100'}`}>
             NEDVI <span className="font-medium text-black/80">OS</span>
           </span>
         </div>
@@ -178,8 +178,8 @@ export function Sidebar({ collapsed, mobileOpen, onToggleCollapse, onCloseMobile
 
         <Link href="/dashboard" title={collapsed ? 'Dashboard' : undefined} onClick={onCloseMobile} className={primaryItemClasses(isPathActive('/dashboard'))}>
           {isPathActive('/dashboard') ? <span className="absolute left-0 h-5 w-0.5 rounded-r-full bg-black" /> : null}
-          <LayoutDashboard size={18} strokeWidth={isPathActive('/dashboard') ? 2 : 1.8} className="text-black" />
-          <span className={`whitespace-nowrap transition-opacity duration-200 ${collapsed ? 'lg:pointer-events-none lg:w-0 lg:opacity-0' : 'opacity-100'}`}>Dashboard</span>
+          <LayoutDashboard size={18} strokeWidth={isPathActive('/dashboard') ? 2 : 1.8} className="shrink-0 text-black" />
+          <span className={`whitespace-nowrap transition-opacity duration-200 ${collapsed ? 'lg:hidden' : 'opacity-100'}`}>Dashboard</span>
         </Link>
 
         <div className="mt-2 space-y-1">
@@ -196,11 +196,11 @@ export function Sidebar({ collapsed, mobileOpen, onToggleCollapse, onCloseMobile
                   title={collapsed ? group.label : undefined}
                   className={`group flex h-11 w-full items-center gap-3 rounded-xl bg-[#7DC6FF] px-3 text-left text-[13px] font-medium text-black transition duration-200 hover:brightness-95 ${
                     groupActive ? 'ring-1 ring-black/25 shadow-sm' : isOpen ? 'ring-1 ring-black/10' : ''
-                  } ${collapsed ? 'lg:justify-center lg:px-0' : ''}`}
+                  } ${collapsed ? 'lg:justify-center lg:gap-0 lg:px-0' : ''}`}
                   aria-expanded={isOpen}
                 >
-                  <GroupIcon size={18} strokeWidth={groupActive ? 2 : 1.8} className="text-black" />
-                  <span className={`min-w-0 flex-1 truncate whitespace-nowrap transition-opacity duration-200 ${collapsed ? 'lg:pointer-events-none lg:w-0 lg:opacity-0' : 'opacity-100'}`}>{group.label}</span>
+                  <GroupIcon size={18} strokeWidth={groupActive ? 2 : 1.8} className="shrink-0 text-black" />
+                  <span className={`min-w-0 flex-1 truncate whitespace-nowrap transition-opacity duration-200 ${collapsed ? 'lg:hidden' : 'opacity-100'}`}>{group.label}</span>
                   <ChevronDown size={14} className={`shrink-0 text-black/70 transition-transform duration-200 ${isOpen ? 'rotate-180' : ''} ${collapsed ? 'lg:hidden' : ''}`} />
                 </button>
 
@@ -240,19 +240,19 @@ export function Sidebar({ collapsed, mobileOpen, onToggleCollapse, onCloseMobile
         <div className="my-4 border-t border-black/15" />
 
         <Link href="/agenda" title={collapsed ? 'Agenda' : undefined} onClick={onCloseMobile} className={primaryItemClasses(isPathActive('/agenda'))}>
-          <CalendarDays size={18} strokeWidth={isPathActive('/agenda') ? 2 : 1.8} className="text-black" />
-          <span className={`whitespace-nowrap transition-opacity duration-200 ${collapsed ? 'lg:pointer-events-none lg:w-0 lg:opacity-0' : 'opacity-100'}`}>Agenda</span>
+          <CalendarDays size={18} strokeWidth={isPathActive('/agenda') ? 2 : 1.8} className="shrink-0 text-black" />
+          <span className={`whitespace-nowrap transition-opacity duration-200 ${collapsed ? 'lg:hidden' : 'opacity-100'}`}>Agenda</span>
         </Link>
 
-        <button type="button" disabled title="Configuración - Próximamente" className={`${primaryItemClasses(false)} cursor-not-allowed opacity-50`}>
-          <Settings2 size={18} strokeWidth={1.8} />
-          <span className={`whitespace-nowrap transition-opacity duration-200 ${collapsed ? 'lg:pointer-events-none lg:w-0 lg:opacity-0' : 'opacity-100'}`}>Configuración</span>
+        <button type="button" disabled title="Configuración - Próximamente" className={`${primaryItemClasses(false)} mt-2 cursor-not-allowed opacity-50`}>
+          <Settings2 size={18} strokeWidth={1.8} className="shrink-0" />
+          <span className={`whitespace-nowrap transition-opacity duration-200 ${collapsed ? 'lg:hidden' : 'opacity-100'}`}>Configuración</span>
         </button>
 
         <div className="my-5 border-t border-black/15" />
-        <button type="button" title={collapsed ? 'Coral' : undefined} className={`group relative flex h-11 w-full items-center gap-3 rounded-xl border border-black/15 bg-[#7DC6FF] px-3 text-left text-[13px] font-medium text-black transition hover:brightness-95 ${collapsed ? 'lg:justify-center lg:px-0' : ''}`}>
-          <Bot size={18} strokeWidth={1.8} className="text-black" />
-          <span className={`whitespace-nowrap transition-opacity duration-200 ${collapsed ? 'lg:pointer-events-none lg:w-0 lg:opacity-0' : 'opacity-100'}`}>Coral</span>
+        <button type="button" title={collapsed ? 'Coral' : undefined} className={`group relative flex h-11 w-full items-center gap-3 rounded-xl border border-black/15 bg-[#7DC6FF] px-3 text-left text-[13px] font-medium text-black transition hover:brightness-95 ${collapsed ? 'lg:justify-center lg:gap-0 lg:px-0' : ''}`}>
+          <Bot size={18} strokeWidth={1.8} className="shrink-0 text-black" />
+          <span className={`whitespace-nowrap transition-opacity duration-200 ${collapsed ? 'lg:hidden' : 'opacity-100'}`}>Coral</span>
           <span className={`ml-auto rounded-md bg-black/10 px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wider text-black/70 ${collapsed ? 'lg:hidden' : ''}`}>AI</span>
         </button>
       </nav>
@@ -260,7 +260,7 @@ export function Sidebar({ collapsed, mobileOpen, onToggleCollapse, onCloseMobile
       <div className="border-t border-black/15 p-3">
         <div className={`flex items-center gap-3 rounded-xl px-2 py-2 ${collapsed ? 'lg:justify-center lg:px-0' : ''}`}>
           <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-[#E9F8FA] text-[10px] font-bold text-black">PG</span>
-          <div className={`min-w-0 transition-opacity duration-200 ${collapsed ? 'lg:pointer-events-none lg:w-0 lg:opacity-0' : 'opacity-100'}`}>
+          <div className={`min-w-0 transition-opacity duration-200 ${collapsed ? 'lg:hidden' : 'opacity-100'}`}>
             <p className="truncate text-xs font-medium text-black">Pedro Garcia</p>
             <p className="truncate text-[11px] text-black/70">Administrador</p>
           </div>
