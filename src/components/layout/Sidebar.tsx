@@ -27,6 +27,8 @@ import {
   Wallet,
   X,
 } from 'lucide-react'
+import { currentUser } from '@/data/currentUser'
+import { hasModuleAccess, type ModulePermission } from '@/config/roles'
 
 type SidebarProps = {
   collapsed: boolean
@@ -45,6 +47,7 @@ type NavigationItem = {
 type NavigationGroup = {
   label: string
   icon: LucideIcon
+  permission: ModulePermission
   items: NavigationItem[]
 }
 
@@ -52,6 +55,7 @@ const navigationGroups: NavigationGroup[] = [
   {
     label: 'Comercial y Ventas',
     icon: BriefcaseBusiness,
+    permission: 'commercial',
     items: [
       { label: 'Clientes', href: '/crm', icon: UsersRound },
       { label: 'Oportunidades', href: '/opportunities', icon: ClipboardList },
@@ -62,6 +66,7 @@ const navigationGroups: NavigationGroup[] = [
   {
     label: 'Gestión de Proyectos',
     icon: FolderKanban,
+    permission: 'projects',
     items: [
       { label: 'Proyectos', href: '/projects', icon: HardHat },
       { label: 'Documentos', href: '/documents', icon: FileText },
@@ -70,6 +75,7 @@ const navigationGroups: NavigationGroup[] = [
   {
     label: 'Compras y Suministros',
     icon: ShoppingCart,
+    permission: 'purchasing',
     items: [
       { label: 'Requisiciones', href: '/requisitions', icon: ClipboardList },
       { label: 'Órdenes de compra', href: '/purchase-orders', icon: ShoppingCart },
@@ -79,6 +85,7 @@ const navigationGroups: NavigationGroup[] = [
   {
     label: 'Operaciones / Obra',
     icon: HardHat,
+    permission: 'operations',
     items: [
       { label: 'Avance de obra', href: '/site-progress', icon: BarChart3 },
       { label: 'Reportes diarios', href: '/daily-reports', icon: FileText },
@@ -89,6 +96,7 @@ const navigationGroups: NavigationGroup[] = [
   {
     label: 'Recursos Humanos',
     icon: UsersRound,
+    permission: 'human-resources',
     items: [
       { label: 'Personal', icon: UserRound, comingSoon: true },
       { label: 'Asistencias', icon: CalendarDays, comingSoon: true },
@@ -98,6 +106,7 @@ const navigationGroups: NavigationGroup[] = [
   {
     label: 'Finanzas',
     icon: CircleDollarSign,
+    permission: 'finance',
     items: [
       { label: 'Cuentas por cobrar', icon: CircleDollarSign, comingSoon: true },
       { label: 'Cuentas por pagar', icon: Wallet, comingSoon: true },
@@ -108,6 +117,7 @@ const navigationGroups: NavigationGroup[] = [
   {
     label: 'Indicadores',
     icon: BarChart3,
+    permission: 'indicators',
     items: [
       { label: 'Comercial', icon: BriefcaseBusiness, comingSoon: true },
       { label: 'Compras', icon: ShoppingCart, comingSoon: true },
@@ -132,16 +142,21 @@ function BrandMark() {
 
 export function Sidebar({ collapsed, mobileOpen, onToggleCollapse, onCloseMobile }: SidebarProps) {
   const pathname = usePathname()
+  const visibleNavigationGroups = navigationGroups.filter((group) =>
+    hasModuleAccess(currentUser.role, group.permission),
+  )
 
   const isPathActive = (href?: string) =>
     Boolean(href && (pathname === href || (href !== '/dashboard' && pathname.startsWith(`${href}/`))))
 
-  const activeGroupLabel = navigationGroups.find((group) =>
+  const activeGroupLabel = visibleNavigationGroups.find((group) =>
     group.items.some((item) => isPathActive(item.href)),
   )?.label
 
   const [openGroups, setOpenGroups] = useState<Record<string, boolean>>(() =>
-    Object.fromEntries(navigationGroups.map((group) => [group.label, group.label === activeGroupLabel])),
+    Object.fromEntries(
+      visibleNavigationGroups.map((group) => [group.label, group.label === activeGroupLabel]),
+    ),
   )
 
   useEffect(() => {
@@ -176,14 +191,16 @@ export function Sidebar({ collapsed, mobileOpen, onToggleCollapse, onCloseMobile
       <nav className="flex-1 overflow-y-auto px-3 py-5" aria-label="Módulos de NEDVI OS">
         <p className={`mb-3 px-3 text-[10px] font-semibold uppercase tracking-[0.16em] text-black/70 transition-opacity ${collapsed ? 'lg:text-center lg:opacity-0' : ''}`}>Sistema</p>
 
-        <Link href="/dashboard" title={collapsed ? 'Dashboard' : undefined} onClick={onCloseMobile} className={primaryItemClasses(isPathActive('/dashboard'))}>
-          {isPathActive('/dashboard') ? <span className="absolute left-0 h-5 w-0.5 rounded-r-full bg-black" /> : null}
-          <LayoutDashboard size={18} strokeWidth={isPathActive('/dashboard') ? 2 : 1.8} className="shrink-0 text-black" />
-          <span className={`whitespace-nowrap transition-opacity duration-200 ${collapsed ? 'lg:hidden' : 'opacity-100'}`}>Dashboard</span>
-        </Link>
+        {hasModuleAccess(currentUser.role, 'dashboard') ? (
+          <Link href="/dashboard" title={collapsed ? 'Dashboard' : undefined} onClick={onCloseMobile} className={primaryItemClasses(isPathActive('/dashboard'))}>
+            {isPathActive('/dashboard') ? <span className="absolute left-0 h-5 w-0.5 rounded-r-full bg-black" /> : null}
+            <LayoutDashboard size={18} strokeWidth={isPathActive('/dashboard') ? 2 : 1.8} className="shrink-0 text-black" />
+            <span className={`whitespace-nowrap transition-opacity duration-200 ${collapsed ? 'lg:hidden' : 'opacity-100'}`}>Dashboard</span>
+          </Link>
+        ) : null}
 
         <div className="mt-2 space-y-1">
-          {navigationGroups.map((group) => {
+          {visibleNavigationGroups.map((group) => {
             const GroupIcon = group.icon
             const groupActive = group.items.some((item) => isPathActive(item.href))
             const isOpen = Boolean(openGroups[group.label])
@@ -237,32 +254,42 @@ export function Sidebar({ collapsed, mobileOpen, onToggleCollapse, onCloseMobile
           })}
         </div>
 
-        <div className="my-4 border-t border-black/15" />
+        {hasModuleAccess(currentUser.role, 'agenda') || hasModuleAccess(currentUser.role, 'settings') || hasModuleAccess(currentUser.role, 'coral') ? (
+          <div className="my-4 border-t border-black/15" />
+        ) : null}
 
-        <Link href="/agenda" title={collapsed ? 'Agenda' : undefined} onClick={onCloseMobile} className={primaryItemClasses(isPathActive('/agenda'))}>
-          <CalendarDays size={18} strokeWidth={isPathActive('/agenda') ? 2 : 1.8} className="shrink-0 text-black" />
-          <span className={`whitespace-nowrap transition-opacity duration-200 ${collapsed ? 'lg:hidden' : 'opacity-100'}`}>Agenda</span>
-        </Link>
+        {hasModuleAccess(currentUser.role, 'agenda') ? (
+          <Link href="/agenda" title={collapsed ? 'Agenda' : undefined} onClick={onCloseMobile} className={primaryItemClasses(isPathActive('/agenda'))}>
+            <CalendarDays size={18} strokeWidth={isPathActive('/agenda') ? 2 : 1.8} className="shrink-0 text-black" />
+            <span className={`whitespace-nowrap transition-opacity duration-200 ${collapsed ? 'lg:hidden' : 'opacity-100'}`}>Agenda</span>
+          </Link>
+        ) : null}
 
-        <button type="button" disabled title="Configuración - Próximamente" className={`${primaryItemClasses(false)} mt-2 cursor-not-allowed opacity-50`}>
-          <Settings2 size={18} strokeWidth={1.8} className="shrink-0" />
-          <span className={`whitespace-nowrap transition-opacity duration-200 ${collapsed ? 'lg:hidden' : 'opacity-100'}`}>Configuración</span>
-        </button>
+        {hasModuleAccess(currentUser.role, 'settings') ? (
+          <button type="button" disabled title="Configuración - Próximamente" className={`${primaryItemClasses(false)} mt-2 cursor-not-allowed opacity-50`}>
+            <Settings2 size={18} strokeWidth={1.8} className="shrink-0" />
+            <span className={`whitespace-nowrap transition-opacity duration-200 ${collapsed ? 'lg:hidden' : 'opacity-100'}`}>Configuración</span>
+          </button>
+        ) : null}
 
-        <div className="my-5 border-t border-black/15" />
-        <button type="button" title={collapsed ? 'Coral' : undefined} className={`group relative flex h-11 w-full items-center gap-3 rounded-xl border border-black/15 bg-[#7DC6FF] px-3 text-left text-[13px] font-medium text-black transition hover:brightness-95 ${collapsed ? 'lg:justify-center lg:gap-0 lg:px-0' : ''}`}>
-          <Bot size={18} strokeWidth={1.8} className="shrink-0 text-black" />
-          <span className={`whitespace-nowrap transition-opacity duration-200 ${collapsed ? 'lg:hidden' : 'opacity-100'}`}>Coral</span>
-          <span className={`ml-auto rounded-md bg-black/10 px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wider text-black/70 ${collapsed ? 'lg:hidden' : ''}`}>AI</span>
-        </button>
+        {hasModuleAccess(currentUser.role, 'coral') ? (
+          <>
+            <div className="my-5 border-t border-black/15" />
+            <button type="button" title={collapsed ? 'Coral' : undefined} className={`group relative flex h-11 w-full items-center gap-3 rounded-xl border border-black/15 bg-[#7DC6FF] px-3 text-left text-[13px] font-medium text-black transition hover:brightness-95 ${collapsed ? 'lg:justify-center lg:gap-0 lg:px-0' : ''}`}>
+              <Bot size={18} strokeWidth={1.8} className="shrink-0 text-black" />
+              <span className={`whitespace-nowrap transition-opacity duration-200 ${collapsed ? 'lg:hidden' : 'opacity-100'}`}>Coral</span>
+              <span className={`ml-auto rounded-md bg-black/10 px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wider text-black/70 ${collapsed ? 'lg:hidden' : ''}`}>AI</span>
+            </button>
+          </>
+        ) : null}
       </nav>
 
       <div className="border-t border-black/15 p-3">
         <div className={`flex items-center gap-3 rounded-xl px-2 py-2 ${collapsed ? 'lg:justify-center lg:px-0' : ''}`}>
-          <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-[#E9F8FA] text-[10px] font-bold text-black">PG</span>
+          <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-[#E9F8FA] text-[10px] font-bold text-black">{currentUser.initials}</span>
           <div className={`min-w-0 transition-opacity duration-200 ${collapsed ? 'lg:hidden' : 'opacity-100'}`}>
-            <p className="truncate text-xs font-medium text-black">Pedro Garcia</p>
-            <p className="truncate text-[11px] text-black/70">Administrador</p>
+            <p className="truncate text-xs font-medium text-black">{currentUser.name}</p>
+            <p className="truncate text-[11px] text-black/70">{currentUser.role}</p>
           </div>
         </div>
       </div>
