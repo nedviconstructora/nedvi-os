@@ -131,6 +131,7 @@ export function AppShell({ children }: AppShellProps) {
               isDark={isDark}
               onToggleTheme={toggleTheme}
               showCompanyLogo={isHumanResourcesRoute}
+              user={accessUser}
             />
           </div>
 
