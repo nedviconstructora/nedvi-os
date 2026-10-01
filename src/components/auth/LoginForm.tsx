@@ -14,7 +14,7 @@ import {
 } from '@/features/access/services/accessStorage'
 
 const DEV_USER_EMAIL = 'pedrog@nedviconstructora.com'
-const DEV_PASSWORD_SHA256 = 'a4d9d20d32d6775416f346e4f0ace7121059529b8758bb38ac43c46006aa60a6'
+const DEV_PASSWORD_SHA256 = process.env.NEXT_PUBLIC_DEV_ADMIN_PASSWORD_SHA256 ?? ''
 
 async function sha256(value: string) {
   const bytes = new TextEncoder().encode(value)
@@ -54,7 +54,7 @@ export function LoginForm() {
     const normalizedEmail = email.trim().toLowerCase()
     const passwordHash = await sha256(password)
 
-    if (normalizedEmail === DEV_USER_EMAIL && passwordHash === DEV_PASSWORD_SHA256) {
+    if (normalizedEmail === DEV_USER_EMAIL && DEV_PASSWORD_SHA256 && passwordHash === DEV_PASSWORD_SHA256) {
       writeAccessSession({
         userId: 'user-001',
         name: 'Pedro García',
