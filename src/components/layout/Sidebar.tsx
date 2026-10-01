@@ -273,10 +273,16 @@ export function Sidebar({ collapsed, mobileOpen, onToggleCollapse, onCloseMobile
         ) : null}
 
         {hasModuleAccess(currentUser.role, 'settings') ? (
-          <button type="button" disabled title="Configuración - Próximamente" className={`${primaryItemClasses(false)} mt-2 cursor-not-allowed opacity-50`}>
-            <Settings2 size={18} strokeWidth={1.8} className="shrink-0" />
+          <Link
+            href="/settings/users"
+            title={collapsed ? 'Configuración' : undefined}
+            onClick={onCloseMobile}
+            className={`${primaryItemClasses(isPathActive('/settings'))} mt-2`}
+          >
+            {isPathActive('/settings') ? <span className="absolute left-0 h-5 w-0.5 rounded-r-full bg-black" /> : null}
+            <Settings2 size={18} strokeWidth={isPathActive('/settings') ? 2 : 1.8} className="shrink-0" />
             <span className={`whitespace-nowrap transition-opacity duration-200 ${collapsed ? 'lg:hidden' : 'opacity-100'}`}>Configuración</span>
-          </button>
+          </Link>
         ) : null}
 
         {hasModuleAccess(currentUser.role, 'coral') ? (
