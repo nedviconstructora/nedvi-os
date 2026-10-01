@@ -1,3 +1,4 @@
+import Link from 'next/link'
 import { LoginForm } from '@/components/auth/LoginForm'
 
 function Logo({ compact = false }: { compact?: boolean }) {
@@ -88,7 +89,10 @@ export default function LoginPage() {
             </p>
           </div>
           <p className="mt-6 text-center text-xs text-[#646873]">
-            Need access? <button type="button" className="font-medium text-[#9CA3AF] transition hover:text-white">Contact your administrator</button>
+            ¿Necesitas acceso?{' '}
+            <Link href="/register" className="font-medium text-[#7DC6FF] transition hover:text-white">
+              Crear cuenta
+            </Link>
           </p>
         </div>
       </section>
