@@ -34,6 +34,9 @@ export type AccessUser = {
   createdAt: string
   passwordHash?: string
   passwordUpdatedAt?: string
+  clientId?: string
+  clientFolio?: string
+  clientName?: string
 }
 
 export type PasswordResetRequest = {
@@ -55,6 +58,9 @@ export type AccessSession = {
   role: AppRole
   permissions: ModulePermission[]
   createdAt: string
+  clientId?: string
+  clientFolio?: string
+  clientName?: string
 }
 
 function readArray<T>(key: string): T[] {
