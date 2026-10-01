@@ -5,11 +5,15 @@ function Logo({ compact = false }: { compact?: boolean }) {
   return (
     <div className={`flex items-center ${compact ? 'gap-3' : 'gap-4'}`}>
       <span
-        className={`flex shrink-0 items-center justify-center overflow-hidden rounded-2xl bg-white/95 p-1.5 shadow-[0_12px_35px_rgba(66,153,225,0.22)] ${
+        className={`flex shrink-0 items-center justify-center ${
           compact ? 'h-12 w-12' : 'h-16 w-16'
         }`}
       >
-        <img src="/icon.png" alt="NEDVI Constructora" className="h-full w-full object-contain" />
+        <img
+          src="/icon.png"
+          alt="NEDVI Constructora"
+          className="h-full w-full object-contain drop-shadow-[0_10px_24px_rgba(66,153,225,0.2)]"
+        />
       </span>
       <span
         className={`font-bold tracking-[-0.055em] text-white ${
