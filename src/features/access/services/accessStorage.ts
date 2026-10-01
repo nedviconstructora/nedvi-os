@@ -29,6 +29,8 @@ export type AccessUser = {
   permissions: ModulePermission[]
   status: AccessUserStatus
   createdAt: string
+  passwordHash?: string
+  passwordUpdatedAt?: string
 }
 
 function readArray<T>(key: string): T[] {
