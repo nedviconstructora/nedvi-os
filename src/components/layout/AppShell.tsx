@@ -2,11 +2,14 @@
 
 import type { ReactNode } from 'react'
 import { useEffect, useState } from 'react'
-import { usePathname } from 'next/navigation'
+import { usePathname, useRouter } from 'next/navigation'
 import { Header } from '@/components/layout/Header'
 import { Sidebar } from '@/components/layout/Sidebar'
-import { canAccessPath } from '@/config/roles'
-import { currentUser } from '@/data/currentUser'
+import { permissionForPath } from '@/config/roles'
+import {
+  readAccessSession,
+  type AccessSession,
+} from '@/features/access/services/accessStorage'
 import { syncQuoteProjectsIntoProjectStorage } from '@/features/projects/services/quoteProjectSync'
 
 type AppShellProps = {
@@ -30,9 +33,24 @@ function applyTheme(theme: Theme) {
 
 export function AppShell({ children }: AppShellProps) {
   const pathname = usePathname()
+  const router = useRouter()
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false)
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
   const [theme, setTheme] = useState<Theme>('light')
+  const [accessUser, setAccessUser] = useState<AccessSession | null>(null)
+  const [sessionReady, setSessionReady] = useState(false)
+
+  useEffect(() => {
+    const session = readAccessSession()
+    if (!session) {
+      setSessionReady(true)
+      router.replace('/login')
+      return
+    }
+
+    setAccessUser(session)
+    setSessionReady(true)
+  }, [router])
 
   useEffect(() => {
     const savedTheme = window.localStorage.getItem(THEME_STORAGE_KEY)
@@ -51,9 +69,6 @@ export function AppShell({ children }: AppShellProps) {
       if (event.key === QUOTE_PROJECTS_STORAGE_KEY) syncProjects()
     }
 
-    // Important: localStorage "storage" events do not fire in the same tab.
-    // Sync on every route change so a project created in Cotizaciones is
-    // materialized before/while the user enters Proyectos.
     syncProjects()
     window.addEventListener('focus', syncProjects)
     window.addEventListener('storage', handleStorage)
@@ -73,8 +88,17 @@ export function AppShell({ children }: AppShellProps) {
     })
   }
 
+  if (!sessionReady || !accessUser) {
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-[#090B0F] text-sm text-white/60">
+        Cargando NEDVI OS...
+      </div>
+    )
+  }
+
   const isDark = theme === 'dark'
-  const hasRouteAccess = canAccessPath(currentUser.role, pathname)
+  const routePermission = permissionForPath(pathname)
+  const hasRouteAccess = routePermission ? accessUser.permissions.includes(routePermission) : true
   const isHumanResourcesRoute =
     pathname === '/personnel' || pathname === '/hr-attendance' || pathname === '/payroll'
 
@@ -87,6 +111,7 @@ export function AppShell({ children }: AppShellProps) {
             mobileOpen={mobileMenuOpen}
             onToggleCollapse={() => setSidebarCollapsed((value) => !value)}
             onCloseMobile={() => setMobileMenuOpen(false)}
+            user={accessUser}
           />
         </div>
 
@@ -118,7 +143,7 @@ export function AppShell({ children }: AppShellProps) {
                   <p className="text-xs font-semibold uppercase tracking-[0.16em] text-[#5496CC]">Acceso restringido</p>
                   <h1 className="mt-3 text-2xl font-bold text-[var(--foreground)]">No tienes permiso para abrir este módulo</h1>
                   <p className="mt-3 text-sm leading-6 text-[var(--muted)]">
-                    Tu rol actual es {currentUser.role}. Solicita acceso a Administración si necesitas entrar a este apartado.
+                    Tu rol actual es {accessUser.role}. Solicita acceso a Administración si necesitas entrar a este apartado.
                   </p>
                 </div>
               </div>
