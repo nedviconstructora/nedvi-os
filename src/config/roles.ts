@@ -1,4 +1,4 @@
-export type AppRole = 'Administración' | 'Supervisor'
+export type AppRole = 'Administración' | 'Supervisor' | 'Cliente'
 
 export type ModulePermission =
   | 'dashboard'
@@ -12,6 +12,7 @@ export type ModulePermission =
   | 'indicators'
   | 'settings'
   | 'coral'
+  | 'client-portal'
 
 export const ROLE_PERMISSIONS: Record<AppRole, readonly ModulePermission[]> = {
   Administración: [
@@ -26,6 +27,7 @@ export const ROLE_PERMISSIONS: Record<AppRole, readonly ModulePermission[]> = {
     'indicators',
     'settings',
     'coral',
+    'client-portal',
   ],
   Supervisor: [
     'dashboard',
@@ -35,12 +37,15 @@ export const ROLE_PERMISSIONS: Record<AppRole, readonly ModulePermission[]> = {
     'operations',
     'agenda',
   ],
+  Cliente: ['client-portal'],
 }
 
 export const ROLE_DESCRIPTIONS: Record<AppRole, string> = {
   Administración: 'Acceso total a NEDVI OS.',
   Supervisor:
     'Acceso a Comercial y Ventas, Gestión de Proyectos, Compras y Suministros, Operaciones / Obra y Agenda.',
+  Cliente:
+    'Acceso únicamente al Portal del Cliente y a la información vinculada con su folio de cliente.',
 }
 
 export function hasModuleAccess(role: AppRole, permission: ModulePermission) {
@@ -68,6 +73,7 @@ const ROUTE_PERMISSIONS: Array<{ prefix: string; permission: ModulePermission }>
   { prefix: '/hr-attendance', permission: 'human-resources' },
   { prefix: '/payroll', permission: 'human-resources' },
   { prefix: '/settings', permission: 'settings' },
+  { prefix: '/client-portal', permission: 'client-portal' },
 ]
 
 export function permissionForPath(pathname: string): ModulePermission | undefined {
