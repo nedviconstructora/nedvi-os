@@ -1,6 +1,7 @@
 'use client'
 
 import type { ReactNode } from 'react'
+import Link from 'next/link'
 import { useEffect, useState } from 'react'
 import { usePathname, useRouter } from 'next/navigation'
 import { Header } from '@/components/layout/Header'
@@ -71,6 +72,12 @@ export function AppShell({ children }: AppShellProps) {
       return
     }
 
+    if (session.role === 'Cliente') {
+      setSessionReady(true)
+      router.replace('/client-portal')
+      return
+    }
+
     setAccessUser(session)
     setSessionReady(true)
   }, [router])
@@ -120,8 +127,6 @@ export function AppShell({ children }: AppShellProps) {
         })
     }
 
-    // Administración conserva la capacidad de capturar o corregir fechas históricas.
-    // Todos los demás roles, incluidos los que se agreguen en el futuro, quedan restringidos.
     if (accessUser.role === 'Administración' || labels.length === 0) {
       clearRestrictions()
       return
@@ -263,6 +268,14 @@ export function AppShell({ children }: AppShellProps) {
           </div>
 
           <main className="min-w-0 flex-1 bg-[var(--background)] p-5 transition-colors duration-300 sm:p-8 print:bg-white print:p-0">
+            {pathname === '/settings/users' && accessUser.role === 'Administración' ? (
+              <div className="mx-auto mb-4 flex w-full max-w-7xl justify-end print:hidden">
+                <Link href="/settings/client-access" className="inline-flex items-center rounded-xl border border-[#5496CC]/25 bg-[#5496CC]/10 px-4 py-2.5 text-sm font-semibold text-[#3F82B8] transition hover:bg-[#5496CC]/15">
+                  Accesos de clientes →
+                </Link>
+              </div>
+            ) : null}
+
             {hasRouteAccess ? (
               children
             ) : (
