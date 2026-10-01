@@ -8,13 +8,14 @@ import {
   Search,
   Sun,
 } from 'lucide-react'
-import { currentUser } from '@/data/currentUser'
+import type { AccessSession } from '@/features/access/services/accessStorage'
 
 type HeaderProps = {
   onOpenMenu: () => void
   isDark: boolean
   onToggleTheme: () => void
   showCompanyLogo?: boolean
+  user: AccessSession
 }
 
 function BrandMark() {
@@ -26,7 +27,7 @@ function BrandMark() {
   )
 }
 
-export function Header({ onOpenMenu, isDark, onToggleTheme, showCompanyLogo = false }: HeaderProps) {
+export function Header({ onOpenMenu, isDark, onToggleTheme, showCompanyLogo = false, user }: HeaderProps) {
   return (
     <header className="flex h-[88px] shrink-0 items-center justify-between border-b border-[var(--border)] bg-[var(--surface)]/95 px-5 text-[var(--foreground)] backdrop-blur-xl transition-colors duration-300 sm:px-8">
       <div className="flex min-w-0 items-center gap-4">
@@ -94,11 +95,11 @@ export function Header({ onOpenMenu, isDark, onToggleTheme, showCompanyLogo = fa
 
         <div className="flex items-center gap-2.5 pl-1">
           <span className="flex h-9 w-9 items-center justify-center rounded-full bg-[#343A40] text-[10px] font-bold text-white ring-2 ring-[var(--surface)]">
-            {currentUser.initials}
+            {user.initials}
           </span>
           <div className="hidden min-w-0 lg:block">
-            <p className="max-w-28 truncate text-xs font-medium text-[var(--foreground)]">{currentUser.name}</p>
-            <p className="text-[10px] text-[var(--muted)]">{currentUser.role}</p>
+            <p className="max-w-36 truncate text-xs font-medium text-[var(--foreground)]">{user.name}</p>
+            <p className="max-w-36 truncate text-[10px] text-[var(--muted)]">{user.role}</p>
           </div>
         </div>
 
