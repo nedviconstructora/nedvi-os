@@ -4,8 +4,12 @@ import { useEffect, useMemo, useState } from 'react'
 import {
   Check,
   Clock3,
+  Eye,
+  EyeOff,
+  KeyRound,
   Search,
   ShieldCheck,
+  Trash2,
   UserCheck,
   UserRoundCog,
   UsersRound,
@@ -13,7 +17,6 @@ import {
 } from 'lucide-react'
 import {
   ROLE_DESCRIPTIONS,
-  ROLE_PERMISSIONS,
   type AppRole,
   type ModulePermission,
 } from '@/config/roles'
@@ -69,7 +72,16 @@ function initials(name: string) {
     .join('')
 }
 
+async function sha256(value: string) {
+  const bytes = new TextEncoder().encode(value)
+  const hashBuffer = await crypto.subtle.digest('SHA-256', bytes)
+  return Array.from(new Uint8Array(hashBuffer))
+    .map((byte) => byte.toString(16).padStart(2, '0'))
+    .join('')
+}
+
 export default function UsersAndPermissionsPage() {
+  const isAdmin = currentUser.role === 'Administración'
   const [tab, setTab] = useState<Tab>('users')
   const [requests, setRequests] = useState<RegistrationRequest[]>([])
   const [users, setUsers] = useState<AccessUser[]>([])
@@ -79,6 +91,14 @@ export default function UsersAndPermissionsPage() {
   const [draftPermissions, setDraftPermissions] = useState<ModulePermission[]>(
     defaultPermissionsForRole('Supervisor'),
   )
+
+  const [passwordUser, setPasswordUser] = useState<AccessUser | null>(null)
+  const [newPassword, setNewPassword] = useState('')
+  const [confirmPassword, setConfirmPassword] = useState('')
+  const [showPassword, setShowPassword] = useState(false)
+  const [passwordError, setPasswordError] = useState('')
+  const [passwordSaved, setPasswordSaved] = useState(false)
+  const [deleteUser, setDeleteUser] = useState<AccessUser | null>(null)
 
   function refresh() {
     setRequests(readRegistrationRequests())
@@ -140,6 +160,8 @@ export default function UsersAndPermissionsPage() {
   }
 
   function approveRequest(request: RegistrationRequest) {
+    if (!isAdmin) return
+
     const permissions =
       draftRole === 'Administración'
         ? defaultPermissionsForRole('Administración')
@@ -183,6 +205,8 @@ export default function UsersAndPermissionsPage() {
   }
 
   function rejectRequest(request: RegistrationRequest) {
+    if (!isAdmin) return
+
     const nextRequests = requests.map((item) =>
       item.id === request.id
         ? { ...item, status: 'Rechazada' as const, reviewedAt: new Date().toISOString() }
@@ -194,6 +218,8 @@ export default function UsersAndPermissionsPage() {
   }
 
   function toggleUserStatus(userId: string) {
+    if (!isAdmin) return
+
     const nextUsers = users.map((user) =>
       user.id === userId
         ? { ...user, status: user.status === 'Activo' ? ('Inactivo' as const) : ('Activo' as const) }
@@ -201,6 +227,64 @@ export default function UsersAndPermissionsPage() {
     )
     writeAccessUsers(nextUsers)
     setUsers(nextUsers)
+  }
+
+  function openPasswordDialog(user: AccessUser) {
+    if (!isAdmin) return
+    setPasswordUser(user)
+    setNewPassword('')
+    setConfirmPassword('')
+    setPasswordError('')
+    setPasswordSaved(false)
+    setShowPassword(false)
+  }
+
+  async function savePassword() {
+    if (!isAdmin || !passwordUser) return
+
+    setPasswordError('')
+    setPasswordSaved(false)
+
+    if (newPassword.length < 8) {
+      setPasswordError('La contraseña debe tener al menos 8 caracteres.')
+      return
+    }
+
+    if (newPassword !== confirmPassword) {
+      setPasswordError('Las contraseñas no coinciden.')
+      return
+    }
+
+    const passwordHash = await sha256(newPassword)
+    const updatedAt = new Date().toISOString()
+    const nextUsers = users.map((user) =>
+      user.id === passwordUser.id
+        ? { ...user, passwordHash, passwordUpdatedAt: updatedAt }
+        : user,
+    )
+
+    writeAccessUsers(nextUsers)
+    setUsers(nextUsers)
+    setPasswordSaved(true)
+    setNewPassword('')
+    setConfirmPassword('')
+  }
+
+  function confirmDeleteUser() {
+    if (!isAdmin || !deleteUser) return
+
+    const nextUsers = users.filter((user) => user.id !== deleteUser.id)
+    const nextRequests = requests.filter(
+      (request) =>
+        request.id !== deleteUser.id &&
+        request.email.toLowerCase() !== deleteUser.email.toLowerCase(),
+    )
+
+    writeAccessUsers(nextUsers)
+    writeRegistrationRequests(nextRequests)
+    setUsers(nextUsers)
+    setRequests(nextRequests)
+    setDeleteUser(null)
   }
 
   return (
@@ -212,7 +296,7 @@ export default function UsersAndPermissionsPage() {
             Usuarios y permisos
           </h1>
           <p className="mt-2 max-w-2xl text-sm leading-6 text-[var(--muted)]">
-            Revisa solicitudes de acceso, asigna roles y define qué módulos puede utilizar cada usuario.
+            Revisa solicitudes de acceso, asigna roles y administra las cuentas autorizadas.
           </p>
         </div>
 
@@ -267,7 +351,9 @@ export default function UsersAndPermissionsPage() {
           <div className="flex flex-col gap-3 border-b border-[var(--border)] p-5 sm:flex-row sm:items-center sm:justify-between">
             <div>
               <h2 className="text-lg font-bold text-[var(--foreground)]">Usuarios autorizados</h2>
-              <p className="mt-1 text-xs text-[var(--muted)]">Usuarios con acceso asignado a NEDVI OS.</p>
+              <p className="mt-1 text-xs text-[var(--muted)]">
+                Solo Administración puede cambiar contraseñas, activar, desactivar o eliminar usuarios.
+              </p>
             </div>
             <div className="relative w-full sm:w-72">
               <Search
@@ -284,7 +370,7 @@ export default function UsersAndPermissionsPage() {
           </div>
 
           <div className="divide-y divide-[var(--border)]">
-            <div className="grid gap-4 p-5 md:grid-cols-[minmax(220px,1.2fr)_minmax(170px,0.8fr)_minmax(180px,1fr)_120px] md:items-center">
+            <div className="grid gap-4 p-5 md:grid-cols-[minmax(220px,1.2fr)_minmax(150px,0.7fr)_minmax(180px,1fr)_minmax(230px,auto)] md:items-center">
               <div className="flex items-center gap-3">
                 <span className="flex h-10 w-10 items-center justify-center rounded-full bg-[#7DC6FF] text-xs font-bold text-black">
                   {currentUser.initials}
@@ -300,15 +386,18 @@ export default function UsersAndPermissionsPage() {
                 </span>
               </div>
               <p className="text-xs text-[var(--muted)]">Acceso total · Usuario principal</p>
-              <span className="inline-flex w-fit rounded-full bg-emerald-500/10 px-2.5 py-1 text-xs font-semibold text-emerald-600">
-                Activo
-              </span>
+              <div className="flex flex-wrap items-center gap-2">
+                <span className="inline-flex rounded-full bg-emerald-500/10 px-2.5 py-1 text-xs font-semibold text-emerald-600">
+                  Activo
+                </span>
+                <span className="text-[11px] text-[var(--muted)]">Cuenta principal protegida</span>
+              </div>
             </div>
 
             {visibleUsers.map((user) => (
               <div
                 key={user.id}
-                className="grid gap-4 p-5 md:grid-cols-[minmax(220px,1.2fr)_minmax(170px,0.8fr)_minmax(180px,1fr)_120px] md:items-center"
+                className="grid gap-4 p-5 md:grid-cols-[minmax(220px,1.2fr)_minmax(150px,0.7fr)_minmax(180px,1fr)_minmax(230px,auto)] md:items-center"
               >
                 <div className="flex items-center gap-3">
                   <span className="flex h-10 w-10 items-center justify-center rounded-full bg-[var(--surface-soft)] text-xs font-bold text-[var(--foreground)]">
@@ -324,20 +413,44 @@ export default function UsersAndPermissionsPage() {
                     {user.role}
                   </span>
                 </div>
-                <p className="text-xs text-[var(--muted)]">
-                  {user.permissions.length} permisos · {user.position || 'Sin puesto indicado'}
-                </p>
-                <button
-                  type="button"
-                  onClick={() => toggleUserStatus(user.id)}
-                  className={`inline-flex w-fit rounded-full px-2.5 py-1 text-xs font-semibold transition ${
-                    user.status === 'Activo'
-                      ? 'bg-emerald-500/10 text-emerald-600 hover:bg-emerald-500/20'
-                      : 'bg-slate-500/10 text-slate-500 hover:bg-slate-500/20'
-                  }`}
-                >
-                  {user.status}
-                </button>
+                <div>
+                  <p className="text-xs text-[var(--muted)]">
+                    {user.permissions.length} permisos · {user.position || 'Sin puesto indicado'}
+                  </p>
+                  <p className="mt-1 text-[11px] text-[var(--muted)]">
+                    Contraseña: {user.passwordUpdatedAt ? `actualizada ${formatDate(user.passwordUpdatedAt)}` : 'sin configurar'}
+                  </p>
+                </div>
+                <div className="flex flex-wrap items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={() => toggleUserStatus(user.id)}
+                    disabled={!isAdmin}
+                    className={`inline-flex rounded-full px-2.5 py-1 text-xs font-semibold transition ${
+                      user.status === 'Activo'
+                        ? 'bg-emerald-500/10 text-emerald-600 hover:bg-emerald-500/20'
+                        : 'bg-slate-500/10 text-slate-500 hover:bg-slate-500/20'
+                    } disabled:cursor-not-allowed disabled:opacity-50`}
+                  >
+                    {user.status}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => openPasswordDialog(user)}
+                    disabled={!isAdmin}
+                    className="inline-flex h-8 items-center gap-1.5 rounded-lg border border-[#5496CC]/20 bg-[#5496CC]/5 px-2.5 text-xs font-semibold text-[#5496CC] transition hover:bg-[#5496CC]/10 disabled:cursor-not-allowed disabled:opacity-50"
+                  >
+                    <KeyRound size={13} /> Contraseña
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => isAdmin && setDeleteUser(user)}
+                    disabled={!isAdmin}
+                    className="inline-flex h-8 items-center gap-1.5 rounded-lg border border-red-500/20 bg-red-500/5 px-2.5 text-xs font-semibold text-red-500 transition hover:bg-red-500/10 disabled:cursor-not-allowed disabled:opacity-50"
+                  >
+                    <Trash2 size={13} /> Eliminar
+                  </button>
+                </div>
               </div>
             ))}
 
@@ -465,14 +578,16 @@ export default function UsersAndPermissionsPage() {
                       <button
                         type="button"
                         onClick={() => rejectRequest(request)}
-                        className="inline-flex h-10 items-center justify-center gap-2 rounded-xl border border-red-500/20 bg-red-500/5 px-4 text-sm font-semibold text-red-500 transition hover:bg-red-500/10"
+                        disabled={!isAdmin}
+                        className="inline-flex h-10 items-center justify-center gap-2 rounded-xl border border-red-500/20 bg-red-500/5 px-4 text-sm font-semibold text-red-500 transition hover:bg-red-500/10 disabled:cursor-not-allowed disabled:opacity-50"
                       >
                         <X size={16} /> Rechazar
                       </button>
                       <button
                         type="button"
                         onClick={() => approveRequest(request)}
-                        className="inline-flex h-10 items-center justify-center gap-2 rounded-xl bg-[#7DC6FF] px-5 text-sm font-semibold text-black transition hover:brightness-95"
+                        disabled={!isAdmin}
+                        className="inline-flex h-10 items-center justify-center gap-2 rounded-xl bg-[#7DC6FF] px-5 text-sm font-semibold text-black transition hover:brightness-95 disabled:cursor-not-allowed disabled:opacity-50"
                       >
                         <Check size={16} /> Aprobar usuario
                       </button>
@@ -486,8 +601,119 @@ export default function UsersAndPermissionsPage() {
       )}
 
       <div className="rounded-2xl border border-[#5496CC]/15 bg-[#5496CC]/5 p-4 text-xs leading-5 text-[var(--muted)]">
-        <strong className="text-[var(--foreground)]">Etapa actual:</strong> estas solicitudes y usuarios se guardan localmente en este navegador. Al conectar Supabase, esta misma pantalla pasará a leer y actualizar usuarios reales desde la base de datos.
+        <strong className="text-[var(--foreground)]">Etapa actual:</strong> usuarios, contraseñas temporales y solicitudes se guardan localmente en este navegador. Al conectar Supabase Auth, estos controles administrarán cuentas reales desde el servidor.
       </div>
+
+      {passwordUser ? (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/55 p-4 backdrop-blur-sm">
+          <div className="w-full max-w-md rounded-2xl border border-[var(--border)] bg-[var(--surface)] p-6 shadow-2xl">
+            <div className="flex items-start justify-between gap-4">
+              <div>
+                <p className="text-xs font-semibold uppercase tracking-[0.15em] text-[#5496CC]">Administración</p>
+                <h2 className="mt-2 text-xl font-bold text-[var(--foreground)]">Cambiar contraseña</h2>
+                <p className="mt-1 text-sm text-[var(--muted)]">{passwordUser.name} · {passwordUser.email}</p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setPasswordUser(null)}
+                className="rounded-lg p-2 text-[var(--muted)] transition hover:bg-[var(--surface-soft)] hover:text-[var(--foreground)]"
+                aria-label="Cerrar"
+              >
+                <X size={18} />
+              </button>
+            </div>
+
+            <div className="mt-6 space-y-4">
+              <label className="block">
+                <span className="text-xs font-semibold text-[var(--muted)]">Nueva contraseña</span>
+                <div className="relative mt-2">
+                  <input
+                    type={showPassword ? 'text' : 'password'}
+                    value={newPassword}
+                    onChange={(event) => setNewPassword(event.target.value)}
+                    placeholder="Mínimo 8 caracteres"
+                    className="h-11 w-full rounded-xl border border-[var(--border)] bg-[var(--surface-soft)] px-3 pr-11 text-sm text-[var(--foreground)] outline-none focus:border-[#5496CC] focus:ring-4 focus:ring-[#5496CC]/10"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowPassword((value) => !value)}
+                    className="absolute inset-y-0 right-2 flex items-center px-2 text-[var(--muted)] hover:text-[var(--foreground)]"
+                    aria-label={showPassword ? 'Ocultar contraseña' : 'Mostrar contraseña'}
+                  >
+                    {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
+                  </button>
+                </div>
+              </label>
+
+              <label className="block">
+                <span className="text-xs font-semibold text-[var(--muted)]">Confirmar contraseña</span>
+                <input
+                  type={showPassword ? 'text' : 'password'}
+                  value={confirmPassword}
+                  onChange={(event) => setConfirmPassword(event.target.value)}
+                  placeholder="Repite la contraseña"
+                  className="mt-2 h-11 w-full rounded-xl border border-[var(--border)] bg-[var(--surface-soft)] px-3 text-sm text-[var(--foreground)] outline-none focus:border-[#5496CC] focus:ring-4 focus:ring-[#5496CC]/10"
+                />
+              </label>
+
+              {passwordError ? <p className="text-sm text-red-500">{passwordError}</p> : null}
+              {passwordSaved ? (
+                <p className="rounded-xl bg-emerald-500/10 px-3 py-2 text-sm font-medium text-emerald-600">
+                  Contraseña actualizada correctamente.
+                </p>
+              ) : null}
+            </div>
+
+            <div className="mt-6 flex justify-end gap-3">
+              <button
+                type="button"
+                onClick={() => setPasswordUser(null)}
+                className="h-10 rounded-xl border border-[var(--border)] px-4 text-sm font-semibold text-[var(--foreground)] transition hover:bg-[var(--surface-soft)]"
+              >
+                Cerrar
+              </button>
+              <button
+                type="button"
+                onClick={savePassword}
+                className="inline-flex h-10 items-center gap-2 rounded-xl bg-[#7DC6FF] px-4 text-sm font-semibold text-black transition hover:brightness-95"
+              >
+                <KeyRound size={15} /> Guardar contraseña
+              </button>
+            </div>
+          </div>
+        </div>
+      ) : null}
+
+      {deleteUser ? (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/55 p-4 backdrop-blur-sm">
+          <div className="w-full max-w-md rounded-2xl border border-red-500/20 bg-[var(--surface)] p-6 shadow-2xl">
+            <div className="flex h-12 w-12 items-center justify-center rounded-full bg-red-500/10 text-red-500">
+              <Trash2 size={21} />
+            </div>
+            <h2 className="mt-4 text-xl font-bold text-[var(--foreground)]">Eliminar usuario</h2>
+            <p className="mt-2 text-sm leading-6 text-[var(--muted)]">
+              Se eliminará a <strong className="text-[var(--foreground)]">{deleteUser.name}</strong> y su solicitud asociada. Esta acción no se puede deshacer.
+            </p>
+
+            <div className="mt-6 flex justify-end gap-3">
+              <button
+                type="button"
+                onClick={() => setDeleteUser(null)}
+                className="h-10 rounded-xl border border-[var(--border)] px-4 text-sm font-semibold text-[var(--foreground)] transition hover:bg-[var(--surface-soft)]"
+              >
+                Cancelar
+              </button>
+              <button
+                type="button"
+                onClick={confirmDeleteUser}
+                className="inline-flex h-10 items-center gap-2 rounded-xl bg-red-500 px-4 text-sm font-semibold text-white transition hover:bg-red-600"
+              >
+                <Trash2 size={15} /> Eliminar usuario
+              </button>
+            </div>
+          </div>
+        </div>
+      ) : null}
     </div>
   )
 }
