@@ -28,14 +28,18 @@ import {
   Wallet,
   X,
 } from 'lucide-react'
-import { currentUser } from '@/data/currentUser'
-import { hasModuleAccess, type ModulePermission } from '@/config/roles'
+import type { ModulePermission } from '@/config/roles'
+import {
+  clearAccessSession,
+  type AccessSession,
+} from '@/features/access/services/accessStorage'
 
 type SidebarProps = {
   collapsed: boolean
   mobileOpen: boolean
   onToggleCollapse: () => void
   onCloseMobile: () => void
+  user: AccessSession
 }
 
 type NavigationItem = {
@@ -141,12 +145,17 @@ function BrandMark() {
   )
 }
 
-export function Sidebar({ collapsed, mobileOpen, onToggleCollapse, onCloseMobile }: SidebarProps) {
+export function Sidebar({
+  collapsed,
+  mobileOpen,
+  onToggleCollapse,
+  onCloseMobile,
+  user,
+}: SidebarProps) {
   const pathname = usePathname()
   const router = useRouter()
-  const visibleNavigationGroups = navigationGroups.filter((group) =>
-    hasModuleAccess(currentUser.role, group.permission),
-  )
+  const canUse = (permission: ModulePermission) => user.permissions.includes(permission)
+  const visibleNavigationGroups = navigationGroups.filter((group) => canUse(group.permission))
 
   const isPathActive = (href?: string) =>
     Boolean(href && (pathname === href || (href !== '/dashboard' && pathname.startsWith(`${href}/`))))
@@ -167,8 +176,9 @@ export function Sidebar({ collapsed, mobileOpen, onToggleCollapse, onCloseMobile
   }, [activeGroupLabel])
 
   function handleLogout() {
+    clearAccessSession()
     onCloseMobile()
-    router.push('/login')
+    router.replace('/login')
   }
 
   const primaryItemClasses = (active: boolean) =>
@@ -198,7 +208,7 @@ export function Sidebar({ collapsed, mobileOpen, onToggleCollapse, onCloseMobile
       <nav className="flex-1 overflow-y-auto px-3 py-5" aria-label="Módulos de NEDVI OS">
         <p className={`mb-3 px-3 text-[10px] font-semibold uppercase tracking-[0.16em] text-black/70 transition-opacity ${collapsed ? 'lg:text-center lg:opacity-0' : ''}`}>Sistema</p>
 
-        {hasModuleAccess(currentUser.role, 'dashboard') ? (
+        {canUse('dashboard') ? (
           <Link href="/dashboard" title={collapsed ? 'Dashboard' : undefined} onClick={onCloseMobile} className={primaryItemClasses(isPathActive('/dashboard'))}>
             {isPathActive('/dashboard') ? <span className="absolute left-0 h-5 w-0.5 rounded-r-full bg-black" /> : null}
             <LayoutDashboard size={18} strokeWidth={isPathActive('/dashboard') ? 2 : 1.8} className="shrink-0 text-black" />
@@ -261,18 +271,18 @@ export function Sidebar({ collapsed, mobileOpen, onToggleCollapse, onCloseMobile
           })}
         </div>
 
-        {hasModuleAccess(currentUser.role, 'agenda') || hasModuleAccess(currentUser.role, 'settings') || hasModuleAccess(currentUser.role, 'coral') ? (
+        {canUse('agenda') || canUse('settings') || canUse('coral') ? (
           <div className="my-4 border-t border-black/15" />
         ) : null}
 
-        {hasModuleAccess(currentUser.role, 'agenda') ? (
+        {canUse('agenda') ? (
           <Link href="/agenda" title={collapsed ? 'Agenda' : undefined} onClick={onCloseMobile} className={primaryItemClasses(isPathActive('/agenda'))}>
             <CalendarDays size={18} strokeWidth={isPathActive('/agenda') ? 2 : 1.8} className="shrink-0 text-black" />
             <span className={`whitespace-nowrap transition-opacity duration-200 ${collapsed ? 'lg:hidden' : 'opacity-100'}`}>Agenda</span>
           </Link>
         ) : null}
 
-        {hasModuleAccess(currentUser.role, 'settings') ? (
+        {canUse('settings') ? (
           <Link
             href="/settings/users"
             title={collapsed ? 'Configuración' : undefined}
@@ -285,7 +295,7 @@ export function Sidebar({ collapsed, mobileOpen, onToggleCollapse, onCloseMobile
           </Link>
         ) : null}
 
-        {hasModuleAccess(currentUser.role, 'coral') ? (
+        {canUse('coral') ? (
           <>
             <div className="my-5 border-t border-black/15" />
             <button type="button" title={collapsed ? 'Coral' : undefined} className={`group relative flex h-11 w-full items-center gap-3 rounded-xl border border-black/15 bg-[#7DC6FF] px-3 text-left text-[13px] font-medium text-black transition hover:brightness-95 ${collapsed ? 'lg:justify-center lg:gap-0 lg:px-0' : ''}`}>
@@ -299,10 +309,10 @@ export function Sidebar({ collapsed, mobileOpen, onToggleCollapse, onCloseMobile
 
       <div className="border-t border-black/15 p-3">
         <div className={`flex items-center gap-3 rounded-xl px-2 py-2 ${collapsed ? 'lg:justify-center lg:px-0' : ''}`}>
-          <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-[#E9F8FA] text-[10px] font-bold text-black">{currentUser.initials}</span>
+          <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-[#E9F8FA] text-[10px] font-bold text-black">{user.initials}</span>
           <div className={`min-w-0 transition-opacity duration-200 ${collapsed ? 'lg:hidden' : 'opacity-100'}`}>
-            <p className="truncate text-xs font-medium text-black">{currentUser.name}</p>
-            <p className="truncate text-[11px] text-black/70">{currentUser.role}</p>
+            <p className="truncate text-xs font-medium text-black">{user.name}</p>
+            <p className="truncate text-[11px] text-black/70">{user.role}</p>
           </div>
         </div>
         <button
