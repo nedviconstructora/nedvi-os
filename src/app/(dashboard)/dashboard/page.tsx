@@ -10,7 +10,7 @@ import {
   RevenueChart,
   SystemAlerts,
 } from '@/components/dashboard/DashboardWidgets'
-import { currentUser } from '@/data/currentUser'
+import { DashboardGreeting } from '@/components/dashboard/DashboardGreeting'
 import { DashboardAgendaTasks } from '@/features/agenda/components/DashboardAgendaTasks'
 
 export default function DashboardPage() {
@@ -22,9 +22,7 @@ export default function DashboardPage() {
             <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[#7187ff]">
               Mi espacio de trabajo
             </p>
-            <h1 className="mt-2 text-3xl font-semibold tracking-[-0.05em] text-white sm:text-4xl">
-              Buenos días, {currentUser.firstName}
-            </h1>
+            <DashboardGreeting />
             <p className="mt-2 text-sm text-[#9CA3AF]">
               Aquí tienes el pulso de NEDVI Constructora
             </p>
