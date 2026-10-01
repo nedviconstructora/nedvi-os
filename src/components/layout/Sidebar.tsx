@@ -2,7 +2,7 @@
 
 import Link from 'next/link'
 import { useEffect, useState } from 'react'
-import { usePathname } from 'next/navigation'
+import { usePathname, useRouter } from 'next/navigation'
 import type { LucideIcon } from 'lucide-react'
 import {
   BarChart3,
@@ -18,6 +18,7 @@ import {
   FolderKanban,
   HardHat,
   LayoutDashboard,
+  LogOut,
   Ruler,
   Settings2,
   ShoppingCart,
@@ -142,6 +143,7 @@ function BrandMark() {
 
 export function Sidebar({ collapsed, mobileOpen, onToggleCollapse, onCloseMobile }: SidebarProps) {
   const pathname = usePathname()
+  const router = useRouter()
   const visibleNavigationGroups = navigationGroups.filter((group) =>
     hasModuleAccess(currentUser.role, group.permission),
   )
@@ -163,6 +165,11 @@ export function Sidebar({ collapsed, mobileOpen, onToggleCollapse, onCloseMobile
     if (!activeGroupLabel) return
     setOpenGroups((current) => ({ ...current, [activeGroupLabel]: true }))
   }, [activeGroupLabel])
+
+  function handleLogout() {
+    onCloseMobile()
+    router.push('/login')
+  }
 
   const primaryItemClasses = (active: boolean) =>
     `group relative flex h-11 w-full items-center gap-3 rounded-xl bg-[#7DC6FF] px-3 text-left text-[13px] font-medium text-black transition duration-200 hover:brightness-95 ${
@@ -292,6 +299,15 @@ export function Sidebar({ collapsed, mobileOpen, onToggleCollapse, onCloseMobile
             <p className="truncate text-[11px] text-black/70">{currentUser.role}</p>
           </div>
         </div>
+        <button
+          type="button"
+          onClick={handleLogout}
+          title={collapsed ? 'Cerrar sesión' : undefined}
+          className={`mt-1 flex h-10 w-full items-center gap-3 rounded-xl px-2 text-left text-xs font-semibold text-black/75 transition hover:bg-black/10 hover:text-black ${collapsed ? 'lg:justify-center lg:gap-0 lg:px-0' : ''}`}
+        >
+          <LogOut size={17} strokeWidth={1.8} className="shrink-0" />
+          <span className={`${collapsed ? 'lg:hidden' : ''}`}>Cerrar sesión</span>
+        </button>
       </div>
 
       <button type="button" onClick={onToggleCollapse} className="absolute -right-3 top-[86px] hidden h-6 w-6 items-center justify-center rounded-full border border-black/15 bg-[#E9F8FA] text-black shadow-lg transition hover:brightness-95 lg:flex" aria-label={collapsed ? 'Expandir menú lateral' : 'Contraer menú lateral'}>
