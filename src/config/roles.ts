@@ -67,6 +67,7 @@ const ROUTE_PERMISSIONS: Array<{ prefix: string; permission: ModulePermission }>
   { prefix: '/personnel', permission: 'human-resources' },
   { prefix: '/hr-attendance', permission: 'human-resources' },
   { prefix: '/payroll', permission: 'human-resources' },
+  { prefix: '/settings', permission: 'settings' },
 ]
 
 export function permissionForPath(pathname: string): ModulePermission | undefined {
