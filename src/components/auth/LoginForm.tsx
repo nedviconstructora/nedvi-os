@@ -97,6 +97,12 @@ export function LoginForm() {
       return
     }
 
+    if (user.role === 'Cliente' && (!user.clientId || !user.clientFolio)) {
+      setSubmitting(false)
+      setError('Esta cuenta de cliente no está vinculada correctamente. Contacta a Administración.')
+      return
+    }
+
     writeAccessSession({
       userId: user.id,
       name: user.name,
@@ -106,8 +112,12 @@ export function LoginForm() {
       role: user.role,
       permissions: user.permissions,
       createdAt: new Date().toISOString(),
+      clientId: user.clientId,
+      clientFolio: user.clientFolio,
+      clientName: user.clientName,
     })
-    router.push('/dashboard')
+
+    router.push(user.role === 'Cliente' ? '/client-portal' : '/dashboard')
   }
 
   function openRecovery() {
