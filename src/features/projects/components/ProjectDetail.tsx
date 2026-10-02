@@ -27,9 +27,9 @@ export function ProjectDetail({ project }: ProjectDetailProps) {
     <Card className="p-5 sm:p-6"><div className="grid gap-6 md:grid-cols-4"><div className="md:col-span-2"><div className="flex items-center justify-between"><span className="text-[10px] font-semibold uppercase tracking-[0.12em] text-[#646873]">Avance actual</span><span className="text-2xl font-semibold tracking-[-0.04em] text-white">{project.progress}%</span></div><div className="mt-4"><ProgressBar value={project.progress} showLabel={false}/></div><p className="mt-3 text-xs leading-5 text-[#9CA3AF]">{project.description||'Sin descripción registrada.'}</p></div><SummaryItem icon={UsersRound} label="Responsable" value={project.manager||'Sin asignar'}/><SummaryItem icon={CalendarDays} label="Terminación estimada" value={project.estimatedCompletion?formatProjectDate(project.estimatedCompletion):'Sin fecha'}/></div></Card>
     <div className="grid gap-5 xl:grid-cols-2"><BudgetCard project={project}/><ProjectMap project={project}/></div>
     <div className="grid gap-5 xl:grid-cols-[0.9fr_1.1fr]"><Card className="overflow-hidden"><CardHeader title="Cronología del proyecto" description="Hitos y plan de ejecución"/><div className="p-5 sm:p-6"><Timeline events={project.timeline}/></div></Card><ProgressHistory history={project.progressHistory}/></div>
-    <ProjectProgressManager project={project}/><ClientVisibilityManager project={project}/><ProjectEvidenceManager project={project}/><ProjectDocuments project={project}/>
+    <ProjectProgressManager project={project}/><ClientVisibilityManager project={project}/><ProjectEvidenceManager project={project}/><ProjectDocuments project={project}/><DailyLog project={project}/>
     <ProjectResources materials={project.materials} equipment={project.equipment}/>
-    <div className="grid gap-5 xl:grid-cols-2"><DailyLog logs={project.dailyLogs}/><TaskList tasks={project.tasks}/></div>
+    <TaskList tasks={project.tasks}/>
     <div className="grid gap-5 xl:grid-cols-2"><InspectionCard inspections={project.inspections}/><SafetyIncidentCard incidents={project.safetyIncidents}/></div>
   </div>
 }
