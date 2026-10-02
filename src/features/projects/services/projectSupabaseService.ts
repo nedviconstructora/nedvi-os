@@ -1,4 +1,4 @@
-import { supabase } from '@/lib/supabase'
+import { createClient } from '@/lib/supabase/client'
 import type { Project, ProjectFormValues, ProjectStatus, ProjectType } from '@/features/projects/types/project'
 
 type ProjectRow = {
@@ -57,6 +57,7 @@ function rowToProject(row: ProjectRow): Project {
 }
 
 export async function readProjectsFromSupabase(): Promise<Project[]> {
+  const supabase = createClient()
   const { data, error } = await supabase
     .from('projects')
     .select('*')
@@ -67,6 +68,7 @@ export async function readProjectsFromSupabase(): Promise<Project[]> {
 }
 
 export async function createProjectInSupabase(values: ProjectFormValues): Promise<Project> {
+  const supabase = createClient()
   const payload = {
     client_id: values.clientId || null,
     client_name: values.client,
@@ -100,6 +102,7 @@ export async function updateProjectInSupabase(
   id: string,
   values: ProjectFormValues,
 ): Promise<Project> {
+  const supabase = createClient()
   const { data, error } = await supabase
     .from('projects')
     .update({
