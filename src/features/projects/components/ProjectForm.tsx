@@ -7,9 +7,9 @@ import { ExternalLink, Save } from 'lucide-react'
 import { readCustomers } from '@/features/crm/services/customerStorage'
 import type { Customer } from '@/features/crm/types/customer'
 import {
-  createProject,
-  updateProject,
-} from '@/features/projects/services/projectStorage'
+  createProjectInSupabase,
+  updateProjectInSupabase,
+} from '@/features/projects/services/projectSupabaseService'
 import {
   projectStatuses,
   projectTypes,
@@ -79,7 +79,7 @@ export function ProjectForm({
     [customers, selectedClientId]
   )
 
-  const handleSubmit = (event: FormEvent<HTMLFormElement>) => {
+  const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault()
     setError(null)
 
@@ -130,9 +130,9 @@ export function ProjectForm({
     try {
       const project =
         mode === 'create'
-          ? createProject(values)
+          ? await createProjectInSupabase(values)
           : projectId
-            ? updateProject(projectId, values)
+            ? await updateProjectInSupabase(projectId, values)
             : undefined
 
       if (!project) {
@@ -145,7 +145,7 @@ export function ProjectForm({
       router.refresh()
     } catch (submitError) {
       console.error('Error al guardar el proyecto:', submitError)
-      setError('Ocurrió un error al guardar el proyecto.')
+      setError('No se pudo guardar el proyecto en Supabase. Revisa permisos o conexión.')
       setSaving(false)
     }
   }
@@ -368,7 +368,7 @@ export function ProjectForm({
 
       <div className="flex flex-col-reverse items-stretch justify-between gap-4 border-t border-white/[0.06] pt-6 sm:flex-row sm:items-center">
         <p className="text-xs leading-5 text-[#646873]">
-          Los proyectos se guardan en este dispositivo y quedan vinculados con los clientes del CRM.
+          Los proyectos se guardan en Supabase y quedan vinculados con los clientes del CRM.
         </p>
 
         <div className="flex justify-end gap-3">
