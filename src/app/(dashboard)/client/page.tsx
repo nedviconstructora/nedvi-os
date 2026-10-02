@@ -28,7 +28,7 @@ export default function ClientPortalPage() {
   }, [])
 
   function returnToAdmin(){const raw=window.localStorage.getItem(ADMIN_SESSION_BACKUP_KEY);if(!raw)return;window.localStorage.setItem('nedvi-access-session',raw);window.localStorage.removeItem(ADMIN_SESSION_BACKUP_KEY);router.push('/crm')}
-  function openDocument(doc:ProjectDocument){if(!doc.fileUrl)return;const win=window.open();if(win){win.document.title=doc.name;win.location.href=doc.fileUrl}}
+  function openDocument(doc:ProjectDocument){if(!doc.fileUrl)return;const a=document.createElement('a');a.href=doc.fileUrl;a.target='_blank';a.rel='noopener noreferrer';document.body.appendChild(a);a.click();a.remove()}
   function downloadDocument(doc:ProjectDocument){if(!doc.fileUrl)return;const a=document.createElement('a');a.href=doc.fileUrl;a.download=doc.fileName||doc.name;document.body.appendChild(a);a.click();a.remove()}
 
   const averageProgress=useMemo(()=>projects.length?Math.round(projects.reduce((n,p)=>n+p.progress,0)/projects.length):0,[projects]); const photoCount=projects.reduce((n,p)=>n+p.photos.filter(x=>x.visibleToClient===true).length,0); const documentCount=projects.reduce((n,p)=>n+p.documents.filter(x=>x.visibleToClient===true).length,0)
