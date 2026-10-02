@@ -1,0 +1,461 @@
+@import 'tailwindcss';
+@custom-variant dark (&:where(.dark, .dark *));
+
+:root,
+.theme-light {
+  --nedvi-blue: #5496cc;
+  --nedvi-blue-strong: #3f82ba;
+  --background: #f3f7fb;
+  --foreground: #172033;
+  --muted: #64748b;
+  --subtle: #7a8799;
+  --surface: #ffffff;
+  --surface-soft: #f8fafc;
+  --border: #dce6f0;
+  --sidebar: #5496cc;
+  --sidebar-foreground: #ffffff;
+  --card: #ffffff;
+  --primary: #5496cc;
+  --nedvi-logo-dark: url('https://drive.google.com/thumbnail?id=1mYaFCSdeEc75o5qI3uR15U6GzfInsxvH&sz=w1200');
+  --nedvi-logo-light: url('/logo-blanco.svg');
+}
+
+.theme-dark {
+  --background: #121820;
+  --foreground: #f7f9fc;
+  --muted: #a8b3c2;
+  --subtle: #7f8b9d;
+  --surface: #1c2530;
+  --surface-soft: #18212b;
+  --border: #2b3948;
+  --sidebar: #5496cc;
+  --sidebar-foreground: #ffffff;
+  --card: #1c2530;
+  --primary: #5496cc;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  min-height: 100%;
+}
+
+body {
+  margin: 0;
+  background: var(--background);
+  color: var(--foreground);
+  font-family: "Avenir Next", "SF Pro Display", "Helvetica Neue", sans-serif;
+  -webkit-font-smoothing: antialiased;
+  transition: background-color 300ms ease, color 300ms ease;
+}
+
+.theme-light select {
+  color-scheme: light;
+}
+
+.theme-light select option,
+.theme-light select optgroup {
+  background-color: #ffffff;
+  color: #172033;
+}
+
+.theme-light select option:checked {
+  background-color: #dcebf7;
+  color: #172033;
+}
+
+.theme-dark select {
+  color-scheme: dark;
+}
+
+.theme-dark select option,
+.theme-dark select optgroup {
+  background-color: #18212b;
+  color: #f7f9fc;
+}
+
+.theme-dark select option:checked {
+  background-color: #315f85;
+  color: #ffffff;
+}
+
+.nedvi-logo-on-dark,
+.nedvi-logo-on-light {
+  display: block;
+  background-position: center;
+  background-repeat: no-repeat;
+  background-size: contain;
+}
+
+.nedvi-logo-on-dark {
+  background-image: var(--nedvi-logo-light);
+}
+
+.nedvi-logo-on-light {
+  background-image: var(--nedvi-logo-dark);
+}
+
+::selection {
+  background: rgba(84, 150, 204, 0.4);
+  color: #102033;
+}
+
+/* NEDVI corporate blue migration for older hardcoded UI accents. */
+[class~="bg-[#163DFF]"],
+[class~="bg-[#7BAEE3]"] {
+  background-color: #5496cc !important;
+}
+
+[class~="text-[#7187ff]"],
+[class~="text-[#6F88FF]"],
+[class~="text-[#6f88ff]"],
+[class~="text-[#91a2ff]"],
+[class~="text-[#5B93C9]"] {
+  color: #5496cc !important;
+}
+
+[class~="border-[#163DFF]"],
+[class~="border-[#7BAEE3]"] {
+  border-color: #5496cc !important;
+}
+
+/* Compatibility for dashboard components that still use the original dark palette. */
+.theme-light [class~="bg-[#0B0B0D]"],
+.theme-light [class~="bg-[#0b0b0d]"] {
+  background-color: #f3f7fb !important;
+}
+
+.theme-light [class~="bg-[#0B0B0D]/90"] {
+  background-color: rgba(243, 247, 251, 0.94) !important;
+}
+
+.theme-light [class~="bg-[#20232A]"],
+.theme-light [class~="bg-[#20232a]"] {
+  background-color: #ffffff !important;
+}
+
+.theme-light [class~="bg-[#17181C]"],
+.theme-light [class~="bg-[#17181c]"] {
+  background-color: #f8fafc !important;
+}
+
+.theme-light main [class~="text-white"] {
+  color: #172033 !important;
+}
+
+.theme-light main [class~="text-[#d5d7df]"] {
+  color: #334155 !important;
+}
+
+.theme-light main [class~="text-[#9CA3AF]"] {
+  color: #64748b !important;
+}
+
+.theme-light main [class~="text-[#646873]"] {
+  color: #7a8799 !important;
+}
+
+.theme-light [class~="border-white/[0.05]"],
+.theme-light [class~="border-white/[0.06]"],
+.theme-light [class~="border-white/[0.07]"],
+.theme-light [class~="border-white/[0.08]"],
+.theme-light [class~="border-white/[0.09]"],
+.theme-light [class~="border-white/[0.1]"],
+.theme-light [class~="border-white/[0.12]"] {
+  border-color: #dce6f0 !important;
+}
+
+.theme-light [class~="divide-white/[0.05]"] > :not([hidden]) ~ :not([hidden]),
+.theme-light [class~="divide-white/[0.06]"] > :not([hidden]) ~ :not([hidden]) {
+  border-color: #e3ebf3 !important;
+}
+
+/* Sidebar stays NEDVI blue in light and dark themes. */
+.theme-light aside[aria-label="Navegación principal"],
+.theme-dark aside[aria-label="Navegación principal"] {
+  background: #5496cc !important;
+  border-right-color: rgba(255, 255, 255, 0.18) !important;
+  color: #ffffff !important;
+}
+
+.theme-light aside[aria-label="Navegación principal"] [class~="text-white"],
+.theme-dark aside[aria-label="Navegación principal"] [class~="text-white"] {
+  color: #ffffff !important;
+}
+
+.theme-light aside[aria-label="Navegación principal"] [class~="text-[#9CA3AF]"],
+.theme-light aside[aria-label="Navegación principal"] [class~="text-[#646873]"],
+.theme-light aside[aria-label="Navegación principal"] [class~="text-[#7D81D8]"],
+.theme-light aside[aria-label="Navegación principal"] [class~="text-[#7187ff]"],
+.theme-light aside[aria-label="Navegación principal"] [class~="text-[#6F88FF]"],
+.theme-light aside[aria-label="Navegación principal"] [class~="text-[#6f88ff]"],
+.theme-light aside[aria-label="Navegación principal"] [class~="text-[#858A96]"],
+.theme-dark aside[aria-label="Navegación principal"] [class~="text-[#9CA3AF]"],
+.theme-dark aside[aria-label="Navegación principal"] [class~="text-[#646873]"],
+.theme-dark aside[aria-label="Navegación principal"] [class~="text-[#7D81D8]"],
+.theme-dark aside[aria-label="Navegación principal"] [class~="text-[#7187ff]"],
+.theme-dark aside[aria-label="Navegación principal"] [class~="text-[#6F88FF]"],
+.theme-dark aside[aria-label="Navegación principal"] [class~="text-[#6f88ff]"],
+.theme-dark aside[aria-label="Navegación principal"] [class~="text-[#858A96]"] {
+  color: rgba(255, 255, 255, 0.96) !important;
+}
+
+.theme-light aside[aria-label="Navegación principal"] [class~="bg-[#343A40]"],
+.theme-dark aside[aria-label="Navegación principal"] [class~="bg-[#343A40]"] {
+  background-color: #343a40 !important;
+  color: #ffffff !important;
+}
+
+.theme-light aside[aria-label="Navegación principal"] [class*="bg-white/"],
+.theme-dark aside[aria-label="Navegación principal"] [class*="bg-white/"] {
+  background-color: rgba(255, 255, 255, 0.1) !important;
+}
+
+.theme-light aside[aria-label="Navegación principal"] [class*="border-white/"],
+.theme-dark aside[aria-label="Navegación principal"] [class*="border-white/"] {
+  border-color: rgba(255, 255, 255, 0.2) !important;
+}
+
+.theme-light aside[aria-label="Navegación principal"] [class~="bg-[#163DFF]"],
+.theme-dark aside[aria-label="Navegación principal"] [class~="bg-[#163DFF]"] {
+  background-color: rgba(255, 255, 255, 0.16) !important;
+}
+
+.theme-light aside[aria-label="Navegación principal"] [class*="bg-[#163DFF]/"],
+.theme-dark aside[aria-label="Navegación principal"] [class*="bg-[#163DFF]/"] {
+  background-color: rgba(255, 255, 255, 0.12) !important;
+}
+
+.theme-light aside[aria-label="Navegación principal"] [class*="border-[#163DFF]/"],
+.theme-dark aside[aria-label="Navegación principal"] [class*="border-[#163DFF]/"] {
+  border-color: rgba(255, 255, 255, 0.24) !important;
+}
+
+@keyframes fade-up {
+  from {
+    opacity: 0;
+    transform: translateY(18px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes shimmer {
+  0% {
+    transform: translateX(-120%);
+  }
+  100% {
+    transform: translateX(120%);
+  }
+}
+
+.animate-fade-up {
+  animation: fade-up 700ms cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+.animate-fade-up-delay {
+  animation: fade-up 700ms 120ms cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+.nedvi-splash {
+  position: fixed;
+  inset: 0;
+  z-index: 9999;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #121820;
+  animation: nedviSplash 1.8s ease forwards;
+}
+
+.nedvi-splash-content {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.nedvi-splash-logo {
+  width: 150px;
+  height: 150px;
+  object-fit: contain;
+  animation: nedviLogoPulse 1.2s ease-in-out infinite;
+}
+
+.nedvi-splash h1 {
+  margin-top: 24px;
+  color: white;
+  font-size: 24px;
+  font-weight: 600;
+  letter-spacing: 0.18em;
+}
+
+.nedvi-splash p {
+  margin-top: 8px;
+  color: #a8b3c2;
+  font-size: 14px;
+}
+
+@keyframes nedviSplash {
+  0% {
+    opacity: 1;
+    visibility: visible;
+  }
+  75% {
+    opacity: 1;
+    visibility: visible;
+  }
+  100% {
+    opacity: 0;
+    visibility: hidden;
+    pointer-events: none;
+  }
+}
+
+@keyframes nedviLogoPulse {
+  0%,
+  100% {
+    transform: scale(1);
+    opacity: 0.85;
+  }
+  50% {
+    transform: scale(1.05);
+    opacity: 1;
+  }
+}
+
+/* Corporate print styling for NEDVI quotations. */
+@media print {
+  @page {
+    size: A4;
+    margin: 0;
+  }
+
+  html,
+  body {
+    background: #ffffff !important;
+    color: #111827 !important;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+
+  section.print\:block {
+    padding: 0 !important;
+    background: #ffffff !important;
+  }
+
+  section.print\:block > div {
+    max-width: none !important;
+  }
+
+  section.print\:block > div > div:first-child {
+    display: grid !important;
+    grid-template-columns: minmax(0, 1fr) 150px;
+    align-items: center !important;
+    column-gap: 32px;
+    min-height: 108px;
+    margin: 0 0 30px !important;
+    padding: 22px 28px !important;
+    border: 0 !important;
+    border-radius: 14px;
+    background: #1f2329 !important;
+    color: #ffffff !important;
+    overflow: hidden;
+  }
+
+  section.print\:block > div > div:first-child::before {
+    content: none !important;
+    display: none !important;
+  }
+
+  section.print\:block > div > div:first-child > div:first-child {
+    display: flex !important;
+    align-items: center !important;
+    gap: 18px !important;
+    min-width: 0;
+  }
+
+  section.print\:block > div > div:first-child > div:first-child img {
+    width: 68px !important;
+    height: 68px !important;
+    flex: 0 0 68px;
+    object-fit: contain !important;
+  }
+
+  section.print\:block > div > div:first-child > div:first-child > div {
+    min-width: 0;
+  }
+
+  section.print\:block > div > div:first-child h1 {
+    margin: 0 !important;
+    font-size: 24px !important;
+    line-height: 1.08 !important;
+    letter-spacing: -0.02em !important;
+    white-space: nowrap;
+  }
+
+  section.print\:block > div > div:first-child > div:first-child p {
+    margin-top: 5px !important;
+    font-size: 11px !important;
+    line-height: 1.35 !important;
+  }
+
+  section.print\:block > div > div:first-child > div:last-child {
+    min-width: 0;
+    padding-left: 20px;
+    border-left: 1px solid rgba(255, 255, 255, 0.18);
+    text-align: right !important;
+  }
+
+  section.print\:block > div > div:first-child > div:last-child p:first-child {
+    margin: 0 0 6px !important;
+    font-size: 17px !important;
+    line-height: 1.1 !important;
+    font-weight: 700 !important;
+  }
+
+  section.print\:block > div > div:first-child > div:last-child p:not(:first-child) {
+    margin: 2px 0 0 !important;
+    font-size: 10.5px !important;
+    line-height: 1.3 !important;
+  }
+
+  section.print\:block > div > div:first-child h1,
+  section.print\:block > div > div:first-child p,
+  section.print\:block > div > div:first-child strong {
+    color: #ffffff !important;
+  }
+
+  section.print\:block > div > div:first-child p {
+    color: #d1d5db !important;
+  }
+
+  section.print\:block table {
+    overflow: hidden;
+    border: 1px solid #e5e7eb;
+    border-radius: 12px;
+  }
+
+  section.print\:block thead tr {
+    background: #f3f4f6 !important;
+  }
+
+  section.print\:block th {
+    color: #374151 !important;
+  }
+
+  section.print\:block tbody tr {
+    break-inside: avoid;
+  }
+
+  section.print\:block > div > div:nth-of-type(2) {
+    padding: 16px 18px;
+    border: 1px solid #e5e7eb;
+    border-radius: 12px;
+    background: #f9fafb !important;
+  }
+}

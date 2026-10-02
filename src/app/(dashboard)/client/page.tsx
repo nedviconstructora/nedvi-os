@@ -1,0 +1,77 @@
+'use client'
+
+import { useEffect, useMemo, useState } from 'react'
+import { AppShell } from '@/components/layout/AppShell'
+import { readAccessSession, readAccessUsers, type AccessSession } from '@/features/access/services/accessStorage'
+import { readCustomers } from '@/features/crm/services/customerStorage'
+import { readProjects } from '@/features/projects/services/projectStorage'
+import type { Customer } from '@/features/crm/types/customer'
+import type { Project } from '@/features/projects/types/project'
+import { Building2, CalendarDays, CheckCircle2, ChevronDown, FileText, HardHat, Images, LogOut, MapPin, ClipboardList, Clock3 } from 'lucide-react'
+import { useRouter } from 'next/navigation'
+
+const ADMIN_SESSION_BACKUP_KEY = 'nedvi-admin-session-backup'
+
+export default function ClientPortalPage() {
+  const router = useRouter()
+  const [session, setSession] = useState<AccessSession | null>(null)
+  const [customer, setCustomer] = useState<Customer | null>(null)
+  const [projects, setProjects] = useState<Project[]>([])
+  const [adminPreview, setAdminPreview] = useState(false)
+  const [openId, setOpenId] = useState<string | null>(null)
+
+  useEffect(() => {
+    const current = readAccessSession()
+    setAdminPreview(Boolean(window.localStorage.getItem(ADMIN_SESSION_BACKUP_KEY)))
+    setSession(current)
+    if (!current) return
+    const customers = readCustomers()
+    const linkedCustomer = customers.find(item => current.customerId ? item.id === current.customerId : item.folio === current.customerFolio) ?? null
+    setCustomer(linkedCustomer)
+    const allProjects = readProjects()
+    // Always use the latest project assignment saved on the access user.
+    // This prevents a stale login session from showing old project totals.
+    const accessUser = readAccessUsers().find(user => user.id === current.userId)
+    const assignedProjectIds = accessUser?.projectIds ?? current.projectIds ?? []
+    const allowedIds = new Set(assignedProjectIds)
+    const linked = allProjects.filter((project, index, rows) =>
+      allowedIds.has(project.id) && rows.findIndex(item => item.id === project.id) === index,
+    )
+    setProjects(linked)
+    setOpenId(linked[0]?.id ?? null)
+  }, [])
+
+  function returnToAdmin() {
+    const raw = window.localStorage.getItem(ADMIN_SESSION_BACKUP_KEY); if (!raw) return
+    window.localStorage.setItem('nedvi-access-session', raw); window.localStorage.removeItem(ADMIN_SESSION_BACKUP_KEY); router.push('/crm')
+  }
+
+  const averageProgress = useMemo(() => projects.length ? Math.round(projects.reduce((n,p)=>n+p.progress,0)/projects.length) : 0, [projects])
+  const photoCount = projects.reduce((n,p)=>n+p.photos.filter(x=>x.visibleToClient===true).length,0)
+  const documentCount = projects.reduce((n,p)=>n+p.documents.filter(x=>x.visibleToClient===true).length,0)
+
+  return <AppShell><div className="mx-auto w-full max-w-[1250px] space-y-7">
+    {adminPreview ? <div className="flex items-center justify-between gap-4 rounded-2xl border border-amber-400/30 bg-amber-400/10 px-5 py-3"><p className="text-xs font-semibold text-amber-700 dark:text-amber-300">Vista previa de Administración: estás viendo NEDVI OS exactamente como este cliente.</p><button type="button" onClick={returnToAdmin} className="inline-flex shrink-0 items-center gap-2 rounded-xl bg-[var(--foreground)] px-3 py-2 text-xs font-bold text-[var(--background)]"><LogOut size={14}/>Volver a Administración</button></div> : null}
+    <header className="rounded-3xl border border-[var(--border)] bg-[var(--surface)] p-6 shadow-sm sm:p-8"><p className="text-xs font-semibold uppercase tracking-[0.16em] text-[#5496CC]">Portal del cliente</p><div className="mt-3 flex flex-col justify-between gap-5 lg:flex-row lg:items-end"><div><h1 className="text-3xl font-bold tracking-[-0.04em] text-[var(--foreground)]">Bienvenido, {session?.firstName ?? 'Cliente'}</h1><p className="mt-2 max-w-2xl text-sm leading-6 text-[var(--muted)]">Consulta avances, hitos, evidencias, documentos y reportes autorizados por NEDVI Constructora.</p></div><div className="rounded-2xl border border-[#7DC6FF]/35 bg-[#7DC6FF]/10 px-5 py-3"><p className="text-[10px] font-semibold uppercase tracking-[0.12em] text-[var(--muted)]">Folio de cliente</p><p className="mt-1 text-base font-bold text-[#5496CC]">{customer?.folio ?? session?.customerFolio ?? 'Sin vincular'}</p></div></div></header>
+    <section className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4"><Stat icon={HardHat} label="Proyectos" value={String(projects.length)}/><Stat icon={Building2} label="Avance promedio" value={`${averageProgress}%`}/><Stat icon={Images} label="Evidencias visibles" value={String(photoCount)}/><Stat icon={FileText} label="Documentos visibles" value={String(documentCount)}/></section>
+    <section><div className="mb-4"><h2 className="text-xl font-bold text-[var(--foreground)]">Mis proyectos</h2><p className="mt-1 text-sm text-[var(--muted)]">La información se actualiza desde el mismo proyecto administrado por NEDVI.</p></div>
+      {projects.length ? <div className="space-y-5">{projects.map(project => {
+        const open=openId===project.id; const photos=project.photos.filter(x=>x.visibleToClient===true); const docs=project.documents.filter(x=>x.visibleToClient===true); const milestones=project.timeline.filter(x=>x.visibleToClient===true); const reports=project.dailyLogs.filter(x=>x.visibleToClient===true); const nextTasks=project.tasks.filter(x=>x.visibleToClient===true&&!x.completed).slice(0,4)
+        return <article key={project.id} className="overflow-hidden rounded-2xl border border-[var(--border)] bg-[var(--surface)] shadow-sm"><button type="button" onClick={()=>setOpenId(open?null:project.id)} className="w-full p-6 text-left"><div className="flex items-start justify-between gap-4"><div><p className="text-[10px] font-semibold uppercase tracking-[0.12em] text-[#5496CC]">{project.folio??'Proyecto NEDVI'}</p><h3 className="mt-2 text-lg font-bold text-[var(--foreground)]">{project.name}</h3><p className="mt-2 flex items-center gap-2 text-xs text-[var(--muted)]"><MapPin size={14}/>{project.address||'Ubicación pendiente'}</p></div><div className="flex items-center gap-3"><span className="rounded-full bg-[#7DC6FF]/15 px-3 py-1 text-xs font-semibold text-[#5496CC]">{project.progress}%</span><ChevronDown size={18} className={`text-[var(--muted)] transition ${open?'rotate-180':''}`}/></div></div><div className="mt-5 h-2 overflow-hidden rounded-full bg-black/10 dark:bg-white/10"><div className="h-full rounded-full bg-[#7DC6FF]" style={{width:`${Math.max(0,Math.min(100,project.progress))}%`}}/></div></button>
+        {open ? <div className="border-t border-[var(--border)] p-6"><div className="grid gap-4 md:grid-cols-3"><Mini icon={CalendarDays} label="Inicio" value={project.startDate||'Por definir'}/><Mini icon={Clock3} label="Entrega estimada" value={project.estimatedCompletion||'Por definir'}/><Mini icon={HardHat} label="Estado" value={statusLabel(project.status)}/></div>
+          {project.description ? <p className="mt-5 rounded-xl bg-black/[0.025] p-4 text-sm leading-6 text-[var(--muted)] dark:bg-white/[0.025]">{project.description}</p> : null}
+          <div className="mt-6 grid gap-5 xl:grid-cols-2"><PortalSection title="Hitos y etapas" icon={CheckCircle2}>{milestones.length?milestones.map(x=><div key={x.id} className="flex gap-3 border-b border-[var(--border)] py-3 last:border-0"><span className={`mt-1 h-2 w-2 shrink-0 rounded-full ${x.status==='completed'?'bg-emerald-500':x.status==='current'?'bg-[#7BAEE3]':'bg-slate-400'}`}/><div><p className="text-sm font-semibold text-[var(--foreground)]">{x.title}</p><p className="mt-1 text-xs text-[var(--muted)]">{x.description}</p><p className="mt-1 text-[10px] text-[var(--muted)]">{x.date}</p></div></div>):<Empty text="Aún no hay hitos publicados."/>}</PortalSection>
+          <PortalSection title="Próximas actividades" icon={ClipboardList}>{nextTasks.length?nextTasks.map(x=><div key={x.id} className="flex items-center justify-between gap-3 border-b border-[var(--border)] py-3 last:border-0"><div><p className="text-sm font-semibold text-[var(--foreground)]">{x.title}</p><p className="mt-1 text-xs text-[var(--muted)]">Responsable: {x.assignee||'NEDVI'}</p></div><span className="text-[10px] text-[var(--muted)]">{x.dueDate}</span></div>):<Empty text="Sin actividades pendientes publicadas."/>}</PortalSection></div>
+          <div className="mt-5 grid gap-5 xl:grid-cols-2"><PortalSection title={`Evidencias fotográficas (${photos.length})`} icon={Images}>{photos.length?<div className="grid grid-cols-2 gap-3">{photos.slice(0,8).map(x=><div key={x.id} className="aspect-[4/3] overflow-hidden rounded-xl bg-black/10"><div className="h-full bg-cover bg-center" style={{backgroundImage:`url(${x.url})`}} title={x.label}/></div>)}</div>:<Empty text="Aún no hay fotografías publicadas."/>}</PortalSection>
+          <PortalSection title={`Documentos (${docs.length})`} icon={FileText}>{docs.length?docs.map(x=><div key={x.id} className="flex items-center gap-3 border-b border-[var(--border)] py-3 last:border-0"><FileText size={16} className="text-[#5496CC]"/><div><p className="text-sm font-semibold text-[var(--foreground)]">{x.name}</p><p className="text-[10px] text-[var(--muted)]">{x.type} · {x.size} · {x.updatedAt}</p></div></div>):<Empty text="Aún no hay documentos publicados."/>}</PortalSection></div>
+          <div className="mt-5"><PortalSection title={`Reportes de avance (${reports.length})`} icon={ClipboardList}>{reports.length?reports.slice(0,6).map(x=><div key={x.id} className="border-b border-[var(--border)] py-3 last:border-0"><div className="flex justify-between gap-4"><p className="text-sm font-semibold text-[var(--foreground)]">{x.summary||'Reporte de obra'}</p><span className="text-[10px] text-[var(--muted)]">{x.date}</span></div><p className="mt-1 text-xs text-[var(--muted)]">Personal en obra: {x.crew} · Clima: {x.weather||'N/D'}</p></div>):<Empty text="Aún no hay reportes publicados."/>}</PortalSection></div>
+        </div> : null}</article>})}</div> : <div className="rounded-2xl border border-dashed border-[var(--border)] bg-[var(--surface)] p-10 text-center"><HardHat className="mx-auto text-[#7DC6FF]" size={34}/><h3 className="mt-4 font-semibold text-[var(--foreground)]">Cuenta lista</h3><p className="mx-auto mt-2 max-w-xl text-sm leading-6 text-[var(--muted)]">Este usuario todavía no tiene un proyecto asignado. Asígnalo desde la ficha del cliente.</p></div>}
+    </section>
+  </div></AppShell>
+}
+
+function Stat({icon:Icon,label,value}:{icon:typeof HardHat;label:string;value:string}){return <div className="rounded-2xl border border-[var(--border)] bg-[var(--surface)] p-5 shadow-sm"><Icon size={19} className="text-[#5496CC]"/><p className="mt-4 text-2xl font-bold text-[var(--foreground)]">{value}</p><p className="mt-1 text-xs text-[var(--muted)]">{label}</p></div>}
+function Mini({icon:Icon,label,value}:{icon:typeof HardHat;label:string;value:string}){return <div className="rounded-xl border border-[var(--border)] p-4"><Icon size={16} className="text-[#5496CC]"/><p className="mt-3 text-[10px] uppercase tracking-wide text-[var(--muted)]">{label}</p><p className="mt-1 text-sm font-semibold text-[var(--foreground)]">{value}</p></div>}
+function PortalSection({title,icon:Icon,children}:{title:string;icon:typeof HardHat;children:React.ReactNode}){return <section className="rounded-xl border border-[var(--border)] p-4"><div className="mb-2 flex items-center gap-2"><Icon size={16} className="text-[#5496CC]"/><h4 className="text-sm font-bold text-[var(--foreground)]">{title}</h4></div>{children}</section>}
+function Empty({text}:{text:string}){return <p className="py-5 text-center text-xs text-[var(--muted)]">{text}</p>}
+function statusLabel(status:Project['status']){return ({Planning:'Planeación',Active:'Activo','At Risk':'En riesgo',Completed:'Completado','On Hold':'En pausa'} as const)[status]}
