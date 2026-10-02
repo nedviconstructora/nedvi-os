@@ -13,21 +13,31 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en">
-     <body>
-      <div className="nedvi-splash">
-  <div className="nedvi-splash-content">
-    <img
-      src="/icon.png"
-      alt="NEDVI"
-      className="nedvi-splash-logo"
-    />
+      <body>
+        <div className="nedvi-splash">
+          <div className="nedvi-splash-content">
+            <img
+              src="/icon.png"
+              alt="NEDVI"
+              className="nedvi-splash-logo"
+              width={150}
+              height={150}
+              style={{
+                width: '150px',
+                height: '150px',
+                maxWidth: '150px',
+                maxHeight: '150px',
+                objectFit: 'contain',
+                display: 'block',
+              }}
+            />
 
-    <h1>NEDVI OS</h1>
-    <p>Construyendo el futuro.</p>
-  </div>
-</div>
-  {children}
-</body>
+            <h1>NEDVI OS</h1>
+            <p>Construyendo el futuro.</p>
+          </div>
+        </div>
+        {children}
+      </body>
     </html>
   )
 }
