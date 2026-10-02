@@ -14,6 +14,12 @@ export type ModulePermission =
   | 'coral'
   | 'client-portal'
 
+export const ROLE_LABELS: Record<AppRole, string> = {
+  Administración: 'ADMIN',
+  Supervisor: 'SUPERVISOR / OBRA',
+  Cliente: 'CLIENTE',
+}
+
 export const ROLE_PERMISSIONS: Record<AppRole, readonly ModulePermission[]> = {
   Administración: [
     'dashboard',
@@ -35,15 +41,19 @@ export const ROLE_PERMISSIONS: Record<AppRole, readonly ModulePermission[]> = {
     'purchasing',
     'operations',
     'agenda',
+    'indicators',
+    'coral',
   ],
   Cliente: ['client-portal'],
 }
 
 export const ROLE_DESCRIPTIONS: Record<AppRole, string> = {
-  Administración: 'Acceso total a NEDVI OS.',
+  Administración:
+    'Acceso total a NEDVI OS, incluidos usuarios y permisos, Recursos Humanos, nómina, finanzas y configuración administrativa.',
   Supervisor:
-    'Acceso a Comercial y Ventas, Gestión de Proyectos, Compras y Suministros, Operaciones / Obra y Agenda.',
-  Cliente: 'Acceso exclusivo al portal del cliente y a la información vinculada con su folio.',
+    'Acceso operativo amplio: clientes, oportunidades, levantamientos, cotizaciones, proyectos, documentos, compras, proveedores, obra, avances, reportes, asistencias, cuadrillas, agenda, indicadores y Coral AI. Sin acceso a Recursos Humanos, nómina, finanzas ni configuración de usuarios y permisos.',
+  Cliente:
+    'Acceso exclusivo al Portal del Cliente para consultar únicamente sus proyectos y la información de avance autorizada por NEDVI.',
 }
 
 export function hasModuleAccess(role: AppRole, permission: ModulePermission) {
