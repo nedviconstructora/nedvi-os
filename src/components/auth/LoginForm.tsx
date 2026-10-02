@@ -4,26 +4,25 @@ import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { Button } from '@/components/ui/Button'
 import { Input } from '@/components/ui/Input'
-import {
-  defaultPermissionsForRole,
-  readAccessUsers,
-  readPasswordResetRequests,
-  writeAccessSession,
-  writePasswordResetRequests,
-  type PasswordResetRequest,
-} from '@/features/access/services/accessStorage'
+import { defaultPermissionsForRole, writeAccessSession } from '@/features/access/services/accessStorage'
+import type { AppRole } from '@/config/roles'
+import { createClient } from '@/lib/supabase/client'
 
-const DEV_USER_EMAIL = 'pedrog@nedviconstructora.com'
-const DEV_PASSWORD_SHA256 = process.env.NEXT_PUBLIC_DEV_ADMIN_PASSWORD_SHA256 ?? ''
-const DEMO_CLIENT_EMAIL = 'cliente.demo@nedvi.local'
-const DEMO_CLIENT_PASSWORD = 'NedviDemo2026!'
+type NedviRole = 'administracion' | 'obra' | 'cliente'
 
-async function sha256(value: string) {
-  const bytes = new TextEncoder().encode(value)
-  const hashBuffer = await crypto.subtle.digest('SHA-256', bytes)
-  return Array.from(new Uint8Array(hashBuffer))
-    .map((byte) => byte.toString(16).padStart(2, '0'))
-    .join('')
+type Profile = {
+  id: string
+  full_name: string
+  first_name: string
+  initials: string | null
+  role: NedviRole
+  active: boolean
+}
+
+function toAppRole(role: NedviRole): AppRole {
+  if (role === 'administracion') return 'Administración'
+  if (role === 'obra') return 'Supervisor'
+  return 'Cliente'
 }
 
 function initials(name: string) {
@@ -37,7 +36,6 @@ function initials(name: string) {
 
 export function LoginForm() {
   const router = useRouter()
-
   const [showPassword, setShowPassword] = useState(false)
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
@@ -53,82 +51,96 @@ export function LoginForm() {
     setError('')
     setSubmitting(true)
 
-    const normalizedEmail = email.trim().toLowerCase()
-    const passwordHash = await sha256(password)
+    try {
+      const supabase = createClient()
+      const normalizedEmail = email.trim().toLowerCase()
 
-    if (normalizedEmail === DEMO_CLIENT_EMAIL && password === DEMO_CLIENT_PASSWORD) {
-      writeAccessSession({
-        userId: 'client-demo-001',
-        name: 'Cliente Demo',
-        firstName: 'Cliente',
-        initials: 'CD',
-        email: DEMO_CLIENT_EMAIL,
-        role: 'Cliente',
-        permissions: defaultPermissionsForRole('Cliente'),
-        customerFolio: 'NEDVI-CLI-0001',
-        createdAt: new Date().toISOString(),
+      const { data, error: signInError } = await supabase.auth.signInWithPassword({
+        email: normalizedEmail,
+        password,
       })
-      router.push('/client')
-      return
-    }
 
-    if (normalizedEmail === DEV_USER_EMAIL && DEV_PASSWORD_SHA256 && passwordHash === DEV_PASSWORD_SHA256) {
+      if (signInError || !data.user) {
+        setError('Correo o contraseña incorrectos.')
+        return
+      }
+
+      const { data: profileData, error: profileError } = await supabase
+        .from('profiles')
+        .select('id, full_name, first_name, initials, role, active')
+        .eq('id', data.user.id)
+        .single()
+
+      if (profileError || !profileData) {
+        await supabase.auth.signOut()
+        setError('No pudimos cargar tu perfil de NEDVI OS. Contacta a Administración.')
+        return
+      }
+
+      const profile = profileData as Profile
+
+      if (!profile.active) {
+        await supabase.auth.signOut()
+        setError('Esta cuenta está inactiva. Contacta a Administración.')
+        return
+      }
+
+      const appRole = toAppRole(profile.role)
+      const name = profile.full_name || data.user.email || 'Usuario NEDVI'
+      const firstName = profile.first_name || name.split(' ')[0] || name
+
+      let customerId: string | undefined
+      let customerFolio: string | undefined
+      let projectIds: string[] | undefined
+
+      if (profile.role === 'cliente') {
+        const { data: customerLink } = await supabase
+          .from('customer_users')
+          .select('customer_id, customers(folio)')
+          .eq('user_id', data.user.id)
+          .limit(1)
+          .maybeSingle()
+
+        customerId = customerLink?.customer_id
+
+        const customer = Array.isArray(customerLink?.customers)
+          ? customerLink?.customers[0]
+          : customerLink?.customers
+
+        customerFolio = customer?.folio ?? undefined
+
+        if (customerId) {
+          const { data: projects } = await supabase
+            .from('projects')
+            .select('id')
+            .eq('customer_id', customerId)
+
+          projectIds = projects?.map((project) => project.id) ?? []
+        }
+      }
+
       writeAccessSession({
-        userId: 'user-001',
-        name: 'Pedro García',
-        firstName: 'Pedro',
-        initials: 'PG',
-        email: DEV_USER_EMAIL,
-        role: 'Administración',
-        permissions: defaultPermissionsForRole('Administración'),
+        userId: data.user.id,
+        name,
+        firstName,
+        initials: profile.initials || initials(name),
+        email: data.user.email ?? normalizedEmail,
+        role: appRole,
+        permissions: defaultPermissionsForRole(appRole),
         createdAt: new Date().toISOString(),
+        customerId,
+        customerFolio,
+        projectIds,
       })
-      router.push('/dashboard')
-      return
-    }
 
-    const user = readAccessUsers().find(
-      (item) => item.email.trim().toLowerCase() === normalizedEmail,
-    )
-
-    if (!user) {
+      router.push(appRole === 'Cliente' ? '/client' : '/dashboard')
+      router.refresh()
+    } catch (loginError) {
+      console.error(loginError)
+      setError('No pudimos conectar con NEDVI OS. Intenta nuevamente.')
+    } finally {
       setSubmitting(false)
-      setError('Correo o contraseña incorrectos.')
-      return
     }
-
-    if (user.status !== 'Activo') {
-      setSubmitting(false)
-      setError('Esta cuenta está inactiva. Contacta a Administración.')
-      return
-    }
-
-    if (!user.passwordHash) {
-      setSubmitting(false)
-      setError('La cuenta aún no tiene contraseña configurada. Contacta a Administración.')
-      return
-    }
-
-    if (user.passwordHash !== passwordHash) {
-      setSubmitting(false)
-      setError('Correo o contraseña incorrectos.')
-      return
-    }
-
-    writeAccessSession({
-      userId: user.id,
-      name: user.name,
-      firstName: user.name.split(' ')[0] || user.name,
-      initials: initials(user.name),
-      email: user.email,
-      role: user.role,
-      permissions: user.permissions,
-      createdAt: new Date().toISOString(),
-      customerId: user.customerId,
-      customerFolio: user.customerFolio,
-      projectIds: user.projectIds,
-    })
-    router.push(user.role === 'Cliente' ? '/client' : '/dashboard')
   }
 
   function openRecovery() {
@@ -138,7 +150,7 @@ export function LoginForm() {
     setShowRecovery(true)
   }
 
-  function requestPasswordReset() {
+  async function requestPasswordReset() {
     setRecoveryMessage('')
     setRecoveryError('')
 
@@ -148,42 +160,25 @@ export function LoginForm() {
       return
     }
 
-    const user = readAccessUsers().find(
-      (item) => item.email.trim().toLowerCase() === normalizedEmail,
-    )
+    try {
+      const supabase = createClient()
+      const redirectTo = `${window.location.origin}/login`
+      const { error: resetError } = await supabase.auth.resetPasswordForEmail(normalizedEmail, {
+        redirectTo,
+      })
 
-    if (!user) {
-      if (normalizedEmail === DEV_USER_EMAIL) {
-        setRecoveryMessage(
-          'La cuenta principal se administra temporalmente desde desarrollo. Al conectar Supabase, la recuperación llegará por correo.',
-        )
+      if (resetError) {
+        setRecoveryError('No pudimos enviar el correo de recuperación. Intenta nuevamente.')
         return
       }
-      setRecoveryError('No encontramos una cuenta aprobada con ese correo.')
-      return
+
+      setRecoveryMessage(
+        'Si existe una cuenta con ese correo, recibirás instrucciones para recuperar tu acceso.',
+      )
+    } catch (resetError) {
+      console.error(resetError)
+      setRecoveryError('No pudimos conectar con el servicio de recuperación.')
     }
-
-    const requests = readPasswordResetRequests()
-    const existingPending = requests.some(
-      (request) =>
-        request.email.toLowerCase() === normalizedEmail && request.status === 'Pendiente',
-    )
-
-    if (!existingPending) {
-      const request: PasswordResetRequest = {
-        id: crypto.randomUUID(),
-        userId: user.id,
-        name: user.name,
-        email: user.email,
-        status: 'Pendiente',
-        createdAt: new Date().toISOString(),
-      }
-      writePasswordResetRequests([request, ...requests])
-    }
-
-    setRecoveryMessage(
-      'Solicitud enviada. Administración podrá restablecer tu contraseña desde Usuarios y permisos.',
-    )
   }
 
   return (
@@ -235,7 +230,7 @@ export function LoginForm() {
         <div className="rounded-xl border border-white/[0.09] bg-black/20 p-4">
           <p className="text-sm font-semibold text-white">Recuperar contraseña</p>
           <p className="mt-1 text-xs leading-5 text-[#9CA3AF]">
-            Envía una solicitud a Administración para que restablezca tu acceso.
+            Te enviaremos un correo para recuperar el acceso a tu cuenta.
           </p>
           <div className="mt-4">
             <Input
@@ -265,7 +260,7 @@ export function LoginForm() {
               onClick={requestPasswordReset}
               className="h-9 flex-1 rounded-lg bg-[#7DC6FF] px-3 text-xs font-semibold text-black transition hover:brightness-95"
             >
-              Enviar solicitud
+              Enviar correo
             </button>
           </div>
         </div>
