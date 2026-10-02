@@ -27,10 +27,14 @@ export type ProjectPhoto = {
 export type ProjectDocument = {
   id: string
   name: string
-  type: 'PDF' | 'DOCX' | 'XLSX'
+  type: 'PDF' | 'DOCX' | 'XLSX' | 'OTHER'
   size: string
   updatedAt: string
   visibleToClient?: boolean
+  description?: string
+  category?: string
+  fileUrl?: string
+  fileName?: string
 }
 
 export type ProjectDailyLog = {
