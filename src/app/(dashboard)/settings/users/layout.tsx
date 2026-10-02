@@ -3,15 +3,19 @@
 import { useEffect, useState, type ReactNode } from 'react'
 import { ShieldCheck, UserRoundCog, X } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
+import { currentUser } from '@/data/currentUser'
+import { defaultPermissionsForRole, readAccessUsers, writeAccessUsers } from '@/features/access/services/accessStorage'
 
 type DbRole = 'administracion' | 'obra' | 'cliente'
+type UiRole = 'Administración' | 'Supervisor' | 'Cliente'
 
-type Profile = {
+type RoleUser = {
   id: string
-  full_name: string | null
-  first_name: string | null
+  name: string
+  email?: string
   role: DbRole
   active: boolean
+  source: 'principal' | 'authorized'
 }
 
 const ROLE_OPTIONS: Array<{ value: DbRole; label: string; description: string }> = [
@@ -20,52 +24,101 @@ const ROLE_OPTIONS: Array<{ value: DbRole; label: string; description: string }>
   { value: 'cliente', label: 'CLIENTE', description: 'Solo consulta sus proyectos y avances autorizados.' },
 ]
 
+function toDbRole(role: string): DbRole {
+  if (role === 'Administración' || role === 'administracion') return 'administracion'
+  if (role === 'Supervisor' || role === 'obra') return 'obra'
+  return 'cliente'
+}
+
+function toUiRole(role: DbRole): UiRole {
+  if (role === 'administracion') return 'Administración'
+  if (role === 'obra') return 'Supervisor'
+  return 'Cliente'
+}
+
 export default function UsersSettingsLayout({ children }: { children: ReactNode }) {
   const [open, setOpen] = useState(false)
-  const [profiles, setProfiles] = useState<Profile[]>([])
-  const [loading, setLoading] = useState(false)
+  const [users, setUsers] = useState<RoleUser[]>([])
   const [savingId, setSavingId] = useState<string | null>(null)
   const [message, setMessage] = useState('')
 
-  async function loadProfiles() {
-    setLoading(true)
-    setMessage('')
-    const supabase = createClient()
-    const { data, error } = await supabase
-      .from('profiles')
-      .select('id, full_name, first_name, role, active')
-      .order('full_name', { ascending: true })
-
-    if (error) {
-      setMessage(`No se pudieron cargar los perfiles: ${error.message}`)
-      setProfiles([])
-    } else {
-      setProfiles((data ?? []) as Profile[])
+  function loadUsers() {
+    const authorized = readAccessUsers()
+    const principal: RoleUser = {
+      id: 'principal-admin',
+      name: currentUser.name,
+      email: currentUser.email,
+      role: toDbRole(currentUser.role),
+      active: true,
+      source: 'principal',
     }
-    setLoading(false)
+
+    const rest: RoleUser[] = authorized
+      .filter((user) => user.email.toLowerCase() !== currentUser.email.toLowerCase())
+      .map((user) => ({
+        id: user.id,
+        name: user.name,
+        email: user.email,
+        role: toDbRole(user.role),
+        active: user.status === 'Activo',
+        source: 'authorized' as const,
+      }))
+
+    setUsers([principal, ...rest])
   }
 
   useEffect(() => {
-    if (open) void loadProfiles()
+    if (open) {
+      setMessage('')
+      loadUsers()
+    }
   }, [open])
 
-  async function changeRole(profile: Profile, role: DbRole) {
-    if (profile.role === role) return
-    setSavingId(profile.id)
+  async function changeRole(user: RoleUser, role: DbRole) {
+    if (user.role === role) return
+    if (user.source === 'principal') {
+      setMessage('La cuenta principal de Administración está protegida y no puede cambiarse desde aquí.')
+      return
+    }
+
+    setSavingId(user.id)
     setMessage('')
 
-    const supabase = createClient()
-    const { error } = await supabase
-      .from('profiles')
-      .update({ role })
-      .eq('id', profile.id)
+    const authorized = readAccessUsers()
+    const nextAuthorized = authorized.map((item) =>
+      item.id === user.id
+        ? {
+            ...item,
+            role: toUiRole(role),
+            permissions: defaultPermissionsForRole(toUiRole(role)),
+          }
+        : item,
+    )
+    writeAccessUsers(nextAuthorized)
 
-    if (error) {
-      setMessage(`No se pudo cambiar el rol: ${error.message}`)
-    } else {
-      setProfiles((current) => current.map((item) => item.id === profile.id ? { ...item, role } : item))
-      setMessage(`Rol de ${profile.full_name || profile.first_name || 'usuario'} actualizado correctamente.`)
+    // Si el usuario ya tiene un perfil real en Supabase, sincronizamos también su rol.
+    // Si todavía no existe ahí, la lista autorizada sigue siendo la fuente actual de esta etapa.
+    if (user.email) {
+      const supabase = createClient()
+      const { data: authMatch } = await supabase
+        .from('profiles')
+        .select('id')
+        .eq('id', user.id)
+        .maybeSingle()
+
+      if (authMatch?.id) {
+        const { error } = await supabase.from('profiles').update({ role }).eq('id', authMatch.id)
+        if (error) {
+          setMessage(`El rol se actualizó en NEDVI OS, pero Supabase no pudo sincronizarlo: ${error.message}`)
+          setUsers((current) => current.map((item) => item.id === user.id ? { ...item, role } : item))
+          setSavingId(null)
+          return
+        }
+      }
     }
+
+    setUsers((current) => current.map((item) => item.id === user.id ? { ...item, role } : item))
+    setMessage(`Rol de ${user.name} actualizado a ${ROLE_OPTIONS.find((item) => item.value === role)?.label ?? role}.`)
     setSavingId(null)
   }
 
@@ -93,7 +146,7 @@ export default function UsersSettingsLayout({ children }: { children: ReactNode 
                   <ShieldCheck size={15} /> Administración
                 </div>
                 <h2 className="mt-2 text-2xl font-bold text-[var(--foreground)]">Gestionar roles</h2>
-                <p className="mt-1 text-sm text-[var(--muted)]">Cambia el nivel de acceso de cada usuario desde NEDVI OS.</p>
+                <p className="mt-1 text-sm text-[var(--muted)]">Administra el nivel de acceso de todos los usuarios autorizados.</p>
               </div>
               <button type="button" onClick={() => setOpen(false)} className="rounded-lg p-2 text-[var(--muted)] hover:bg-[var(--surface-soft)]">
                 <X size={20} />
@@ -101,28 +154,26 @@ export default function UsersSettingsLayout({ children }: { children: ReactNode 
             </div>
 
             <div className="max-h-[62vh] overflow-y-auto p-5">
-              {loading ? <p className="py-8 text-center text-sm text-[var(--muted)]">Cargando usuarios...</p> : null}
-
-              {!loading ? (
-                <div className="space-y-3">
-                  {profiles.map((profile) => (
-                    <div key={profile.id} className="grid gap-4 rounded-xl border border-[var(--border)] bg-[var(--surface-soft)] p-4 md:grid-cols-[1fr_260px] md:items-center">
-                      <div>
-                        <p className="font-semibold text-[var(--foreground)]">{profile.full_name || profile.first_name || 'Usuario NEDVI'}</p>
-                        <p className="mt-1 text-xs text-[var(--muted)]">{profile.active ? 'Activo' : 'Inactivo'} · ID {profile.id.slice(0, 8)}</p>
-                      </div>
-                      <select
-                        value={profile.role}
-                        disabled={savingId === profile.id}
-                        onChange={(event) => void changeRole(profile, event.target.value as DbRole)}
-                        className="h-11 w-full rounded-xl border border-[var(--border)] bg-[var(--surface)] px-3 text-sm font-bold text-[var(--foreground)] outline-none focus:border-[#5496CC] disabled:opacity-60"
-                      >
-                        {ROLE_OPTIONS.map((role) => <option key={role.value} value={role.value}>{role.label}</option>)}
-                      </select>
+              <div className="space-y-3">
+                {users.map((user) => (
+                  <div key={user.id} className="grid gap-4 rounded-xl border border-[var(--border)] bg-[var(--surface-soft)] p-4 md:grid-cols-[1fr_260px] md:items-center">
+                    <div>
+                      <p className="font-semibold text-[var(--foreground)]">{user.name}</p>
+                      <p className="mt-1 text-xs text-[var(--muted)]">
+                        {user.email ? `${user.email} · ` : ''}{user.active ? 'Activo' : 'Inactivo'}{user.source === 'principal' ? ' · Cuenta principal protegida' : ''}
+                      </p>
                     </div>
-                  ))}
-                </div>
-              ) : null}
+                    <select
+                      value={user.role}
+                      disabled={savingId === user.id || user.source === 'principal'}
+                      onChange={(event) => void changeRole(user, event.target.value as DbRole)}
+                      className="h-11 w-full rounded-xl border border-[var(--border)] bg-[var(--surface)] px-3 text-sm font-bold text-[var(--foreground)] outline-none focus:border-[#5496CC] disabled:cursor-not-allowed disabled:opacity-60"
+                    >
+                      {ROLE_OPTIONS.map((role) => <option key={role.value} value={role.value}>{role.label}</option>)}
+                    </select>
+                  </div>
+                ))}
+              </div>
 
               {message ? <p className="mt-4 rounded-xl border border-[#5496CC]/20 bg-[#5496CC]/10 p-3 text-sm text-[var(--foreground)]">{message}</p> : null}
 
