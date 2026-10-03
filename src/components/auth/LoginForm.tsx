@@ -4,7 +4,14 @@ import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { Button } from '@/components/ui/Button'
 import { Input } from '@/components/ui/Input'
-import { defaultPermissionsForRole, writeAccessSession } from '@/features/access/services/accessStorage'
+import {
+  defaultPermissionsForRole,
+  readAccessUsers,
+  readPasswordResetRequests,
+  writeAccessSession,
+  writePasswordResetRequests,
+  type PasswordResetRequest,
+} from '@/features/access/services/accessStorage'
 import type { AppRole } from '@/config/roles'
 import { createClient } from '@/lib/supabase/client'
 
@@ -150,35 +157,38 @@ export function LoginForm() {
     setShowRecovery(true)
   }
 
-  async function requestPasswordReset() {
+  function requestPasswordReset() {
     setRecoveryMessage('')
     setRecoveryError('')
 
     const normalizedEmail = recoveryEmail.trim().toLowerCase()
-    if (!normalizedEmail) {
+    if (!normalizedEmail || !normalizedEmail.includes('@')) {
       setRecoveryError('Escribe el correo de tu cuenta.')
       return
     }
 
-    try {
-      const supabase = createClient()
-      const redirectTo = `${window.location.origin}/login`
-      const { error: resetError } = await supabase.auth.resetPasswordForEmail(normalizedEmail, {
-        redirectTo,
-      })
+    const accessUsers = readAccessUsers()
+    const user = accessUsers.find((item) => item.email.toLowerCase() === normalizedEmail)
+    const existing = readPasswordResetRequests()
+    const alreadyPending = existing.some(
+      (request) => request.email.toLowerCase() === normalizedEmail && request.status === 'Pendiente',
+    )
 
-      if (resetError) {
-        setRecoveryError('No pudimos enviar el correo de recuperación. Intenta nuevamente.')
-        return
+    if (!alreadyPending) {
+      const request: PasswordResetRequest = {
+        id: crypto.randomUUID(),
+        userId: user?.id ?? normalizedEmail,
+        name: user?.name ?? normalizedEmail.split('@')[0] ?? 'Usuario NEDVI',
+        email: normalizedEmail,
+        status: 'Pendiente',
+        createdAt: new Date().toISOString(),
       }
-
-      setRecoveryMessage(
-        'Si existe una cuenta con ese correo, recibirás instrucciones para recuperar tu acceso.',
-      )
-    } catch (resetError) {
-      console.error(resetError)
-      setRecoveryError('No pudimos conectar con el servicio de recuperación.')
+      writePasswordResetRequests([request, ...existing])
     }
+
+    setRecoveryMessage(
+      'Solicitud enviada a Administración. Cuando restablezcan tu contraseña, te entregarán una contraseña temporal.',
+    )
   }
 
   return (
@@ -230,7 +240,7 @@ export function LoginForm() {
         <div className="rounded-xl border border-white/[0.09] bg-black/20 p-4">
           <p className="text-sm font-semibold text-white">Recuperar contraseña</p>
           <p className="mt-1 text-xs leading-5 text-[#9CA3AF]">
-            Te enviaremos un correo para recuperar el acceso a tu cuenta.
+            Enviaremos una solicitud interna a Administración para que te asignen una contraseña temporal.
           </p>
           <div className="mt-4">
             <Input
@@ -260,7 +270,7 @@ export function LoginForm() {
               onClick={requestPasswordReset}
               className="h-9 flex-1 rounded-lg bg-[#7DC6FF] px-3 text-xs font-semibold text-black transition hover:brightness-95"
             >
-              Enviar correo
+              Enviar solicitud
             </button>
           </div>
         </div>
