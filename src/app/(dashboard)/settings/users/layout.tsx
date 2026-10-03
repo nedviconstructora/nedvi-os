@@ -6,6 +6,7 @@ import { createClient } from '@/lib/supabase/client'
 import { currentUser } from '@/data/currentUser'
 import { defaultPermissionsForRole, readAccessUsers, writeAccessUsers } from '@/features/access/services/accessStorage'
 import { PasswordRecoveryCenter } from '@/features/access/components/PasswordRecoveryCenter'
+import { PermissionsCenter } from '@/features/access/components/PermissionsCenter'
 
 type DbRole = 'administracion' | 'obra' | 'cliente'
 type UiRole = 'Administración' | 'Supervisor' | 'Cliente'
@@ -125,6 +126,7 @@ export default function UsersSettingsLayout({ children }: { children: ReactNode 
     <>
       <div className="relative">
         <div className="mx-auto flex w-full max-w-7xl flex-wrap justify-end gap-2 px-0 pt-4 sm:pt-6 lg:pt-8">
+          <PermissionsCenter />
           <PasswordRecoveryCenter />
           <button
             type="button"
