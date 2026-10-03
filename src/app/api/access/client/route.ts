@@ -18,6 +18,19 @@ function getAdminClient() {
   })
 }
 
+function normalizeRole(value: unknown) {
+  return String(value ?? '')
+    .trim()
+    .toLowerCase()
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+}
+
+function canManageClientAccess(role: unknown) {
+  const normalizedRole = normalizeRole(role)
+  return ['administracion', 'administrador', 'admin', 'obra', 'supervisor'].includes(normalizedRole)
+}
+
 export async function POST(request: Request) {
   try {
     const serverSupabase = await createServerClient()
@@ -35,7 +48,12 @@ export async function POST(request: Request) {
       .eq('id', currentUser.id)
       .maybeSingle()
 
-    if (!currentProfile?.active || !['administracion', 'obra'].includes(currentProfile.role)) {
+    if (!currentProfile?.active || !canManageClientAccess(currentProfile.role)) {
+      console.error('Permiso denegado para crear acceso de cliente:', {
+        userId: currentUser.id,
+        role: currentProfile?.role,
+        active: currentProfile?.active,
+      })
       return NextResponse.json({ error: 'No tienes permiso para crear accesos de cliente.' }, { status: 403 })
     }
 
