@@ -91,7 +91,6 @@ export async function POST(request: Request) {
 
     const { error: profileError } = await admin.from('profiles').upsert({
       id: userId,
-      email,
       full_name: fullName,
       first_name: firstName,
       initials,
