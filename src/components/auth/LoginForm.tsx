@@ -12,7 +12,7 @@ import {
   writePasswordResetRequests,
   type PasswordResetRequest,
 } from '@/features/access/services/accessStorage'
-import type { AppRole } from '@/config/roles'
+import type { AppRole, ModulePermission } from '@/config/roles'
 import { createClient } from '@/lib/supabase/client'
 
 type NedviRole = 'administracion' | 'obra' | 'cliente'
@@ -25,6 +25,21 @@ type Profile = {
   role: NedviRole
   active: boolean
 }
+
+const VALID_PERMISSIONS: ModulePermission[] = [
+  'dashboard',
+  'commercial',
+  'projects',
+  'purchasing',
+  'operations',
+  'agenda',
+  'human-resources',
+  'finance',
+  'indicators',
+  'settings',
+  'coral',
+  'client-portal',
+]
 
 function toAppRole(role: NedviRole): AppRole {
   if (role === 'administracion') return 'Administración'
@@ -39,6 +54,13 @@ function initials(name: string) {
     .slice(0, 2)
     .map((part) => part[0]?.toUpperCase())
     .join('')
+}
+
+function readCustomPermissions(value: unknown): ModulePermission[] | null {
+  if (!Array.isArray(value)) return null
+  return value.filter((permission): permission is ModulePermission =>
+    VALID_PERMISSIONS.includes(permission as ModulePermission),
+  )
 }
 
 export function LoginForm() {
@@ -95,6 +117,8 @@ export function LoginForm() {
       const appRole = toAppRole(profile.role)
       const name = profile.full_name || data.user.email || 'Usuario NEDVI'
       const firstName = profile.first_name || name.split(' ')[0] || name
+      const customPermissions = readCustomPermissions(data.user.user_metadata?.permissions)
+      const permissions = customPermissions ?? defaultPermissionsForRole(appRole)
 
       let customerId: string | undefined
       let customerFolio: string | undefined
@@ -133,7 +157,7 @@ export function LoginForm() {
         initials: profile.initials || initials(name),
         email: data.user.email ?? normalizedEmail,
         role: appRole,
-        permissions: defaultPermissionsForRole(appRole),
+        permissions,
         createdAt: new Date().toISOString(),
         customerId,
         customerFolio,
