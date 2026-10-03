@@ -91,6 +91,7 @@ export async function POST(request: Request) {
 
     const { error: profileError } = await admin.from('profiles').upsert({
       id: userId,
+      email,
       full_name: fullName,
       first_name: firstName,
       initials,
@@ -100,6 +101,7 @@ export async function POST(request: Request) {
 
     if (profileError) {
       await admin.auth.admin.deleteUser(userId)
+      console.error('Error creando perfil cliente:', profileError)
       return NextResponse.json({ error: 'No pudimos crear el perfil del cliente.' }, { status: 500 })
     }
 
