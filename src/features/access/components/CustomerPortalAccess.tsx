@@ -23,10 +23,12 @@ export function CustomerPortalAccess({customer}:{customer:Customer}){
   try{
    const generated=accessUser?'':tempPassword(); const now=new Date().toISOString()
    const response=await fetch('/api/access/client',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({userId:accessUser?.id,email:mail,password:generated||undefined,fullName:customer.contact||customer.company,customerFolio:customer.folio,company:customer.company,contact:customer.contact,phone:customer.phone})})
-   const result=await response.json() as {userId?:string;error?:string;warning?:string;linkedCustomerId?:string;customerFolio?:string}
+   const result=await response.json() as {userId?:string;error?:string;warning?:string;linkedCustomerId?:string;customerFolio?:string;reusedExistingUser?:boolean}
    if(!response.ok||!result.userId){setMessage(result.error??'No pudimos sincronizar el acceso del cliente.');return}
    const authUserId=result.userId
-   const next:AccessUser={id:authUserId,name:customer.contact||customer.company,email:mail,phone:customer.phone,position:`Cliente · ${customer.company}`,role:'Cliente',permissions:defaultPermissionsForRole('Cliente'),status:accessUser?.status??'Activo',createdAt:accessUser?.createdAt??now,passwordHash:accessUser?.passwordHash??await sha256(generated),passwordUpdatedAt:accessUser?.passwordUpdatedAt??now,customerId:customer.id,customerFolio:result.customerFolio??customer.folio,projectIds:selected}; const all=[next,...users.filter(x=>x.id!==next.id)]; writeAccessUsers(all);setUsers(all);setPassword(generated);setMessage(accessUser?'Acceso y folio sincronizados correctamente.':'Acceso creado y folio sincronizado. Guarda la contraseña temporal.')
+   const shouldKeepGeneratedPassword=!accessUser&&!result.reusedExistingUser
+   const passwordHash=accessUser?.passwordHash??(shouldKeepGeneratedPassword?await sha256(generated):'')
+   const next:AccessUser={id:authUserId,name:customer.contact||customer.company,email:mail,phone:customer.phone,position:`Cliente · ${customer.company}`,role:'Cliente',permissions:defaultPermissionsForRole('Cliente'),status:accessUser?.status??'Activo',createdAt:accessUser?.createdAt??now,passwordHash,passwordUpdatedAt:accessUser?.passwordUpdatedAt??now,customerId:customer.id,customerFolio:result.customerFolio??customer.folio,projectIds:selected}; const all=[next,...users.filter(x=>x.id!==next.id)]; writeAccessUsers(all);setUsers(all);setPassword(shouldKeepGeneratedPassword?generated:'');setMessage(result.reusedExistingUser?'Usuario existente vinculado y folio sincronizado correctamente.':accessUser?'Acceso y folio sincronizados correctamente.':'Acceso creado y folio sincronizado. Guarda la contraseña temporal.')
   }catch(error){console.error(error);setMessage('No pudimos conectar con el servicio de creación de usuarios.')}
   finally{setSaving(false)}
  }
