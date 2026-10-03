@@ -40,23 +40,30 @@ export async function POST(request: Request) {
     }
 
     const body = (await request.json()) as {
+      userId?: string
       email?: string
       password?: string
       fullName?: string
       customerFolio?: string
+      company?: string
+      contact?: string
+      phone?: string
     }
 
     const email = body.email?.trim().toLowerCase()
     const password = body.password?.trim()
     const fullName = body.fullName?.trim() || 'Cliente NEDVI'
     const customerFolio = body.customerFolio?.trim()
+    const company = body.company?.trim() || fullName
+    const contact = body.contact?.trim() || fullName
+    const phone = body.phone?.trim() || null
 
     if (!email || !email.includes('@')) {
       return NextResponse.json({ error: 'Correo no válido.' }, { status: 400 })
     }
 
-    if (!password || password.length < 8) {
-      return NextResponse.json({ error: 'La contraseña temporal debe tener al menos 8 caracteres.' }, { status: 400 })
+    if (!customerFolio) {
+      return NextResponse.json({ error: 'El cliente no tiene folio asignado.' }, { status: 400 })
     }
 
     const admin = getAdminClient()
@@ -68,26 +75,36 @@ export async function POST(request: Request) {
       .map((part) => part[0]?.toUpperCase())
       .join('')
 
-    const { data: created, error: createError } = await admin.auth.admin.createUser({
-      email,
-      password,
-      email_confirm: true,
-      user_metadata: {
-        full_name: fullName,
-        first_name: firstName,
-        initials,
-        role: 'cliente',
-      },
-    })
+    let userId = body.userId?.trim()
+    let createdNewUser = false
 
-    if (createError || !created.user) {
-      const message = createError?.message?.toLowerCase().includes('already')
-        ? 'Ya existe un usuario con ese correo en Supabase Auth.'
-        : createError?.message || 'No pudimos crear el usuario en Supabase Auth.'
-      return NextResponse.json({ error: message }, { status: 400 })
+    if (!userId) {
+      if (!password || password.length < 8) {
+        return NextResponse.json({ error: 'La contraseña temporal debe tener al menos 8 caracteres.' }, { status: 400 })
+      }
+
+      const { data: created, error: createError } = await admin.auth.admin.createUser({
+        email,
+        password,
+        email_confirm: true,
+        user_metadata: {
+          full_name: fullName,
+          first_name: firstName,
+          initials,
+          role: 'cliente',
+        },
+      })
+
+      if (createError || !created.user) {
+        const message = createError?.message?.toLowerCase().includes('already')
+          ? 'Ya existe un usuario con ese correo en Supabase Auth.'
+          : createError?.message || 'No pudimos crear el usuario en Supabase Auth.'
+        return NextResponse.json({ error: message }, { status: 400 })
+      }
+
+      userId = created.user.id
+      createdNewUser = true
     }
-
-    const userId = created.user.id
 
     const { error: profileError } = await admin.from('profiles').upsert({
       id: userId,
@@ -99,45 +116,74 @@ export async function POST(request: Request) {
     })
 
     if (profileError) {
-      await admin.auth.admin.deleteUser(userId)
+      if (createdNewUser) await admin.auth.admin.deleteUser(userId)
       console.error('Error creando perfil cliente:', profileError)
       return NextResponse.json({ error: 'No pudimos crear el perfil del cliente.' }, { status: 500 })
     }
 
-    let linkedCustomerId: string | null = null
+    const { data: existingCustomer, error: findCustomerError } = await admin
+      .from('customers')
+      .select('id')
+      .eq('folio', customerFolio)
+      .maybeSingle()
 
-    if (customerFolio) {
-      const { data: customer } = await admin
+    if (findCustomerError) {
+      console.error('Error buscando cliente por folio:', findCustomerError)
+      return NextResponse.json({ error: 'No pudimos buscar el folio del cliente.' }, { status: 500 })
+    }
+
+    let customerId = existingCustomer?.id as string | undefined
+
+    if (!customerId) {
+      const newCustomerId = crypto.randomUUID()
+      const { data: insertedCustomer, error: insertCustomerError } = await admin
         .from('customers')
-        .select('id')
-        .eq('folio', customerFolio)
-        .maybeSingle()
-
-      if (customer?.id) {
-        linkedCustomerId = customer.id
-        const { error: linkError } = await admin.from('customer_users').upsert({
-          customer_id: customer.id,
-          user_id: userId,
+        .insert({
+          id: newCustomerId,
+          folio: customerFolio,
+          company,
+          contact,
+          phone,
+          email,
         })
+        .select('id')
+        .single()
 
-        if (linkError) {
-          return NextResponse.json(
-            {
-              userId,
-              warning: 'El usuario fue creado, pero no se pudo vincular al cliente.',
-            },
-            { status: 201 },
-          )
-        }
+      if (insertCustomerError || !insertedCustomer?.id) {
+        console.error('Error sincronizando cliente:', insertCustomerError)
+        return NextResponse.json({ error: 'No pudimos sincronizar el folio del cliente.' }, { status: 500 })
       }
+
+      customerId = insertedCustomer.id
+    } else {
+      const { error: updateCustomerError } = await admin
+        .from('customers')
+        .update({ company, contact, phone, email })
+        .eq('id', customerId)
+
+      if (updateCustomerError) {
+        console.error('Error actualizando cliente:', updateCustomerError)
+        return NextResponse.json({ error: 'No pudimos actualizar los datos del cliente.' }, { status: 500 })
+      }
+    }
+
+    const { error: linkError } = await admin.from('customer_users').upsert({
+      customer_id: customerId,
+      user_id: userId,
+    })
+
+    if (linkError) {
+      console.error('Error vinculando customer_users:', linkError)
+      return NextResponse.json({ error: 'No pudimos vincular el folio con el usuario.' }, { status: 500 })
     }
 
     return NextResponse.json(
       {
         userId,
-        linkedCustomerId,
+        linkedCustomerId: customerId,
+        customerFolio,
       },
-      { status: 201 },
+      { status: createdNewUser ? 201 : 200 },
     )
   } catch (error) {
     console.error(error)
