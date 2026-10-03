@@ -95,6 +95,7 @@ export async function POST(request: Request) {
 
     let userId = body.userId?.trim()
     let createdNewUser = false
+    let reusedExistingUser = false
 
     if (!userId) {
       if (!password || password.length < 8) {
@@ -113,15 +114,43 @@ export async function POST(request: Request) {
         },
       })
 
-      if (createError || !created.user) {
-        const message = createError?.message?.toLowerCase().includes('already')
-          ? 'Ya existe un usuario con ese correo en Supabase Auth.'
-          : createError?.message || 'No pudimos crear el usuario en Supabase Auth.'
-        return NextResponse.json({ error: message }, { status: 400 })
-      }
+      if (created.user) {
+        userId = created.user.id
+        createdNewUser = true
+      } else if (createError?.message?.toLowerCase().includes('already')) {
+        const { data: listedUsers, error: listUsersError } = await admin.auth.admin.listUsers({
+          page: 1,
+          perPage: 1000,
+        })
 
-      userId = created.user.id
-      createdNewUser = true
+        if (listUsersError) {
+          console.error('Error buscando usuario existente en Supabase Auth:', listUsersError)
+          return NextResponse.json({ error: 'No pudimos recuperar el usuario existente.' }, { status: 500 })
+        }
+
+        const existingUser = listedUsers.users.find(
+          (user) => user.email?.trim().toLowerCase() === email,
+        )
+
+        if (!existingUser) {
+          return NextResponse.json(
+            { error: 'El correo ya existe en Supabase Auth, pero no pudimos recuperar ese usuario.' },
+            { status: 409 },
+          )
+        }
+
+        userId = existingUser.id
+        reusedExistingUser = true
+      } else {
+        return NextResponse.json(
+          { error: createError?.message || 'No pudimos crear el usuario en Supabase Auth.' },
+          { status: 400 },
+        )
+      }
+    }
+
+    if (!userId) {
+      return NextResponse.json({ error: 'No pudimos resolver el usuario del cliente.' }, { status: 500 })
     }
 
     const { error: profileError } = await admin.from('profiles').upsert({
@@ -200,6 +229,7 @@ export async function POST(request: Request) {
         userId,
         linkedCustomerId: customerId,
         customerFolio,
+        reusedExistingUser,
       },
       { status: createdNewUser ? 201 : 200 },
     )
