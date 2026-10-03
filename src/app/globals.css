@@ -1,6 +1,4 @@
 @import 'tailwindcss';
-@custom-variant dark (&:where(.dark, .dark *));
-
 :root,
 .theme-light {
   --nedvi-blue: #5496cc;
