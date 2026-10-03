@@ -5,6 +5,7 @@ import { ShieldCheck, UserRoundCog, X } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
 import { currentUser } from '@/data/currentUser'
 import { defaultPermissionsForRole, readAccessUsers, writeAccessUsers } from '@/features/access/services/accessStorage'
+import { PasswordRecoveryCenter } from '@/features/access/components/PasswordRecoveryCenter'
 
 type DbRole = 'administracion' | 'obra' | 'cliente'
 type UiRole = 'Administración' | 'Supervisor' | 'Cliente'
@@ -96,8 +97,6 @@ export default function UsersSettingsLayout({ children }: { children: ReactNode 
     )
     writeAccessUsers(nextAuthorized)
 
-    // Si el usuario ya tiene un perfil real en Supabase, sincronizamos también su rol.
-    // Si todavía no existe ahí, la lista autorizada sigue siendo la fuente actual de esta etapa.
     if (user.email) {
       const supabase = createClient()
       const { data: authMatch } = await supabase
@@ -125,7 +124,8 @@ export default function UsersSettingsLayout({ children }: { children: ReactNode 
   return (
     <>
       <div className="relative">
-        <div className="mx-auto flex w-full max-w-7xl justify-end px-0 pt-4 sm:pt-6 lg:pt-8">
+        <div className="mx-auto flex w-full max-w-7xl flex-wrap justify-end gap-2 px-0 pt-4 sm:pt-6 lg:pt-8">
+          <PasswordRecoveryCenter />
           <button
             type="button"
             onClick={() => setOpen(true)}
