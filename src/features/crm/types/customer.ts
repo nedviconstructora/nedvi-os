@@ -30,6 +30,24 @@ export type CustomerTimelineEvent = {
 
 export type Customer = {
   id: string
+  folio?: string
+  company: string
+  contact: string
+  phone: string
+  email: string
+  address: string
+  rfc: string
+  projectType: ProjectType | ''
+  leadSource: LeadSource | ''
+  status: CustomerStatus
+  assignedSalesperson: string
+  notes: string
+  createdAt: string
+  lastContact: string
+  timeline: CustomerTimelineEvent[]
+}
+
+export type CustomerFormValues = {
   company: string
   contact: string
   phone: string
@@ -41,12 +59,7 @@ export type Customer = {
   status: CustomerStatus
   assignedSalesperson: string
   notes: string
-  createdAt: string
-  lastContact: string
-  timeline: CustomerTimelineEvent[]
 }
-
-export type CustomerFormValues = Omit<Customer, 'id' | 'createdAt' | 'lastContact' | 'timeline'>
 
 export type CustomerSortKey = 'company' | 'contact' | 'status' | 'projectType' | 'lastContact'
 export type SortDirection = 'asc' | 'desc'
