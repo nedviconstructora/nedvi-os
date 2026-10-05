@@ -131,8 +131,7 @@ export function LoginForm() {
       }
 
       router.push('/dashboard')
-    } catch (loginError) {
-      console.error('NEDVI OS login error:', loginError)
+    } catch {
       setError('No fue posible conectar con Supabase. Intenta nuevamente.')
     } finally {
       setLoading(false)
@@ -179,21 +178,16 @@ export function LoginForm() {
           data.error ||
           'No fue posible enviar el correo de recuperación.'
 
-        console.error('Supabase recovery error:', {
-          status: response.status,
-          code: data.code,
-          detail,
-        })
-
-        setError(data.code ? `${detail} (${data.code})` : detail)
+        const statusText = response.status ? ` [HTTP ${response.status}]` : ''
+        const codeText = data.code ? ` (${data.code})` : ''
+        setError(`${detail}${codeText}${statusText}`)
         return
       }
 
       setRecoveryMessage(
         'Te enviamos un enlace para crear una nueva contraseña. Revisa tu correo.',
       )
-    } catch (recoveryError) {
-      console.error('NEDVI OS recovery error:', recoveryError)
+    } catch {
       setError('No fue posible solicitar la recuperación. Intenta nuevamente.')
     } finally {
       setRecovering(false)
