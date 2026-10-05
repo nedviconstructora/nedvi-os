@@ -8,40 +8,51 @@ export default function SupabaseCheckPage() {
   const [loading, setLoading] = useState(false)
 
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || ''
-  const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY || ''
+  const publishableKey = process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY || ''
+  const legacyAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || ''
 
-  const maskedKey = supabaseKey
-    ? `${supabaseKey.slice(0, 15)}...${supabaseKey.slice(-6)}`
-    : 'No configurada'
+  const keys = [
+    { name: 'Publishable', value: publishableKey },
+    { name: 'Legacy anon', value: legacyAnonKey },
+  ].filter((item) => item.value)
+
+  function mask(value: string) {
+    return value ? `${value.slice(0, 15)}...${value.slice(-6)}` : 'No configurada'
+  }
 
   async function runCheck() {
     setLoading(true)
     setStatus('Probando...')
     setDetail('')
 
-    if (!supabaseUrl || !supabaseKey) {
+    if (!supabaseUrl || keys.length === 0) {
       setStatus('Configuración incompleta')
-      setDetail('Falta NEXT_PUBLIC_SUPABASE_URL o NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY en .env.local.')
+      setDetail('Falta NEXT_PUBLIC_SUPABASE_URL y al menos una clave pública en .env.local.')
       setLoading(false)
       return
     }
 
     try {
-      const response = await fetch(`${supabaseUrl}/auth/v1/settings`, {
-        headers: {
-          apikey: supabaseKey,
-        },
-      })
+      const results: string[] = []
 
-      const text = await response.text()
+      for (const item of keys) {
+        const response = await fetch(`${supabaseUrl}/auth/v1/settings`, {
+          headers: { apikey: item.value },
+        })
+        const text = await response.text()
 
-      if (response.ok) {
-        setStatus(`Conexión correcta - HTTP ${response.status}`)
-        setDetail('La Project URL y la Publishable Key son válidas para este proyecto.')
-      } else {
-        setStatus(`Error - HTTP ${response.status}`)
-        setDetail(text || 'Supabase rechazó la solicitud.')
+        if (response.ok) {
+          setStatus(`Conexión correcta - HTTP ${response.status}`)
+          setDetail(`${item.name} Key válida. NEDVI OS puede conectarse con este proyecto.`)
+          setLoading(false)
+          return
+        }
+
+        results.push(`${item.name}: HTTP ${response.status} - ${text || 'Sin detalle'}`)
       }
+
+      setStatus('Error de API key')
+      setDetail(results.join('\n\n'))
     } catch (error) {
       setStatus('Error de conexión')
       setDetail(error instanceof Error ? error.message : 'No fue posible conectar con Supabase.')
@@ -55,9 +66,7 @@ export default function SupabaseCheckPage() {
       <section className="mx-auto max-w-2xl rounded-2xl border border-white/10 bg-[#20232A] p-8 shadow-2xl">
         <p className="text-xs font-semibold uppercase tracking-[0.18em] text-[#7BAEE3]">NEDVI OS</p>
         <h1 className="mt-3 text-3xl font-semibold">Diagnóstico de Supabase</h1>
-        <p className="mt-3 text-sm text-[#9CA3AF]">
-          Esta pantalla no muestra la clave completa. Solo verifica si NEDVI OS está leyendo correctamente la configuración pública de Supabase.
-        </p>
+        <p className="mt-3 text-sm text-[#9CA3AF]">Prueba automáticamente las claves públicas configuradas sin mostrarlas completas.</p>
 
         <div className="mt-8 space-y-4 rounded-xl border border-white/10 bg-black/20 p-5 text-sm">
           <div>
@@ -66,7 +75,11 @@ export default function SupabaseCheckPage() {
           </div>
           <div>
             <span className="text-[#9CA3AF]">Publishable Key:</span>
-            <p className="mt-1 break-all font-mono">{maskedKey}</p>
+            <p className="mt-1 break-all font-mono">{mask(publishableKey)}</p>
+          </div>
+          <div>
+            <span className="text-[#9CA3AF]">Legacy anon Key:</span>
+            <p className="mt-1 break-all font-mono">{mask(legacyAnonKey)}</p>
           </div>
           <div>
             <span className="text-[#9CA3AF]">Estado:</span>
@@ -75,17 +88,12 @@ export default function SupabaseCheckPage() {
           {detail && (
             <div>
               <span className="text-[#9CA3AF]">Detalle:</span>
-              <p className="mt-1 break-words font-mono text-xs">{detail}</p>
+              <pre className="mt-1 whitespace-pre-wrap break-words font-mono text-xs">{detail}</pre>
             </div>
           )}
         </div>
 
-        <button
-          type="button"
-          onClick={runCheck}
-          disabled={loading}
-          className="mt-6 w-full rounded-xl bg-[#7BAEE3] px-4 py-3 font-semibold text-[#0B0B0D] transition hover:opacity-90 disabled:opacity-50"
-        >
+        <button type="button" onClick={runCheck} disabled={loading} className="mt-6 w-full rounded-xl bg-[#7BAEE3] px-4 py-3 font-semibold text-[#0B0B0D] transition hover:opacity-90 disabled:opacity-50">
           {loading ? 'Probando conexión...' : 'Probar conexión con Supabase'}
         </button>
       </section>
