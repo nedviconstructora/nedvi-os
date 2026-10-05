@@ -4,24 +4,49 @@ import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { Button } from '@/components/ui/Button'
 import { Input } from '@/components/ui/Input'
-import {
-  defaultPermissionsForRole,
-  readAccessUsers,
-  readPasswordResetRequests,
-  writeAccessSession,
-  writePasswordResetRequests,
-  type PasswordResetRequest,
-} from '@/features/access/services/accessStorage'
+import { defaultPermissionsForRole, writeAccessSession } from '@/features/access/services/accessStorage'
+import type { AppRole } from '@/config/roles'
 
-const DEV_USER_EMAIL = 'pedrog@nedviconstructora.com'
-const DEV_PASSWORD_SHA256 = process.env.NEXT_PUBLIC_DEV_ADMIN_PASSWORD_SHA256 ?? ''
+type SupabaseAuthResponse = {
+  access_token?: string
+  refresh_token?: string
+  expires_in?: number
+  token_type?: string
+  user?: { id: string; email?: string }
+  error?: string
+  error_description?: string
+  msg?: string
+}
 
-async function sha256(value: string) {
-  const bytes = new TextEncoder().encode(value)
-  const hashBuffer = await crypto.subtle.digest('SHA-256', bytes)
-  return Array.from(new Uint8Array(hashBuffer))
-    .map((byte) => byte.toString(16).padStart(2, '0'))
-    .join('')
+type Profile = {
+  role: string
+  active: boolean
+}
+
+type SupabaseRecoveryError = {
+  msg?: string
+  message?: string
+  error?: string
+  error_description?: string
+  code?: string
+}
+
+function mapRole(role: string): AppRole {
+  const normalized = role.trim().toLowerCase()
+  if (normalized === 'cliente') return 'Cliente'
+  if (normalized === 'supervisor') return 'Supervisor'
+  return 'Administración'
+}
+
+function displayNameFromEmail(email: string) {
+  const local = email.split('@')[0] || 'Usuario'
+  if (local.toLowerCase() === 'pedrog') return 'Pedro García'
+  return local
+    .replace(/[._-]+/g, ' ')
+    .split(' ')
+    .filter(Boolean)
+    .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
+    .join(' ')
 }
 
 function initials(name: string) {
@@ -35,148 +60,206 @@ function initials(name: string) {
 
 export function LoginForm() {
   const router = useRouter()
-
   const [showPassword, setShowPassword] = useState(false)
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [error, setError] = useState('')
-  const [submitting, setSubmitting] = useState(false)
-  const [showRecovery, setShowRecovery] = useState(false)
-  const [recoveryEmail, setRecoveryEmail] = useState('')
   const [recoveryMessage, setRecoveryMessage] = useState('')
-  const [recoveryError, setRecoveryError] = useState('')
+  const [loading, setLoading] = useState(false)
+  const [recovering, setRecovering] = useState(false)
 
-  async function handleLogin(event: React.FormEvent<HTMLFormElement>) {
-    event.preventDefault()
-    setError('')
-    setSubmitting(true)
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
+  const publishableKey = process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY
+  const legacyAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
+  const supabaseKeys = [publishableKey, legacyAnonKey].filter(
+    (value): value is string => Boolean(value?.trim()),
+  )
 
-    const normalizedEmail = email.trim().toLowerCase()
-    const passwordHash = await sha256(password)
+  async function requestWithAvailableKey(
+    path: string,
+    init: Omit<RequestInit, 'headers'> & { headers?: Record<string, string> },
+  ) {
+    let lastResponse: Response | null = null
 
-    if (normalizedEmail === DEV_USER_EMAIL && DEV_PASSWORD_SHA256 && passwordHash === DEV_PASSWORD_SHA256) {
-      writeAccessSession({
-        userId: 'user-001',
-        name: 'Pedro García',
-        firstName: 'Pedro',
-        initials: 'PG',
-        email: DEV_USER_EMAIL,
-        role: 'Administración',
-        permissions: defaultPermissionsForRole('Administración'),
-        createdAt: new Date().toISOString(),
+    for (const key of supabaseKeys) {
+      const response = await fetch(`${supabaseUrl}${path}`, {
+        ...init,
+        headers: {
+          ...init.headers,
+          apikey: key,
+        },
       })
-      router.push('/dashboard')
-      return
+      lastResponse = response
+      if (response.status !== 401) return { response, key }
     }
 
-    const user = readAccessUsers().find(
-      (item) => item.email.trim().toLowerCase() === normalizedEmail,
-    )
-
-    if (!user) {
-      setSubmitting(false)
-      setError('Correo o contraseña incorrectos.')
-      return
-    }
-
-    if (user.status !== 'Activo') {
-      setSubmitting(false)
-      setError('Esta cuenta está inactiva. Contacta a Administración.')
-      return
-    }
-
-    if (!user.passwordHash) {
-      setSubmitting(false)
-      setError('La cuenta aún no tiene contraseña configurada. Contacta a Administración.')
-      return
-    }
-
-    if (user.passwordHash !== passwordHash) {
-      setSubmitting(false)
-      setError('Correo o contraseña incorrectos.')
-      return
-    }
-
-    if (user.role === 'Cliente' && (!user.clientId || !user.clientFolio)) {
-      setSubmitting(false)
-      setError('Esta cuenta de cliente no está vinculada correctamente. Contacta a Administración.')
-      return
-    }
-
-    writeAccessSession({
-      userId: user.id,
-      name: user.name,
-      firstName: user.name.split(' ')[0] || user.name,
-      initials: initials(user.name),
-      email: user.email,
-      role: user.role,
-      permissions: user.permissions,
-      createdAt: new Date().toISOString(),
-      clientId: user.clientId,
-      clientFolio: user.clientFolio,
-      clientName: user.clientName,
-    })
-
-    router.push(user.role === 'Cliente' ? '/client-portal' : '/dashboard')
+    return { response: lastResponse, key: supabaseKeys[0] }
   }
 
-  function openRecovery() {
-    setRecoveryEmail(email.trim().toLowerCase())
+  async function handleLogin() {
+    setError('')
     setRecoveryMessage('')
-    setRecoveryError('')
-    setShowRecovery(true)
-  }
 
-  function requestPasswordReset() {
-    setRecoveryMessage('')
-    setRecoveryError('')
-
-    const normalizedEmail = recoveryEmail.trim().toLowerCase()
-    if (!normalizedEmail) {
-      setRecoveryError('Escribe el correo de tu cuenta.')
+    if (!email.trim() || !password) {
+      setError('Escribe tu correo y contraseña.')
       return
     }
 
-    const user = readAccessUsers().find(
-      (item) => item.email.trim().toLowerCase() === normalizedEmail,
-    )
+    if (!supabaseUrl || supabaseKeys.length === 0) {
+      setError('Falta configurar Supabase en .env.local.')
+      return
+    }
 
-    if (!user) {
-      if (normalizedEmail === DEV_USER_EMAIL) {
-        setRecoveryMessage(
-          'La cuenta principal se administra temporalmente desde desarrollo. Al conectar Supabase, la recuperación llegará por correo.',
+    setLoading(true)
+
+    try {
+      const { response: authResponse, key: workingKey } = await requestWithAvailableKey(
+        '/auth/v1/token?grant_type=password',
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            email: email.trim().toLowerCase(),
+            password,
+          }),
+        },
+      )
+
+      if (!authResponse || !workingKey) {
+        setError('No hay una API key pública configurada para Supabase.')
+        return
+      }
+
+      const authData = (await authResponse.json()) as SupabaseAuthResponse
+
+      if (!authResponse.ok || !authData.access_token || !authData.user?.id) {
+        setError(
+          authData.error_description || authData.msg || authData.error || 'Correo o contraseña incorrectos.',
         )
         return
       }
-      setRecoveryError('No encontramos una cuenta aprobada con ese correo.')
+
+      const profileResponse = await fetch(
+        `${supabaseUrl}/rest/v1/profiles?id=eq.${encodeURIComponent(authData.user.id)}&select=role,active&limit=1`,
+        {
+          headers: {
+            apikey: workingKey,
+            Authorization: `Bearer ${authData.access_token}`,
+            Accept: 'application/json',
+          },
+        },
+      )
+
+      if (!profileResponse.ok) {
+        const detail = await profileResponse.text().catch(() => '')
+        setError(`No fue posible consultar el perfil. [HTTP ${profileResponse.status}]${detail ? ` ${detail}` : ''}`)
+        return
+      }
+
+      const profiles = (await profileResponse.json()) as Profile[]
+      const profile = profiles[0]
+
+      if (!profile) {
+        setError('Tu usuario no tiene un perfil asignado. Contacta a Administración.')
+        return
+      }
+
+      if (!profile.active) {
+        setError('Tu acceso está desactivado. Contacta a Administración.')
+        return
+      }
+
+      const normalizedEmail = authData.user.email || email.trim().toLowerCase()
+      const appRole = mapRole(profile.role)
+      const name = displayNameFromEmail(normalizedEmail)
+
+      localStorage.setItem(
+        'nedvi_session',
+        JSON.stringify({
+          access_token: authData.access_token,
+          refresh_token: authData.refresh_token,
+          expires_in: authData.expires_in,
+          token_type: authData.token_type,
+          user: authData.user,
+          role: profile.role,
+        }),
+      )
+
+      writeAccessSession({
+        userId: authData.user.id,
+        name,
+        firstName: name.split(' ')[0] || name,
+        initials: initials(name),
+        email: normalizedEmail,
+        role: appRole,
+        permissions: defaultPermissionsForRole(appRole),
+        createdAt: new Date().toISOString(),
+      })
+
+      router.replace(appRole === 'Cliente' ? '/client-portal' : '/dashboard')
+    } catch {
+      setError('No fue posible conectar con Supabase. Intenta nuevamente.')
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  async function handlePasswordRecovery() {
+    setError('')
+    setRecoveryMessage('')
+
+    if (!email.trim()) {
+      setError('Escribe tu correo antes de solicitar el cambio de contraseña.')
       return
     }
 
-    const requests = readPasswordResetRequests()
-    const existingPending = requests.some(
-      (request) =>
-        request.email.toLowerCase() === normalizedEmail && request.status === 'Pendiente',
-    )
-
-    if (!existingPending) {
-      const request: PasswordResetRequest = {
-        id: crypto.randomUUID(),
-        userId: user.id,
-        name: user.name,
-        email: user.email,
-        status: 'Pendiente',
-        createdAt: new Date().toISOString(),
-      }
-      writePasswordResetRequests([request, ...requests])
+    if (!supabaseUrl || supabaseKeys.length === 0) {
+      setError('Falta configurar Supabase en .env.local.')
+      return
     }
 
-    setRecoveryMessage(
-      'Solicitud enviada. Administración podrá restablecer tu contraseña desde Usuarios y permisos.',
-    )
+    setRecovering(true)
+
+    try {
+      const redirectTo = `${window.location.origin}/reset-password`
+      const { response } = await requestWithAvailableKey(
+        `/auth/v1/recover?redirect_to=${encodeURIComponent(redirectTo)}`,
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ email: email.trim().toLowerCase() }),
+        },
+      )
+
+      if (!response) {
+        setError('No hay una API key pública configurada para Supabase.')
+        return
+      }
+
+      const data = (await response.json().catch(() => ({}))) as SupabaseRecoveryError
+      if (!response.ok) {
+        const detail = data.message || data.error_description || data.msg || data.error || 'No fue posible enviar el correo.'
+        setError(`${detail}${data.code ? ` (${data.code})` : ''} [HTTP ${response.status}]`)
+        return
+      }
+
+      setRecoveryMessage('Te enviamos un enlace para crear una nueva contraseña. Revisa tu correo.')
+    } catch {
+      setError('No fue posible solicitar la recuperación. Intenta nuevamente.')
+    } finally {
+      setRecovering(false)
+    }
+  }
+
+  function handleKeyDown(event: React.KeyboardEvent<HTMLDivElement>) {
+    if (event.key === 'Enter' && !loading) {
+      event.preventDefault()
+      void handleLogin()
+    }
   }
 
   return (
-    <form className="mt-9 space-y-6" onSubmit={handleLogin}>
+    <div className="mt-9 space-y-6" onKeyDown={handleKeyDown}>
       <Input
         id="email"
         name="email"
@@ -188,6 +271,7 @@ export function LoginForm() {
         onChange={(e) => setEmail(e.target.value)}
         required
       />
+
       <Input
         id="password"
         name="password"
@@ -213,64 +297,21 @@ export function LoginForm() {
       <div className="flex items-center justify-end">
         <button
           type="button"
-          onClick={openRecovery}
-          className="text-sm font-medium text-[#A8B0BC] transition hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#5DAAF2] focus-visible:ring-offset-2 focus-visible:ring-offset-[#181D24]"
+          onClick={handlePasswordRecovery}
+          disabled={recovering}
+          className="text-sm font-medium text-[#A8B0BC] transition hover:text-white disabled:opacity-50"
         >
-          ¿Olvidaste tu contraseña?
+          {recovering ? 'Enviando...' : '¿Olvidaste tu contraseña?'}
         </button>
       </div>
 
-      {showRecovery ? (
-        <div className="rounded-xl border border-white/[0.09] bg-black/20 p-4">
-          <p className="text-sm font-semibold text-white">Recuperar contraseña</p>
-          <p className="mt-1 text-xs leading-5 text-[#9CA3AF]">
-            Envía una solicitud a Administración para que restablezca tu acceso.
-          </p>
-          <div className="mt-4">
-            <Input
-              id="recovery-email"
-              name="recovery-email"
-              type="email"
-              label="Correo de la cuenta"
-              placeholder="tu@empresa.com"
-              value={recoveryEmail}
-              onChange={(event) => setRecoveryEmail(event.target.value)}
-            />
-          </div>
-          {recoveryError ? <p className="mt-3 text-xs text-red-400">{recoveryError}</p> : null}
-          {recoveryMessage ? (
-            <p className="mt-3 text-xs leading-5 text-emerald-300">{recoveryMessage}</p>
-          ) : null}
-          <div className="mt-4 flex gap-2">
-            <button
-              type="button"
-              onClick={() => setShowRecovery(false)}
-              className="h-9 flex-1 rounded-lg border border-white/[0.09] px-3 text-xs font-semibold text-[#A8B0BC] transition hover:bg-white/[0.04] hover:text-white"
-            >
-              Cancelar
-            </button>
-            <button
-              type="button"
-              onClick={requestPasswordReset}
-              className="h-9 flex-1 rounded-lg bg-[#7DC6FF] px-3 text-xs font-semibold text-black transition hover:brightness-95"
-            >
-              Enviar solicitud
-            </button>
-          </div>
-        </div>
-      ) : null}
-
       {error ? <p className="text-sm text-red-400">{error}</p> : null}
+      {recoveryMessage ? <p className="text-sm text-emerald-300">{recoveryMessage}</p> : null}
 
-      <Button type="submit" className="group w-full" disabled={submitting}>
-        <span>{submitting ? 'Iniciando sesión...' : 'Iniciar sesión en NEDVI OS'}</span>
-        <span
-          aria-hidden="true"
-          className="ml-3 transition-transform duration-200 group-hover:translate-x-1"
-        >
-          -&gt;
-        </span>
+      <Button type="button" onClick={() => void handleLogin()} className="group w-full" disabled={loading}>
+        <span>{loading ? 'Iniciando sesión...' : 'Iniciar sesión en NEDVI OS'}</span>
+        {!loading ? <span aria-hidden="true" className="ml-3">-&gt;</span> : null}
       </Button>
-    </form>
+    </div>
   )
 }
