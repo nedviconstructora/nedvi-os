@@ -1,7 +1,6 @@
 'use client'
 
 import { useState } from 'react'
-import { useRouter } from 'next/navigation'
 import { Button } from '@/components/ui/Button'
 import { Input } from '@/components/ui/Input'
 import { defaultPermissionsForRole, writeAccessSession } from '@/features/access/services/accessStorage'
@@ -31,6 +30,16 @@ type SupabaseRecoveryError = {
   error?: string
   error_description?: string
   code?: string
+}
+
+type ClientLink = {
+  customer_id: string
+}
+
+type ClientIdentity = {
+  id: string
+  folio: string | null
+  company: string
 }
 
 function mapRole(role: string): AppRole {
@@ -81,7 +90,6 @@ function sanitizePermissions(values: string[] | null | undefined): ModulePermiss
 }
 
 export function LoginForm() {
-  const router = useRouter()
   const [showPassword, setShowPassword] = useState(false)
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
@@ -199,6 +207,66 @@ export function LoginForm() {
         : defaultPermissionsForRole(appRole)
       const name = profile.full_name?.trim() || displayNameFromEmail(normalizedEmail)
 
+      let clientId: string | undefined
+      let clientFolio: string | undefined
+      let clientName: string | undefined
+
+      if (appRole === 'Cliente') {
+        const linkResponse = await fetch(
+          `${supabaseUrl}/rest/v1/customer_users?user_id=eq.${encodeURIComponent(authData.user.id)}&select=customer_id&limit=1`,
+          {
+            headers: {
+              apikey: workingKey,
+              Authorization: `Bearer ${authData.access_token}`,
+              Accept: 'application/json',
+            },
+          },
+        )
+
+        if (!linkResponse.ok) {
+          const detail = await linkResponse.text().catch(() => '')
+          setError(`No fue posible consultar el vínculo del cliente. [HTTP ${linkResponse.status}]${detail ? ` ${detail}` : ''}`)
+          return
+        }
+
+        const links = (await linkResponse.json()) as ClientLink[]
+        const link = links[0]
+
+        if (!link?.customer_id) {
+          setError('Tu usuario de cliente no está vinculado a una empresa. Contacta a Administración.')
+          return
+        }
+
+        const customerResponse = await fetch(
+          `${supabaseUrl}/rest/v1/customers?id=eq.${encodeURIComponent(link.customer_id)}&select=id,folio,company&limit=1`,
+          {
+            headers: {
+              apikey: workingKey,
+              Authorization: `Bearer ${authData.access_token}`,
+              Accept: 'application/json',
+            },
+          },
+        )
+
+        if (!customerResponse.ok) {
+          const detail = await customerResponse.text().catch(() => '')
+          setError(`No fue posible cargar los datos del cliente. [HTTP ${customerResponse.status}]${detail ? ` ${detail}` : ''}`)
+          return
+        }
+
+        const customers = (await customerResponse.json()) as ClientIdentity[]
+        const customer = customers[0]
+
+        if (!customer) {
+          setError('No encontramos la empresa vinculada a tu cuenta.')
+          return
+        }
+
+        clientId = customer.id
+        clientFolio = customer.folio ?? undefined
+        clientName = customer.company
+      }
+
       localStorage.setItem(
         'nedvi_session',
         JSON.stringify({
@@ -220,6 +288,9 @@ export function LoginForm() {
         role: appRole,
         permissions,
         createdAt: new Date().toISOString(),
+        clientId,
+        clientFolio,
+        clientName,
       })
 
       const destination = appRole === 'Cliente' ? '/client-portal' : '/dashboard'
