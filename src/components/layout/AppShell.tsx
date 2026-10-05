@@ -6,9 +6,11 @@ import { useEffect, useState } from 'react'
 import { usePathname, useRouter } from 'next/navigation'
 import { Header } from '@/components/layout/Header'
 import { Sidebar } from '@/components/layout/Sidebar'
-import { permissionForPath } from '@/config/roles'
+import { permissionForPath, type AppRole } from '@/config/roles'
 import {
+  defaultPermissionsForRole,
   readAccessSession,
+  writeAccessSession,
   type AccessSession,
 } from '@/features/access/services/accessStorage'
 import { syncQuoteProjectsIntoProjectStorage } from '@/features/projects/services/quoteProjectSync'
@@ -65,7 +67,60 @@ export function AppShell({ children }: AppShellProps) {
   const [sessionReady, setSessionReady] = useState(false)
 
   useEffect(() => {
-    const session = readAccessSession()
+    let session = readAccessSession()
+
+    if (!session) {
+      try {
+        const rawSupabaseSession = window.localStorage.getItem('nedvi_session')
+        if (rawSupabaseSession) {
+          const supabaseSession = JSON.parse(rawSupabaseSession) as {
+            user?: { id?: string; email?: string }
+            role?: string
+          }
+
+          const normalizedRole = supabaseSession.role?.trim().toLowerCase()
+          const appRole: AppRole =
+            normalizedRole === 'cliente'
+              ? 'Cliente'
+              : normalizedRole === 'obra' || normalizedRole === 'supervisor'
+                ? 'Supervisor'
+                : 'Administración'
+
+          const email = supabaseSession.user?.email ?? ''
+          const localName = email.split('@')[0] || 'Usuario'
+          const name =
+            localName.toLowerCase() === 'pedrog'
+              ? 'Pedro García'
+              : localName
+                  .replace(/[._-]+/g, ' ')
+                  .split(' ')
+                  .filter(Boolean)
+                  .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
+                  .join(' ')
+
+          session = {
+            userId: supabaseSession.user?.id ?? 'supabase-user',
+            name,
+            firstName: name.split(' ')[0] || name,
+            initials: name
+              .split(' ')
+              .filter(Boolean)
+              .slice(0, 2)
+              .map((part) => part[0]?.toUpperCase())
+              .join(''),
+            email,
+            role: appRole,
+            permissions: defaultPermissionsForRole(appRole),
+            createdAt: new Date().toISOString(),
+          }
+
+          writeAccessSession(session)
+        }
+      } catch {
+        window.localStorage.removeItem('nedvi_session')
+      }
+    }
+
     if (!session) {
       setSessionReady(true)
       router.replace('/login')
