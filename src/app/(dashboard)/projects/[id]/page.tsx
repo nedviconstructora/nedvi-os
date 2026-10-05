@@ -2,18 +2,23 @@
 
 import Link from 'next/link'
 import { useEffect, useState } from 'react'
-import { useParams } from 'next/navigation'
+import { useParams, useRouter } from 'next/navigation'
 import { ArrowLeft } from 'lucide-react'
 import { AppShell } from '@/components/layout/AppShell'
 import { ProjectDetail } from '@/features/projects/components/ProjectDetail'
-import { getProjectByIdFromSupabase } from '@/features/projects/services/projectSupabase'
+import {
+  deleteProjectFromSupabase,
+  getProjectByIdFromSupabase,
+} from '@/features/projects/services/projectSupabase'
 import type { Project } from '@/features/projects/types/project'
 
 export default function ProjectDetailPage() {
   const params = useParams<{ id: string }>()
+  const router = useRouter()
   const projectId = params.id
   const [project, setProject] = useState<Project | null | undefined>(undefined)
   const [error, setError] = useState<string | null>(null)
+  const [deleting, setDeleting] = useState(false)
 
   useEffect(() => {
     let active = true
@@ -37,6 +42,26 @@ export default function ProjectDetailPage() {
     return () => { active = false }
   }, [projectId])
 
+  async function handleDelete() {
+    if (!project || deleting) return
+
+    const confirmed = window.confirm('¿Eliminar el proyecto ' + project.name + '? Esta acción lo quitará de Supabase.')
+    if (!confirmed) return
+
+    setDeleting(true)
+    setError(null)
+
+    try {
+      await deleteProjectFromSupabase(project.id)
+      router.push('/projects')
+      router.refresh()
+    } catch (deleteError) {
+      console.error('Error al eliminar proyecto:', deleteError)
+      setError(deleteError instanceof Error ? deleteError.message : 'No se pudo eliminar el proyecto.')
+      setDeleting(false)
+    }
+  }
+
   return <AppShell>
     {error ? <div className="mx-auto mb-5 w-full max-w-[1600px] rounded-2xl border border-red-400/20 bg-red-400/[0.06] px-5 py-4 text-xs text-red-200">{error}</div> : null}
 
@@ -49,7 +74,7 @@ export default function ProjectDetailPage() {
         <Link href="/projects" className="mt-5 inline-flex items-center gap-2 text-xs font-semibold text-[#7187ff] transition hover:text-white"><ArrowLeft size={14} /> Volver a proyectos</Link>
       </div>
     ) : (
-      <ProjectDetail project={project} />
+      <ProjectDetail project={project} onDelete={() => void handleDelete()} deleting={deleting} />
     )}
   </AppShell>
 }
