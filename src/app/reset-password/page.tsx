@@ -15,7 +15,9 @@ export default function ResetPasswordPage() {
   const [loading, setLoading] = useState(false)
 
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
-  const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY
+  const publishableKey = process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY
+  const legacyAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
+  const supabaseKey = publishableKey || legacyAnonKey
 
   useEffect(() => {
     const hash = new URLSearchParams(window.location.hash.replace(/^#/, ''))
@@ -83,11 +85,7 @@ export default function ResetPasswordPage() {
       }
 
       if (!response.ok) {
-        setError(
-          data.error_description ||
-            data.msg ||
-            'No fue posible actualizar la contraseña.',
-        )
+        setError(data.error_description || data.msg || 'No fue posible actualizar la contraseña.')
         return
       }
 
@@ -104,45 +102,15 @@ export default function ResetPasswordPage() {
   return (
     <main className="flex min-h-screen items-center justify-center bg-[#0B0B0D] px-6 py-12 text-white">
       <section className="w-full max-w-md rounded-2xl border border-white/[0.08] bg-[#20232A] p-8 shadow-2xl">
-        <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[#7BAEE3]">
-          NEDVI OS
-        </p>
-        <h1 className="mt-4 text-3xl font-semibold tracking-[-0.04em]">
-          Crea una nueva contraseña
-        </h1>
-        <p className="mt-3 text-sm leading-6 text-[#9CA3AF]">
-          Escribe tu nueva contraseña para recuperar el acceso a tu cuenta.
-        </p>
-
+        <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[#7BAEE3]">NEDVI OS</p>
+        <h1 className="mt-4 text-3xl font-semibold tracking-[-0.04em]">Crea una nueva contraseña</h1>
+        <p className="mt-3 text-sm leading-6 text-[#9CA3AF]">Escribe tu nueva contraseña para recuperar el acceso a tu cuenta.</p>
         <form className="mt-8 space-y-5" onSubmit={handleSubmit}>
-          <Input
-            id="new-password"
-            name="new-password"
-            type="password"
-            label="Nueva contraseña"
-            autoComplete="new-password"
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            required
-          />
-
-          <Input
-            id="confirm-password"
-            name="confirm-password"
-            type="password"
-            label="Confirmar contraseña"
-            autoComplete="new-password"
-            value={confirmPassword}
-            onChange={(e) => setConfirmPassword(e.target.value)}
-            required
-          />
-
+          <Input id="new-password" name="new-password" type="password" label="Nueva contraseña" autoComplete="new-password" value={password} onChange={(e) => setPassword(e.target.value)} required />
+          <Input id="confirm-password" name="confirm-password" type="password" label="Confirmar contraseña" autoComplete="new-password" value={confirmPassword} onChange={(e) => setConfirmPassword(e.target.value)} required />
           {error && <p className="text-sm text-red-500">{error}</p>}
           {message && <p className="text-sm text-emerald-400">{message}</p>}
-
-          <Button type="submit" className="w-full" disabled={!canSubmit}>
-            {loading ? 'Actualizando...' : 'Guardar nueva contraseña'}
-          </Button>
+          <Button type="submit" className="w-full" disabled={!canSubmit}>{loading ? 'Actualizando...' : 'Guardar nueva contraseña'}</Button>
         </form>
       </section>
     </main>
