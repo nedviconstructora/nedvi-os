@@ -1,11 +1,17 @@
 import type { Project, ProjectStatus } from '@/features/projects/types/project'
 
 export function formatProjectDate(value: string): string {
+  if (!value) return 'Sin registrar'
+
+  const normalizedValue = value.includes('T') ? value : `${value}T12:00:00`
+  const date = new Date(normalizedValue)
+  if (Number.isNaN(date.getTime())) return 'Sin registrar'
+
   return new Intl.DateTimeFormat('en-US', {
     day: '2-digit',
     month: 'short',
     year: 'numeric',
-  }).format(new Date(`${value}T12:00:00`))
+  }).format(date)
 }
 
 export function formatCurrency(value: number): string {
