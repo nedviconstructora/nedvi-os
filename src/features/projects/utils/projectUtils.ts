@@ -1,17 +1,21 @@
 import type { Project, ProjectStatus } from '@/features/projects/types/project'
 
 export function formatProjectDate(value: string): string {
-  return new Intl.DateTimeFormat('en-US', {
+  if (!value) return 'Sin fecha'
+  const date = new Date(`${value}T12:00:00`)
+  if (Number.isNaN(date.getTime())) return 'Sin fecha'
+
+  return new Intl.DateTimeFormat('es-MX', {
     day: '2-digit',
     month: 'short',
     year: 'numeric',
-  }).format(new Date(`${value}T12:00:00`))
+  }).format(date)
 }
 
 export function formatCurrency(value: number): string {
-  return new Intl.NumberFormat('en-US', {
+  return new Intl.NumberFormat('es-MX', {
     style: 'currency',
-    currency: 'USD',
+    currency: 'MXN',
     maximumFractionDigits: 0,
   }).format(value)
 }
@@ -28,11 +32,11 @@ export function getProjectInitials(project: Pick<Project, 'name'>): string {
 
 export function getProjectStatusLabel(status: ProjectStatus): string {
   const labels: Record<ProjectStatus, string> = {
-    Planning: 'Planning',
-    Active: 'Active',
-    'At Risk': 'At risk',
-    Completed: 'Completed',
-    'On Hold': 'On hold',
+    Planning: 'Planeación',
+    Active: 'Activo',
+    'At Risk': 'En riesgo',
+    Completed: 'Completado',
+    'On Hold': 'En pausa',
   }
 
   return labels[status]
