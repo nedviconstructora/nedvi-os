@@ -68,8 +68,15 @@ async function supabaseFetch(path: string, init?: RequestInit) {
 export function mapDatabaseRole(role: string): AppRole {
   const normalized = role.trim().toLowerCase()
   if (normalized === 'cliente') return 'Cliente'
-  if (normalized === 'supervisor') return 'Supervisor'
+  if (normalized === 'obra' || normalized === 'supervisor') return 'Supervisor'
   return 'Administración'
+}
+
+function mapAppRoleToDatabase(role: string) {
+  const normalized = role.trim().toLowerCase()
+  if (normalized === 'cliente') return 'cliente'
+  if (normalized === 'supervisor' || normalized === 'obra') return 'obra'
+  return 'administracion'
 }
 
 export function profilePermissions(profile: DatabaseProfile): ModulePermission[] {
@@ -105,9 +112,14 @@ export async function updateDatabaseProfile(
   id: string,
   changes: Partial<Pick<DatabaseProfile, 'role' | 'active' | 'permissions' | 'full_name' | 'phone' | 'position'>>,
 ) {
+  const payload = {
+    ...changes,
+    ...(changes.role ? { role: mapAppRoleToDatabase(changes.role) } : {}),
+  }
+
   await supabaseFetch(`/rest/v1/profiles?id=eq.${encodeURIComponent(id)}`, {
     method: 'PATCH',
     headers: { Prefer: 'return=minimal' },
-    body: JSON.stringify(changes),
+    body: JSON.stringify(payload),
   })
 }
