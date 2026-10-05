@@ -68,18 +68,21 @@ export function LoginForm() {
     return { response: lastResponse, key: supabaseKeys[0] }
   }
 
-  async function handleLogin(event: React.FormEvent<HTMLFormElement>) {
-    event.preventDefault()
-    event.stopPropagation()
+  async function handleLogin() {
     setError('')
     setRecoveryMessage('')
-    setLoading(true)
+
+    if (!email.trim() || !password) {
+      setError('Escribe tu correo y contraseña.')
+      return
+    }
 
     if (!supabaseUrl || supabaseKeys.length === 0) {
       setError('Falta configurar Supabase en .env.local.')
-      setLoading(false)
       return
     }
+
+    setLoading(true)
 
     try {
       const { response: authResponse, key: workingKey } = await requestWithAvailableKey(
@@ -124,7 +127,10 @@ export function LoginForm() {
       )
 
       if (!profileResponse.ok) {
-        setError(`No fue posible consultar el perfil del usuario. [HTTP ${profileResponse.status}]`)
+        const detail = await profileResponse.text().catch(() => '')
+        setError(
+          `No fue posible consultar el perfil del usuario. [HTTP ${profileResponse.status}]${detail ? ` ${detail}` : ''}`,
+        )
         return
       }
 
@@ -154,7 +160,7 @@ export function LoginForm() {
       )
 
       const destination = profile.role === 'cliente' ? '/cliente-demo' : '/dashboard'
-      window.location.assign(destination)
+      window.location.replace(destination)
     } catch {
       setError('No fue posible conectar con Supabase. Intenta nuevamente.')
     } finally {
@@ -216,9 +222,27 @@ export function LoginForm() {
     }
   }
 
+  function handleKeyDown(event: React.KeyboardEvent<HTMLDivElement>) {
+    if (event.key === 'Enter' && !loading) {
+      event.preventDefault()
+      void handleLogin()
+    }
+  }
+
   return (
-    <form className="mt-9 space-y-6" onSubmit={handleLogin} noValidate>
-      <Input id="email" name="email" type="email" label="Work email" placeholder="you@company.com" autoComplete="email" value={email} onChange={(e) => setEmail(e.target.value)} required />
+    <div className="mt-9 space-y-6" onKeyDown={handleKeyDown}>
+      <Input
+        id="email"
+        name="email"
+        type="email"
+        label="Work email"
+        placeholder="you@company.com"
+        autoComplete="email"
+        value={email}
+        onChange={(e) => setEmail(e.target.value)}
+        required
+      />
+
       <Input
         id="password"
         name="password"
@@ -230,22 +254,44 @@ export function LoginForm() {
         onChange={(e) => setPassword(e.target.value)}
         required
         rightElement={
-          <button type="button" onClick={() => setShowPassword((value) => !value)} className="rounded-md px-2 py-1 text-[10px] font-bold uppercase tracking-[0.14em] text-[#9CA3AF] transition hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#163DFF]" aria-label={showPassword ? 'Hide password' : 'Show password'}>
+          <button
+            type="button"
+            onClick={() => setShowPassword((value) => !value)}
+            className="rounded-md px-2 py-1 text-[10px] font-bold uppercase tracking-[0.14em] text-[#9CA3AF] transition hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#163DFF]"
+            aria-label={showPassword ? 'Hide password' : 'Show password'}
+          >
             {showPassword ? 'Hide' : 'Show'}
           </button>
         }
       />
+
       <div className="flex items-center justify-end">
-        <button type="button" onClick={handlePasswordRecovery} disabled={recovering} className="text-sm font-medium text-[#9CA3AF] transition hover:text-white disabled:opacity-50">
+        <button
+          type="button"
+          onClick={handlePasswordRecovery}
+          disabled={recovering}
+          className="text-sm font-medium text-[#9CA3AF] transition hover:text-white disabled:opacity-50"
+        >
           {recovering ? 'Sending...' : 'Forgot password?'}
         </button>
       </div>
+
       {error && <p className="text-sm text-red-500">{error}</p>}
       {recoveryMessage && <p className="text-sm text-emerald-400">{recoveryMessage}</p>}
-      <Button type="submit" className="group w-full" disabled={loading}>
+
+      <Button
+        type="button"
+        onClick={() => void handleLogin()}
+        className="group w-full"
+        disabled={loading}
+      >
         <span>{loading ? 'Signing in...' : 'Sign in to NEDVI OS'}</span>
-        {!loading && <span aria-hidden="true" className="ml-3 transition-transform duration-200 group-hover:translate-x-1">-&gt;</span>}
+        {!loading && (
+          <span aria-hidden="true" className="ml-3 transition-transform duration-200 group-hover:translate-x-1">
+            -&gt;
+          </span>
+        )}
       </Button>
-    </form>
+    </div>
   )
 }
