@@ -8,6 +8,7 @@ import {
   KeyRound,
   Search,
   ShieldCheck,
+  Trash2,
   UserCheck,
   UserRoundCog,
   X,
@@ -59,7 +60,7 @@ function initials(name: string) {
 
 function roleToDatabase(role: AppRole) {
   if (role === 'Administración') return 'administracion'
-  if (role === 'Supervisor') return 'supervisor'
+  if (role === 'Supervisor') return 'obra'
   return 'cliente'
 }
 
@@ -71,6 +72,7 @@ export default function UsersAndPermissionsPage() {
   const [error, setError] = useState('')
   const [savingId, setSavingId] = useState<string | null>(null)
   const [editingProfile, setEditingProfile] = useState<DatabaseProfile | null>(null)
+  const [deletingProfile, setDeletingProfile] = useState<DatabaseProfile | null>(null)
   const [draftRole, setDraftRole] = useState<AppRole>('Supervisor')
   const [draftPermissions, setDraftPermissions] = useState<ModulePermission[]>([])
   const [savedMessage, setSavedMessage] = useState('')
@@ -167,11 +169,45 @@ export default function UsersAndPermissionsPage() {
 
     setSavingId(profile.id)
     setError('')
+    setSavedMessage('')
     try {
       await updateDatabaseProfile(profile.id, { active: !profile.active })
       await loadProfiles()
+      setSavedMessage(profile.active ? 'Usuario desactivado correctamente.' : 'Usuario activado correctamente.')
     } catch (err) {
       setError(err instanceof Error ? err.message : 'No fue posible actualizar el estado del usuario.')
+    } finally {
+      setSavingId(null)
+    }
+  }
+
+  function requestDeleteProfile(profile: DatabaseProfile) {
+    if (!isAdmin) return
+    if (profile.id === session?.userId) {
+      setError('La cuenta de Administración que está en uso no puede eliminarse desde esta pantalla.')
+      return
+    }
+    setError('')
+    setSavedMessage('')
+    setDeletingProfile(profile)
+  }
+
+  async function confirmDeleteProfile() {
+    if (!deletingProfile || !isAdmin) return
+
+    setSavingId(deletingProfile.id)
+    setError('')
+    setSavedMessage('')
+    try {
+      await updateDatabaseProfile(deletingProfile.id, {
+        active: false,
+        deleted_at: new Date().toISOString(),
+      })
+      await loadProfiles()
+      setSavedMessage('Usuario eliminado de NEDVI OS correctamente.')
+      setDeletingProfile(null)
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'No fue posible eliminar el usuario.')
     } finally {
       setSavingId(null)
     }
@@ -243,7 +279,7 @@ export default function UsersAndPermissionsPage() {
               const isCurrentUser = profile.id === session?.userId
 
               return (
-                <div key={profile.id} className="grid gap-4 p-5 md:grid-cols-[minmax(220px,1.2fr)_minmax(150px,0.7fr)_minmax(190px,1fr)_minmax(270px,auto)] md:items-center">
+                <div key={profile.id} className="grid gap-4 p-5 md:grid-cols-[minmax(220px,1.2fr)_minmax(150px,0.7fr)_minmax(190px,1fr)_minmax(340px,auto)] md:items-center">
                   <div className="flex items-center gap-3">
                     <span className="flex h-10 w-10 items-center justify-center rounded-full bg-[#7DC6FF] text-xs font-bold text-black">{initials(name)}</span>
                     <div className="min-w-0">
@@ -281,6 +317,15 @@ export default function UsersAndPermissionsPage() {
                     >
                       <UserRoundCog size={14} /> Permisos
                     </button>
+
+                    <button
+                      type="button"
+                      onClick={() => requestDeleteProfile(profile)}
+                      disabled={!isAdmin || savingId === profile.id || isCurrentUser}
+                      className="inline-flex items-center gap-1.5 rounded-lg border border-red-500/25 bg-red-500/5 px-3 py-1.5 text-xs font-semibold text-red-500 transition hover:bg-red-500/10 disabled:cursor-not-allowed disabled:opacity-40"
+                    >
+                      <Trash2 size={14} /> Eliminar
+                    </button>
                   </div>
                 </div>
               )
@@ -294,7 +339,7 @@ export default function UsersAndPermissionsPage() {
       </section>
 
       <div className="rounded-2xl border border-emerald-500/20 bg-emerald-500/5 p-4 text-xs leading-5 text-[var(--muted)]">
-        <strong className="text-[var(--foreground)]">Persistencia real activada:</strong> roles, permisos y estado activo/inactivo de los usuarios se guardan ahora en Supabase.
+        <strong className="text-[var(--foreground)]">Persistencia real activada:</strong> roles, permisos, estado activo/inactivo y eliminación de acceso se guardan ahora en Supabase.
       </div>
 
       {editingProfile ? (
@@ -359,6 +404,35 @@ export default function UsersAndPermissionsPage() {
                 className="inline-flex h-10 items-center gap-2 rounded-xl bg-[#7DC6FF] px-5 text-sm font-semibold text-black disabled:opacity-60"
               >
                 <KeyRound size={15} /> {savingId === editingProfile.id ? 'Guardando...' : 'Guardar permisos'}
+              </button>
+            </div>
+          </div>
+        </div>
+      ) : null}
+
+      {deletingProfile ? (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/55 p-4 backdrop-blur-sm">
+          <div className="w-full max-w-md rounded-2xl border border-[var(--border)] bg-[var(--surface)] p-6 shadow-2xl">
+            <div className="flex items-start justify-between gap-4">
+              <div>
+                <p className="text-xs font-semibold uppercase tracking-[0.14em] text-red-500">Eliminar acceso</p>
+                <h2 className="mt-2 text-xl font-bold text-[var(--foreground)]">¿Eliminar este usuario?</h2>
+                <p className="mt-2 text-sm leading-6 text-[var(--muted)]">
+                  {deletingProfile.full_name || deletingProfile.email} dejará de aparecer en NEDVI OS y no podrá iniciar sesión porque su perfil quedará desactivado.
+                </p>
+              </div>
+              <button type="button" onClick={() => setDeletingProfile(null)} className="rounded-lg p-2 text-[var(--muted)] hover:bg-[var(--surface-soft)]"><X size={18} /></button>
+            </div>
+
+            <div className="mt-6 flex justify-end gap-2 border-t border-[var(--border)] pt-5">
+              <button type="button" onClick={() => setDeletingProfile(null)} className="h-10 rounded-xl border border-[var(--border)] px-4 text-sm font-semibold text-[var(--foreground)]">Cancelar</button>
+              <button
+                type="button"
+                onClick={() => void confirmDeleteProfile()}
+                disabled={savingId === deletingProfile.id}
+                className="inline-flex h-10 items-center gap-2 rounded-xl bg-red-500 px-5 text-sm font-semibold text-white disabled:opacity-60"
+              >
+                <Trash2 size={15} /> {savingId === deletingProfile.id ? 'Eliminando...' : 'Sí, eliminar'}
               </button>
             </div>
           </div>
