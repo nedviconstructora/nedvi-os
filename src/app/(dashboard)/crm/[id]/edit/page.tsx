@@ -6,27 +6,44 @@ import { useParams } from 'next/navigation'
 import { ArrowLeft, Edit3 } from 'lucide-react'
 import { AppShell } from '@/components/layout/AppShell'
 import { CustomerForm } from '@/features/crm/components/CustomerForm'
-import { readCustomerById } from '@/features/crm/services/customerStorage'
+import { getCustomerFromSupabase } from '@/features/crm/services/supabaseCustomerService'
 import type { Customer } from '@/features/crm/types/customer'
 
 export default function EditCustomerPage() {
   const params = useParams<{ id: string }>()
   const customerId = params.id
   const [customer, setCustomer] = useState<Customer | null | undefined>(undefined)
+  const [error, setError] = useState('')
 
   useEffect(() => {
-    setCustomer(readCustomerById(customerId) ?? null)
+    let active = true
+    setCustomer(undefined)
+    setError('')
+
+    void getCustomerFromSupabase(customerId)
+      .then((result) => {
+        if (active) setCustomer(result ?? null)
+      })
+      .catch((loadError) => {
+        if (!active) return
+        setError(loadError instanceof Error ? loadError.message : 'No fue posible cargar el cliente.')
+        setCustomer(null)
+      })
+
+    return () => {
+      active = false
+    }
   }, [customerId])
 
   return (
     <AppShell>
       <div className="mx-auto w-full max-w-4xl space-y-7">
         {customer === undefined ? (
-          <div className="rounded-2xl border border-white/[0.07] bg-[#20232A] p-8 text-sm text-[#9CA3AF]">Cargando cliente...</div>
+          <div className="rounded-2xl border border-white/[0.07] bg-[#20232A] p-8 text-sm text-[#9CA3AF]">Cargando cliente desde Supabase...</div>
         ) : customer === null ? (
           <div className="rounded-2xl border border-red-400/20 bg-red-400/[0.06] p-8">
             <h1 className="text-xl font-semibold text-white">Cliente no encontrado</h1>
-            <p className="mt-2 text-sm text-[#9CA3AF]">El registro ya no existe o no está disponible en este dispositivo.</p>
+            <p className="mt-2 text-sm text-[#9CA3AF]">{error || 'El registro ya no existe o no está disponible en la base de datos.'}</p>
             <Link href="/crm" className="mt-5 inline-flex items-center gap-2 text-xs font-semibold text-[#7187ff] transition hover:text-white"><ArrowLeft size={14} /> Volver a clientes</Link>
           </div>
         ) : (
