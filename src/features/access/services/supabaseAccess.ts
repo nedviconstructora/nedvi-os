@@ -13,6 +13,7 @@ export type DatabaseProfile = {
   active: boolean
   permissions: string[] | null
   updated_at?: string | null
+  deleted_at?: string | null
 }
 
 type NedviSession = {
@@ -103,14 +104,19 @@ export function profilePermissions(profile: DatabaseProfile): ModulePermission[]
 
 export async function listDatabaseProfiles(): Promise<DatabaseProfile[]> {
   const response = await supabaseFetch(
-    '/rest/v1/profiles?select=id,email,full_name,phone,position,role,active,permissions,updated_at&order=full_name.asc.nullslast',
+    '/rest/v1/profiles?select=id,email,full_name,phone,position,role,active,permissions,updated_at,deleted_at&deleted_at=is.null&order=full_name.asc.nullslast',
   )
   return (await response.json()) as DatabaseProfile[]
 }
 
 export async function updateDatabaseProfile(
   id: string,
-  changes: Partial<Pick<DatabaseProfile, 'role' | 'active' | 'permissions' | 'full_name' | 'phone' | 'position'>>,
+  changes: Partial<
+    Pick<
+      DatabaseProfile,
+      'role' | 'active' | 'permissions' | 'full_name' | 'phone' | 'position' | 'deleted_at'
+    >
+  >,
 ) {
   const payload = {
     ...changes,
