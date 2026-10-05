@@ -1,6 +1,7 @@
 'use client'
 
 import { useState } from 'react'
+import { useRouter } from 'next/navigation'
 import { Button } from '@/components/ui/Button'
 import { Input } from '@/components/ui/Input'
 
@@ -29,6 +30,7 @@ type SupabaseRecoveryError = {
 }
 
 export function LoginForm() {
+  const router = useRouter()
   const [showPassword, setShowPassword] = useState(false)
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
@@ -160,7 +162,8 @@ export function LoginForm() {
       )
 
       const destination = profile.role === 'cliente' ? '/cliente-demo' : '/dashboard'
-      window.location.replace(destination)
+      router.replace(destination)
+      router.refresh()
     } catch {
       setError('No fue posible conectar con Supabase. Intenta nuevamente.')
     } finally {
