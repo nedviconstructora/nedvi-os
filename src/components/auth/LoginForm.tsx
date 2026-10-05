@@ -21,6 +21,14 @@ type Profile = {
   active: boolean
 }
 
+type SupabaseRecoveryError = {
+  msg?: string
+  message?: string
+  error?: string
+  error_description?: string
+  code?: string
+}
+
 export function LoginForm() {
   const router = useRouter()
   const [showPassword, setShowPassword] = useState(false)
@@ -161,17 +169,23 @@ export function LoginForm() {
         },
       )
 
-      const data = (await response.json().catch(() => ({}))) as {
-        msg?: string
-        error_description?: string
-      }
+      const data = (await response.json().catch(() => ({}))) as SupabaseRecoveryError
 
       if (!response.ok) {
-        setError(
+        const detail =
+          data.message ||
           data.error_description ||
-            data.msg ||
-            'No fue posible enviar el correo de recuperación.',
-        )
+          data.msg ||
+          data.error ||
+          'No fue posible enviar el correo de recuperación.'
+
+        console.error('Supabase recovery error:', {
+          status: response.status,
+          code: data.code,
+          detail,
+        })
+
+        setError(data.code ? `${detail} (${data.code})` : detail)
         return
       }
 
