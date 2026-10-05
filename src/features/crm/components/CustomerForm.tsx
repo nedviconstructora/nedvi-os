@@ -9,6 +9,7 @@ import {
   updateCustomerInSupabase,
 } from '@/features/crm/services/customerSupabase'
 import type {
+  Customer,
   CustomerFormValues,
   CustomerStatus,
   LeadSource,
@@ -22,7 +23,7 @@ import {
 import { getCustomerStatusLabel } from '@/features/crm/utils/customerUtils'
 
 type CustomerFormProps = {
-  initialValues?: Partial<CustomerFormValues>
+  initialValues?: Partial<Customer>
   mode: 'create' | 'edit'
   customerId?: string
 }
