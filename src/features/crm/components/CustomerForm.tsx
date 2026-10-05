@@ -5,9 +5,9 @@ import { useState, type FormEvent } from 'react'
 import { useRouter } from 'next/navigation'
 import { Save } from 'lucide-react'
 import {
-  createCustomer,
-  updateCustomer,
-} from '@/features/crm/services/customerStorage'
+  createCustomerInSupabase,
+  updateCustomerInSupabase,
+} from '@/features/crm/services/supabaseCustomerService'
 import type {
   CustomerFormValues,
   CustomerStatus,
@@ -50,7 +50,7 @@ export function CustomerForm({
   const [error, setError] = useState<string | null>(null)
   const [saving, setSaving] = useState(false)
 
-  const handleSubmit = (event: FormEvent<HTMLFormElement>) => {
+  const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault()
     setError(null)
 
@@ -83,14 +83,13 @@ export function CustomerForm({
     try {
       const customer =
         mode === 'create'
-          ? createCustomer(values)
+          ? await createCustomerInSupabase(values)
           : customerId
-            ? updateCustomer(customerId, values)
+            ? await updateCustomerInSupabase(customerId, values)
             : undefined
 
       if (!customer) {
         setError('No se pudo guardar el cliente. Actualiza la página e inténtalo de nuevo.')
-        setSaving(false)
         return
       }
 
@@ -98,7 +97,12 @@ export function CustomerForm({
       router.refresh()
     } catch (submitError) {
       console.error('Error al guardar el cliente:', submitError)
-      setError('Ocurrió un error al guardar el cliente.')
+      setError(
+        submitError instanceof Error
+          ? submitError.message
+          : 'Ocurrió un error al guardar el cliente.',
+      )
+    } finally {
       setSaving(false)
     }
   }
@@ -122,7 +126,7 @@ export function CustomerForm({
       {error ? <p className="rounded-xl border border-red-400/20 bg-red-400/[0.08] px-4 py-3 text-xs text-red-200" role="alert">{error}</p> : null}
 
       <div className="flex flex-col-reverse items-stretch justify-between gap-4 border-t border-white/[0.06] pt-6 sm:flex-row sm:items-center">
-        <p className="text-xs leading-5 text-[#646873]">Los cambios se guardan en este dispositivo mientras conectamos la base de datos central de NEDVI OS.</p>
+        <p className="text-xs leading-5 text-[#646873]">Los cambios se guardan directamente en la base de datos real de Supabase.</p>
         <div className="flex items-center justify-end gap-3">
           <Link href={mode === 'edit' && customerId ? `/crm/${customerId}` : '/crm'} className="inline-flex h-11 items-center justify-center rounded-xl px-4 text-xs font-semibold text-[#9CA3AF] transition hover:bg-white/[0.05] hover:text-white">Cancelar</Link>
           <button type="submit" disabled={saving} className="inline-flex h-11 items-center justify-center gap-2 rounded-xl bg-[#163DFF] px-4 text-xs font-semibold text-white shadow-[0_10px_25px_rgba(22,61,255,0.2)] transition hover:bg-[#3155ff] focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-[#163DFF]/30 disabled:cursor-wait disabled:opacity-60"><Save size={15} />{saving ? 'Guardando...' : mode === 'create' ? 'Crear cliente' : 'Guardar cambios'}</button>
