@@ -36,7 +36,7 @@ type SupabaseRecoveryError = {
 function mapRole(role: string): AppRole {
   const normalized = role.trim().toLowerCase()
   if (normalized === 'cliente') return 'Cliente'
-  if (normalized === 'supervisor') return 'Supervisor'
+  if (normalized === 'obra' || normalized === 'supervisor') return 'Supervisor'
   return 'Administración'
 }
 
