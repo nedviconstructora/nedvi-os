@@ -5,8 +5,6 @@ import { useRouter } from 'next/navigation'
 import { Button } from '@/components/ui/Button'
 import { Input } from '@/components/ui/Input'
 
-const SUPABASE_URL = 'https://auiiobawsmvzcrlhwnnq.supabase.co'
-
 export default function ResetPasswordPage() {
   const router = useRouter()
   const [accessToken, setAccessToken] = useState('')
@@ -16,6 +14,7 @@ export default function ResetPasswordPage() {
   const [message, setMessage] = useState('')
   const [loading, setLoading] = useState(false)
 
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
   const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY
 
   useEffect(() => {
@@ -45,8 +44,8 @@ export default function ResetPasswordPage() {
     setError('')
     setMessage('')
 
-    if (!supabaseKey) {
-      setError('Falta configurar NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY en .env.local.')
+    if (!supabaseUrl || !supabaseKey) {
+      setError('Falta configurar Supabase en .env.local.')
       return
     }
 
@@ -68,7 +67,7 @@ export default function ResetPasswordPage() {
     setLoading(true)
 
     try {
-      const response = await fetch(`${SUPABASE_URL}/auth/v1/user`, {
+      const response = await fetch(`${supabaseUrl}/auth/v1/user`, {
         method: 'PUT',
         headers: {
           apikey: supabaseKey,
