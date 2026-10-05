@@ -1,7 +1,6 @@
 'use client'
 
 import { useState } from 'react'
-import { useRouter } from 'next/navigation'
 import { Button } from '@/components/ui/Button'
 import { Input } from '@/components/ui/Input'
 
@@ -30,7 +29,6 @@ type SupabaseRecoveryError = {
 }
 
 export function LoginForm() {
-  const router = useRouter()
   const [showPassword, setShowPassword] = useState(false)
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
@@ -72,6 +70,7 @@ export function LoginForm() {
 
   async function handleLogin(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault()
+    event.stopPropagation()
     setError('')
     setRecoveryMessage('')
     setLoading(true)
@@ -125,7 +124,7 @@ export function LoginForm() {
       )
 
       if (!profileResponse.ok) {
-        setError('No fue posible consultar el perfil del usuario.')
+        setError(`No fue posible consultar el perfil del usuario. [HTTP ${profileResponse.status}]`)
         return
       }
 
@@ -154,7 +153,8 @@ export function LoginForm() {
         }),
       )
 
-      router.push(profile.role === 'cliente' ? '/cliente-demo' : '/dashboard')
+      const destination = profile.role === 'cliente' ? '/cliente-demo' : '/dashboard'
+      window.location.assign(destination)
     } catch {
       setError('No fue posible conectar con Supabase. Intenta nuevamente.')
     } finally {
@@ -217,7 +217,7 @@ export function LoginForm() {
   }
 
   return (
-    <form className="mt-9 space-y-6" onSubmit={handleLogin}>
+    <form className="mt-9 space-y-6" onSubmit={handleLogin} noValidate>
       <Input id="email" name="email" type="email" label="Work email" placeholder="you@company.com" autoComplete="email" value={email} onChange={(e) => setEmail(e.target.value)} required />
       <Input
         id="password"
