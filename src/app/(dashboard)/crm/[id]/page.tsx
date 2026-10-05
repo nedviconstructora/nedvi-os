@@ -2,13 +2,16 @@
 
 import Link from 'next/link'
 import { useEffect, useState } from 'react'
-import { useParams } from 'next/navigation'
-import { ArrowLeft, Edit3, Mail, MapPin, Phone } from 'lucide-react'
+import { useParams, useRouter } from 'next/navigation'
+import { ArrowLeft, Edit3, Mail, MapPin, Phone, Trash2 } from 'lucide-react'
 import { AppShell } from '@/components/layout/AppShell'
 import { Card, CardHeader } from '@/components/ui/Card'
 import { CustomerStatusBadge } from '@/features/crm/components/CustomerStatusBadge'
 import { CustomerTimeline } from '@/features/crm/components/CustomerTimeline'
-import { readCustomerById } from '@/features/crm/services/customerStorage'
+import {
+  deleteCustomerFromSupabase,
+  getCustomerByIdFromSupabase,
+} from '@/features/crm/services/customerSupabase'
 import type { Customer } from '@/features/crm/types/customer'
 import {
   formatCustomerDate,
@@ -17,22 +20,83 @@ import {
 
 export default function CustomerDetailPage() {
   const params = useParams<{ id: string }>()
+  const router = useRouter()
   const customerId = params.id
   const [customer, setCustomer] = useState<Customer | null | undefined>(undefined)
+  const [error, setError] = useState<string | null>(null)
+  const [deleting, setDeleting] = useState(false)
 
   useEffect(() => {
-    setCustomer(readCustomerById(customerId) ?? null)
+    let active = true
+
+    async function loadCustomer() {
+      setError(null)
+
+      try {
+        const nextCustomer = await getCustomerByIdFromSupabase(customerId)
+        if (active) setCustomer(nextCustomer ?? null)
+      } catch (loadError) {
+        console.error('Error al cargar cliente desde Supabase:', loadError)
+        if (active) {
+          setCustomer(null)
+          setError(
+            loadError instanceof Error
+              ? loadError.message
+              : 'No se pudo cargar el cliente desde Supabase.',
+          )
+        }
+      }
+    }
+
+    void loadCustomer()
+
+    return () => {
+      active = false
+    }
   }, [customerId])
+
+  async function handleDelete() {
+    if (!customer || deleting) return
+
+    const confirmed = window.confirm(
+      `¿Eliminar a ${customer.company}? Esta acción quitará el cliente de Supabase.`,
+    )
+
+    if (!confirmed) return
+
+    setDeleting(true)
+    setError(null)
+
+    try {
+      await deleteCustomerFromSupabase(customer.id)
+      router.push('/crm')
+      router.refresh()
+    } catch (deleteError) {
+      console.error('Error al eliminar cliente de Supabase:', deleteError)
+      setError(
+        deleteError instanceof Error
+          ? deleteError.message
+          : 'No se pudo eliminar el cliente de Supabase.',
+      )
+      setDeleting(false)
+    }
+  }
 
   return (
     <AppShell>
       <div className="mx-auto w-full max-w-[1300px] space-y-7">
+        {error ? (
+          <div className="rounded-2xl border border-red-400/20 bg-red-400/[0.06] px-5 py-4 text-xs text-red-200">
+            {error}
+          </div>
+        ) : null}
+
         {customer === undefined ? (
-          <div className="rounded-2xl border border-white/[0.07] bg-[#20232A] p-8 text-sm text-[#9CA3AF]">Cargando cliente...</div>
+          <div className="rounded-2xl border border-white/[0.07] bg-[#20232A] p-8 text-sm text-[#9CA3AF]">Cargando cliente desde Supabase...</div>
         ) : customer === null ? (
           <div className="rounded-2xl border border-red-400/20 bg-red-400/[0.06] p-8">
             <h1 className="text-xl font-semibold text-white">Cliente no encontrado</h1>
-            <p className="mt-2 text-sm text-[#9CA3AF]">El registro ya no existe o no está disponible en este dispositivo.</p>
+            <p className="mt-2 text-sm text-[#9CA3AF]">El registro no existe o tu usuario no tiene permiso para consultarlo.</p>
             <Link href="/crm" className="mt-5 inline-flex items-center gap-2 text-xs font-semibold text-[#7187ff] transition hover:text-white"><ArrowLeft size={14} /> Volver a clientes</Link>
           </div>
         ) : (
@@ -47,11 +111,15 @@ export default function CustomerDetailPage() {
                       <h1 className="text-3xl font-semibold tracking-[-0.05em] text-white">{customer.company}</h1>
                       <CustomerStatusBadge status={customer.status} />
                     </div>
-                    <p className="mt-2 text-sm text-[#9CA3AF]">{customer.contact} · {customer.projectType}</p>
+                    <p className="mt-2 text-sm text-[#9CA3AF]">{customer.contact}{customer.projectType ? ` · ${customer.projectType}` : ''}</p>
+                    {customer.folio ? <p className="mt-1 text-xs font-medium text-[#7187ff]">{customer.folio}</p> : null}
                   </div>
                 </div>
               </div>
-              <Link href={`/crm/${customer.id}/edit`} className="inline-flex h-10 items-center justify-center gap-2 rounded-xl border border-white/[0.09] px-4 text-xs font-semibold text-[#d5d7df] transition hover:bg-white/[0.06] hover:text-white"><Edit3 size={14} /> Editar cliente</Link>
+              <div className="flex flex-wrap items-center gap-2">
+                <Link href={`/crm/${customer.id}/edit`} className="inline-flex h-10 items-center justify-center gap-2 rounded-xl border border-white/[0.09] px-4 text-xs font-semibold text-[#d5d7df] transition hover:bg-white/[0.06] hover:text-white"><Edit3 size={14} /> Editar cliente</Link>
+                <button type="button" disabled={deleting} onClick={() => void handleDelete()} className="inline-flex h-10 items-center justify-center gap-2 rounded-xl border border-red-400/20 px-4 text-xs font-semibold text-red-200 transition hover:bg-red-400/[0.08] disabled:cursor-wait disabled:opacity-60"><Trash2 size={14} /> {deleting ? 'Eliminando...' : 'Eliminar'}</button>
+              </div>
             </header>
 
             <div className="grid gap-5 lg:grid-cols-[0.9fr_1.1fr]">
@@ -64,7 +132,7 @@ export default function CustomerDetailPage() {
                     <DetailItem icon={MapPin} label="Dirección" value={customer.address} />
                     <div className="grid grid-cols-2 gap-5 border-t border-white/[0.06] pt-5">
                       <div><p className="text-[10px] font-semibold uppercase tracking-[0.12em] text-[#646873]">RFC</p><p className="mt-2 text-xs text-[#d5d7df]">{customer.rfc || 'Sin registrar'}</p></div>
-                      <div><p className="text-[10px] font-semibold uppercase tracking-[0.12em] text-[#646873]">Origen</p><p className="mt-2 text-xs text-[#d5d7df]">{customer.leadSource}</p></div>
+                      <div><p className="text-[10px] font-semibold uppercase tracking-[0.12em] text-[#646873]">Origen</p><p className="mt-2 text-xs text-[#d5d7df]">{customer.leadSource || 'Sin registrar'}</p></div>
                     </div>
                   </div>
                 </Card>
