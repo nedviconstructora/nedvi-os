@@ -1,7 +1,6 @@
 'use client'
 
-import { useState } from 'react'
-import { useRouter } from 'next/navigation'
+import { useEffect, useState } from 'react'
 import { Button } from '@/components/ui/Button'
 import { Input } from '@/components/ui/Input'
 
@@ -30,7 +29,6 @@ type SupabaseRecoveryError = {
 }
 
 export function LoginForm() {
-  const router = useRouter()
   const [showPassword, setShowPassword] = useState(false)
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
@@ -45,6 +43,23 @@ export function LoginForm() {
   const supabaseKeys = [publishableKey, legacyAnonKey].filter(
     (value): value is string => Boolean(value?.trim()),
   )
+
+  useEffect(() => {
+    const rawSession = window.localStorage.getItem('nedvi_session')
+    if (!rawSession) return
+
+    try {
+      const session = JSON.parse(rawSession) as { access_token?: string; role?: string }
+      if (!session.access_token || !session.role) return
+
+      const destination = session.role === 'cliente' ? '/cliente-demo' : '/dashboard'
+      if (window.location.pathname !== destination) {
+        window.location.replace(destination)
+      }
+    } catch {
+      window.localStorage.removeItem('nedvi_session')
+    }
+  }, [])
 
   async function requestWithAvailableKey(
     path: string,
@@ -149,20 +164,25 @@ export function LoginForm() {
         return
       }
 
-      localStorage.setItem(
-        'nedvi_session',
-        JSON.stringify({
-          access_token: authData.access_token,
-          refresh_token: authData.refresh_token,
-          expires_in: authData.expires_in,
-          token_type: authData.token_type,
-          user: authData.user,
-          role: profile.role,
-        }),
-      )
+      const sessionPayload = {
+        access_token: authData.access_token,
+        refresh_token: authData.refresh_token,
+        expires_in: authData.expires_in,
+        token_type: authData.token_type,
+        user: authData.user,
+        role: profile.role,
+      }
+
+      window.localStorage.setItem('nedvi_session', JSON.stringify(sessionPayload))
+
+      const savedSession = window.localStorage.getItem('nedvi_session')
+      if (!savedSession) {
+        setError('No fue posible guardar la sesión local. Intenta nuevamente.')
+        return
+      }
 
       const destination = profile.role === 'cliente' ? '/cliente-demo' : '/dashboard'
-      window.location.assign(destination)
+      window.location.replace(destination)
       return
     } catch {
       setError('No fue posible conectar con Supabase. Intenta nuevamente.')
