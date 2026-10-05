@@ -29,8 +29,6 @@ type SupabaseRecoveryError = {
   code?: string
 }
 
-const SUPABASE_URL = 'https://auiiobawsmvzcrlhwnnq.supabase.co'
-
 export function LoginForm() {
   const router = useRouter()
   const [showPassword, setShowPassword] = useState(false)
@@ -41,6 +39,7 @@ export function LoginForm() {
   const [loading, setLoading] = useState(false)
   const [recovering, setRecovering] = useState(false)
 
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
   const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY
 
   async function handleLogin(event: React.FormEvent<HTMLFormElement>) {
@@ -49,15 +48,15 @@ export function LoginForm() {
     setRecoveryMessage('')
     setLoading(true)
 
-    if (!supabaseKey) {
-      setError('Falta configurar NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY en .env.local.')
+    if (!supabaseUrl || !supabaseKey) {
+      setError('Falta configurar Supabase en .env.local.')
       setLoading(false)
       return
     }
 
     try {
       const authResponse = await fetch(
-        `${SUPABASE_URL}/auth/v1/token?grant_type=password`,
+        `${supabaseUrl}/auth/v1/token?grant_type=password`,
         {
           method: 'POST',
           headers: {
@@ -77,13 +76,14 @@ export function LoginForm() {
         setError(
           authData.error_description ||
             authData.msg ||
+            authData.error ||
             'Correo o contraseña incorrectos.',
         )
         return
       }
 
       const profileResponse = await fetch(
-        `${SUPABASE_URL}/rest/v1/profiles?id=eq.${encodeURIComponent(authData.user.id)}&select=role,active&limit=1`,
+        `${supabaseUrl}/rest/v1/profiles?id=eq.${encodeURIComponent(authData.user.id)}&select=role,active&limit=1`,
         {
           method: 'GET',
           headers: {
@@ -146,8 +146,8 @@ export function LoginForm() {
       return
     }
 
-    if (!supabaseKey) {
-      setError('Falta configurar NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY en .env.local.')
+    if (!supabaseUrl || !supabaseKey) {
+      setError('Falta configurar Supabase en .env.local.')
       return
     }
 
@@ -156,7 +156,7 @@ export function LoginForm() {
     try {
       const redirectTo = `${window.location.origin}/reset-password`
       const response = await fetch(
-        `${SUPABASE_URL}/auth/v1/recover?redirect_to=${encodeURIComponent(redirectTo)}`,
+        `${supabaseUrl}/auth/v1/recover?redirect_to=${encodeURIComponent(redirectTo)}`,
         {
           method: 'POST',
           headers: {
