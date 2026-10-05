@@ -222,7 +222,9 @@ export function LoginForm() {
         createdAt: new Date().toISOString(),
       })
 
-      router.replace(appRole === 'Cliente' ? '/client-portal' : '/dashboard')
+      const destination = appRole === 'Cliente' ? '/client-portal' : '/dashboard'
+      window.location.assign(destination)
+      return
     } catch {
       setError('No fue posible conectar con Supabase. Intenta nuevamente.')
     } finally {
