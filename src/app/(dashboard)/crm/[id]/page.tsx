@@ -6,6 +6,7 @@ import { useParams, useRouter } from 'next/navigation'
 import { ArrowLeft, Edit3, Mail, MapPin, Phone, Trash2 } from 'lucide-react'
 import { AppShell } from '@/components/layout/AppShell'
 import { Card, CardHeader } from '@/components/ui/Card'
+import { CustomerPortalAccess } from '@/features/crm/components/CustomerPortalAccess'
 import { CustomerStatusBadge } from '@/features/crm/components/CustomerStatusBadge'
 import { CustomerTimeline } from '@/features/crm/components/CustomerTimeline'
 import {
@@ -145,6 +146,14 @@ export default function CustomerDetailPage() {
                     <div className="col-span-2 border-t border-white/[0.06] pt-5"><p className="text-[10px] font-semibold uppercase tracking-[0.12em] text-[#646873]">Notas</p><p className="mt-2 text-xs leading-6 text-[#9CA3AF]">{customer.notes || 'Sin notas registradas.'}</p></div>
                   </div>
                 </Card>
+
+                <CustomerPortalAccess
+                  customerId={customer.id}
+                  customerName={customer.company}
+                  customerEmail={customer.email}
+                  contactName={customer.contact}
+                  folio={customer.folio}
+                />
               </div>
 
               <Card>
