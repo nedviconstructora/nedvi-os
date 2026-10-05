@@ -18,12 +18,12 @@ import {
 } from '@/features/access/services/accessStorage'
 import {
   readDailyReports,
-  readOperationProjects,
   readProgressRecords,
   type DailyReport,
   type OperationProject,
   type ProgressRecord,
 } from '@/features/operations/services/operationsStorage'
+import { getProjectsFromSupabase } from '@/features/projects/services/projectSupabase'
 
 type ClientQuote = {
   id: string
@@ -79,7 +79,7 @@ export default function ClientPortalPage() {
   const [quotes, setQuotes] = useState<ClientQuote[]>([])
   const [ready, setReady] = useState(false)
 
-  function loadData(activeSession: AccessSession) {
+  async function loadData(activeSession: AccessSession) {
     const clientName = (activeSession.clientName ?? '').trim().toLowerCase()
     const clientId = activeSession.clientId
 
@@ -89,8 +89,23 @@ export default function ClientPortalPage() {
       return sameId || sameName
     })
 
-    const projectIds = new Set(matchingQuotes.filter((quote) => quote.convertedToProject).map((quote) => quote.id))
-    const matchingProjects = readOperationProjects().filter((project) => projectIds.has(project.id))
+    const supabaseProjects = await getProjectsFromSupabase()
+    const matchingProjects: OperationProject[] = supabaseProjects
+      .filter((project) => !clientId || project.clientId === clientId)
+      .map((project) => ({
+        id: project.id,
+        folio: project.folio || 'Sin folio',
+        project: project.name,
+        client: project.client,
+        owner: project.manager,
+        contact: project.clientContact,
+        phone: '',
+        email: '',
+        address: project.address,
+        rfc: '',
+      }))
+
+    const projectIds = new Set(matchingProjects.map((project) => project.id))
     const matchingProgress = readProgressRecords().filter((record) => projectIds.has(record.quoteId))
     const matchingReports = readDailyReports().filter((report) => projectIds.has(report.quoteId))
 
@@ -113,10 +128,20 @@ export default function ClientPortalPage() {
     }
 
     setSession(activeSession)
-    loadData(activeSession)
-    setReady(true)
 
-    const refresh = () => loadData(activeSession)
+    void loadData(activeSession)
+      .catch((loadError) => {
+        console.error('Error al cargar el portal del cliente:', loadError)
+      })
+      .finally(() => {
+        setReady(true)
+      })
+
+    const refresh = () => {
+      void loadData(activeSession).catch((loadError) => {
+        console.error('Error al actualizar el portal del cliente:', loadError)
+      })
+    }
     window.addEventListener('focus', refresh)
     window.addEventListener('storage', refresh)
     return () => {
@@ -216,14 +241,14 @@ export default function ClientPortalPage() {
               <h2 className="text-xl font-bold">Mis proyectos</h2>
               <p className="mt-1 text-sm text-slate-500">Información vinculada con tu cuenta de cliente.</p>
             </div>
-            <button type="button" onClick={() => loadData(session)} className="inline-flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs font-semibold text-slate-600 shadow-sm hover:bg-slate-50"><RefreshCw size={14} /> Actualizar</button>
+            <button type="button" onClick={() => void loadData(session)} className="inline-flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs font-semibold text-slate-600 shadow-sm hover:bg-slate-50"><RefreshCw size={14} /> Actualizar</button>
           </div>
 
           {!projectCards.length ? (
             <div className="rounded-2xl border border-dashed border-slate-300 bg-white p-10 text-center">
               <FolderKanban className="mx-auto text-[#5496CC]" size={34} />
               <h3 className="mt-4 font-bold">Todavía no hay proyectos vinculados</h3>
-              <p className="mt-2 text-sm text-slate-500">Cuando NEDVI convierta una cotización aprobada en proyecto, aparecerá aquí.</p>
+              <p className="mt-2 text-sm text-slate-500">Cuando NEDVI cree un proyecto vinculado a tu empresa, aparecerá aquí.</p>
             </div>
           ) : (
             <div className="grid gap-5 xl:grid-cols-2">
