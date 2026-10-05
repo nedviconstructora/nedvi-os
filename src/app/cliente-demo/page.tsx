@@ -19,10 +19,6 @@ type StoredSession = {
   role?: string
 }
 
-type CustomerLinkRow = {
-  customer_id: string
-}
-
 type CustomerRow = {
   id: string
   folio: string | null
@@ -36,6 +32,12 @@ type CustomerRow = {
   status: string
   notes: string
   created_at: string
+}
+
+type BootstrapResponse = {
+  user?: { id: string; email: string }
+  customer?: CustomerRow
+  error?: string
 }
 
 type PortalCustomer = {
@@ -74,14 +76,15 @@ export default function ClienteDemoPage() {
 
   useEffect(() => {
     let active = true
+    const controller = new AbortController()
+    const timeout = window.setTimeout(() => controller.abort(), 12000)
 
     async function loadPortal() {
       const session = getStoredSession()
       const accessToken = session?.access_token
-      const userId = session?.user?.id
       const role = session?.role
 
-      if (!accessToken || !userId) {
+      if (!accessToken) {
         router.replace('/login')
         return
       }
@@ -91,77 +94,27 @@ export default function ClienteDemoPage() {
         return
       }
 
-      setUserEmail(session?.user?.email ?? '')
-
-      const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL?.trim()
-      const keys = [
-        process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY,
-        process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY,
-      ].filter((value): value is string => Boolean(value?.trim()))
-
-      if (!supabaseUrl || keys.length === 0) {
-        if (active) {
-          setError('Falta configurar Supabase en NEDVI OS.')
-          setLoading(false)
-        }
-        return
-      }
-
-      async function request(path: string) {
-        let lastResponse: Response | null = null
-
-        for (const key of keys) {
-          const response = await fetch(`${supabaseUrl}${path}`, {
-            method: 'GET',
-            headers: {
-              apikey: key,
-              Authorization: `Bearer ${accessToken}`,
-              Accept: 'application/json',
-            },
-            cache: 'no-store',
-          })
-
-          lastResponse = response
-          if (response.status !== 401) return response
-        }
-
-        return lastResponse
-      }
-
       try {
-        const linkResponse = await request(
-          `/rest/v1/customer_users?user_id=eq.${encodeURIComponent(userId)}&select=customer_id&limit=1`,
-        )
+        const response = await fetch('/api/portal/bootstrap', {
+          method: 'GET',
+          headers: {
+            Authorization: `Bearer ${accessToken}`,
+            Accept: 'application/json',
+          },
+          cache: 'no-store',
+          signal: controller.signal,
+        })
 
-        if (!linkResponse?.ok) {
-          const detail = await linkResponse?.text().catch(() => '')
-          throw new Error(`No fue posible consultar el vínculo del cliente.${detail ? ` ${detail}` : ''}`)
+        const data = (await response.json().catch(() => ({}))) as BootstrapResponse
+
+        if (!response.ok || !data.customer) {
+          throw new Error(data.error || `No fue posible abrir el portal. [HTTP ${response.status}]`)
         }
 
-        const links = (await linkResponse.json()) as CustomerLinkRow[]
-        const customerId = links[0]?.customer_id
-
-        if (!customerId) {
-          throw new Error('Tu usuario todavía no está vinculado a un cliente de NEDVI OS.')
-        }
-
-        const customerResponse = await request(
-          `/rest/v1/customers?id=eq.${encodeURIComponent(customerId)}&select=id,folio,company,contact,phone,email,address,rfc,project_type,status,notes,created_at&limit=1`,
-        )
-
-        if (!customerResponse?.ok) {
-          const detail = await customerResponse?.text().catch(() => '')
-          throw new Error(`No fue posible cargar la información del cliente.${detail ? ` ${detail}` : ''}`)
-        }
-
-        const rows = (await customerResponse.json()) as CustomerRow[]
-        const row = rows[0]
-
-        if (!row) {
-          throw new Error('No encontramos la información de tu empresa.')
-        }
+        const row = data.customer
 
         if (active) {
+          setUserEmail(data.user?.email ?? session?.user?.email ?? '')
           setCustomer({
             id: row.id,
             folio: row.folio ?? '',
@@ -178,7 +131,11 @@ export default function ClienteDemoPage() {
           })
         }
       } catch (portalError) {
-        if (active) {
+        if (!active) return
+
+        if (portalError instanceof DOMException && portalError.name === 'AbortError') {
+          setError('La carga del portal tardó demasiado. Intenta iniciar sesión nuevamente.')
+        } else {
           setError(
             portalError instanceof Error
               ? portalError.message
@@ -194,13 +151,14 @@ export default function ClienteDemoPage() {
 
     return () => {
       active = false
+      controller.abort()
+      window.clearTimeout(timeout)
     }
   }, [router])
 
   function handleLogout() {
     window.localStorage.removeItem('nedvi_session')
-    router.replace('/login')
-    router.refresh()
+    window.location.assign('/login')
   }
 
   if (loading) {
