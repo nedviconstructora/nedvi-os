@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation'
 import { Button } from '@/components/ui/Button'
 import { Input } from '@/components/ui/Input'
 import { defaultPermissionsForRole, writeAccessSession } from '@/features/access/services/accessStorage'
-import type { AppRole } from '@/config/roles'
+import type { AppRole, ModulePermission } from '@/config/roles'
 
 type SupabaseAuthResponse = {
   access_token?: string
@@ -21,6 +21,8 @@ type SupabaseAuthResponse = {
 type Profile = {
   role: string
   active: boolean
+  permissions?: string[] | null
+  full_name?: string | null
 }
 
 type SupabaseRecoveryError = {
@@ -56,6 +58,26 @@ function initials(name: string) {
     .slice(0, 2)
     .map((part) => part[0]?.toUpperCase())
     .join('')
+}
+
+function sanitizePermissions(values: string[] | null | undefined): ModulePermission[] {
+  const allowed = new Set<ModulePermission>([
+    'dashboard',
+    'commercial',
+    'projects',
+    'purchasing',
+    'operations',
+    'agenda',
+    'human-resources',
+    'finance',
+    'indicators',
+    'settings',
+    'coral',
+    'client-portal',
+  ])
+  return (values || []).filter(
+    (value): value is ModulePermission => allowed.has(value as ModulePermission),
+  )
 }
 
 export function LoginForm() {
@@ -140,7 +162,7 @@ export function LoginForm() {
       }
 
       const profileResponse = await fetch(
-        `${supabaseUrl}/rest/v1/profiles?id=eq.${encodeURIComponent(authData.user.id)}&select=role,active&limit=1`,
+        `${supabaseUrl}/rest/v1/profiles?id=eq.${encodeURIComponent(authData.user.id)}&select=role,active,permissions,full_name&limit=1`,
         {
           headers: {
             apikey: workingKey,
@@ -171,7 +193,11 @@ export function LoginForm() {
 
       const normalizedEmail = authData.user.email || email.trim().toLowerCase()
       const appRole = mapRole(profile.role)
-      const name = displayNameFromEmail(normalizedEmail)
+      const storedPermissions = sanitizePermissions(profile.permissions)
+      const permissions = storedPermissions.length
+        ? storedPermissions
+        : defaultPermissionsForRole(appRole)
+      const name = profile.full_name?.trim() || displayNameFromEmail(normalizedEmail)
 
       localStorage.setItem(
         'nedvi_session',
@@ -192,7 +218,7 @@ export function LoginForm() {
         initials: initials(name),
         email: normalizedEmail,
         role: appRole,
-        permissions: defaultPermissionsForRole(appRole),
+        permissions,
         createdAt: new Date().toISOString(),
       })
 
