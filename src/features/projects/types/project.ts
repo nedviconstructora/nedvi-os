@@ -72,7 +72,7 @@ export type ProjectProgressPoint = {
 export type Project = {
   id: string
   folio?: string
-  customerId: string
+  customerId?: string
   name: string
   client: string
   clientContact: string
