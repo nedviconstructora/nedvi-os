@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useState } from 'react'
 import { Button } from '@/components/ui/Button'
 import { Input } from '@/components/ui/Input'
 
@@ -44,22 +44,6 @@ export function LoginForm() {
     (value): value is string => Boolean(value?.trim()),
   )
 
-  useEffect(() => {
-    const rawSession = window.localStorage.getItem('nedvi_session')
-    if (!rawSession) return
-
-    try {
-      const session = JSON.parse(rawSession) as { access_token?: string; role?: string }
-      if (!session.access_token || !session.role) return
-
-      const destination = session.role === 'cliente' ? '/cliente-demo' : '/dashboard'
-      if (window.location.pathname !== destination) {
-        window.location.replace(destination)
-      }
-    } catch {
-      window.localStorage.removeItem('nedvi_session')
-    }
-  }, [])
 
   async function requestWithAvailableKey(
     path: string,
@@ -175,14 +159,8 @@ export function LoginForm() {
 
       window.localStorage.setItem('nedvi_session', JSON.stringify(sessionPayload))
 
-      const savedSession = window.localStorage.getItem('nedvi_session')
-      if (!savedSession) {
-        setError('No fue posible guardar la sesión local. Intenta nuevamente.')
-        return
-      }
-
       const destination = profile.role === 'cliente' ? '/cliente-demo' : '/dashboard'
-      window.location.replace(destination)
+      window.location.href = destination
       return
     } catch {
       setError('No fue posible conectar con Supabase. Intenta nuevamente.')
