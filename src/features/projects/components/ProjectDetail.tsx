@@ -14,7 +14,7 @@ import { ProjectStatusBadge } from '@/features/projects/components/ProjectStatus
 import { SafetyIncidentCard } from '@/features/projects/components/SafetyIncidentCard'
 import { TaskList } from '@/features/projects/components/TaskList'
 import { Timeline } from '@/features/projects/components/Timeline'
-import type { Project } from '@/features/projects/types/project'
+import type { Project, ProjectType } from '@/features/projects/types/project'
 import {
   formatProjectDate,
   getProjectInitials,
@@ -22,6 +22,14 @@ import {
 
 type ProjectDetailProps = {
   project: Project
+}
+
+const projectTypeLabels: Record<ProjectType, string> = {
+  Residential: 'Residencial',
+  Commercial: 'Comercial',
+  Industrial: 'Industrial',
+  Infrastructure: 'Infraestructura',
+  Renovation: 'Remodelación',
 }
 
 export function ProjectDetail({ project }: ProjectDetailProps) {
@@ -62,7 +70,7 @@ export function ProjectDetail({ project }: ProjectDetailProps) {
                   <span>{project.client}</span>
                 )}
                 <span>·</span>
-                <span>{project.projectType}</span>
+                <span>{projectTypeLabels[project.projectType]}</span>
               </div>
 
               {project.clientContact ? (
