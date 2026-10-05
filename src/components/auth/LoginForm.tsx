@@ -5,34 +5,135 @@ import { useRouter } from 'next/navigation'
 import { Button } from '@/components/ui/Button'
 import { Input } from '@/components/ui/Input'
 
+type SupabaseAuthResponse = {
+  access_token?: string
+  refresh_token?: string
+  expires_in?: number
+  token_type?: string
+  user?: {
+    id: string
+    email?: string
+  }
+  error?: string
+  error_description?: string
+  msg?: string
+}
+
+type Profile = {
+  role: string
+  active: boolean
+}
+
 export function LoginForm() {
   const router = useRouter()
 
   const [showPassword, setShowPassword] = useState(false)
-
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [error, setError] = useState('')
+  const [loading, setLoading] = useState(false)
 
-  function handleLogin(event: React.FormEvent<HTMLFormElement>) {
+  async function handleLogin(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault()
+    setError('')
+    setLoading(true)
 
-    if (
-      email === 'pedrog@nedviconstructora.com' &&
-      password === 'Nedvi2026!'
-    ) {
-      router.push('/dashboard')
+    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
+    const supabaseKey =
+      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ||
+      process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY
+
+    if (!supabaseUrl || !supabaseKey) {
+      setError('Falta configurar Supabase en .env.local.')
+      setLoading(false)
       return
     }
 
-    setError('Correo o contraseña incorrectos.')
+    try {
+      const authResponse = await fetch(
+        `${supabaseUrl}/auth/v1/token?grant_type=password`,
+        {
+          method: 'POST',
+          headers: {
+            apikey: supabaseKey,
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            email: email.trim().toLowerCase(),
+            password,
+          }),
+        },
+      )
+
+      const authData = (await authResponse.json()) as SupabaseAuthResponse
+
+      if (!authResponse.ok || !authData.access_token || !authData.user?.id) {
+        setError(
+          authData.error_description ||
+            authData.msg ||
+            'Correo o contraseña incorrectos.',
+        )
+        return
+      }
+
+      const profileResponse = await fetch(
+        `${supabaseUrl}/rest/v1/profiles?id=eq.${encodeURIComponent(authData.user.id)}&select=role,active&limit=1`,
+        {
+          method: 'GET',
+          headers: {
+            apikey: supabaseKey,
+            Authorization: `Bearer ${authData.access_token}`,
+            Accept: 'application/json',
+          },
+        },
+      )
+
+      if (!profileResponse.ok) {
+        setError('No fue posible consultar el perfil del usuario.')
+        return
+      }
+
+      const profiles = (await profileResponse.json()) as Profile[]
+      const profile = profiles[0]
+
+      if (!profile) {
+        setError('Tu usuario no tiene un perfil asignado. Contacta a administración.')
+        return
+      }
+
+      if (!profile.active) {
+        setError('Tu acceso está desactivado. Contacta a administración.')
+        return
+      }
+
+      localStorage.setItem(
+        'nedvi_session',
+        JSON.stringify({
+          access_token: authData.access_token,
+          refresh_token: authData.refresh_token,
+          expires_in: authData.expires_in,
+          token_type: authData.token_type,
+          user: authData.user,
+          role: profile.role,
+        }),
+      )
+
+      if (profile.role === 'cliente') {
+        router.push('/cliente-demo')
+        return
+      }
+
+      router.push('/dashboard')
+    } catch (loginError) {
+      console.error('NEDVI OS login error:', loginError)
+      setError('No fue posible conectar con Supabase. Intenta nuevamente.')
+    } finally {
+      setLoading(false)
+    }
   }
 
   return (
-    <form
-      className="mt-9 space-y-6"
-      onSubmit={handleLogin}
-    >
+    <form className="mt-9 space-y-6" onSubmit={handleLogin}>
       <Input
         id="email"
         name="email"
@@ -44,6 +145,7 @@ export function LoginForm() {
         onChange={(e) => setEmail(e.target.value)}
         required
       />
+
       <Input
         id="password"
         name="password"
@@ -65,6 +167,7 @@ export function LoginForm() {
           </button>
         }
       />
+
       <div className="flex items-center justify-end">
         <button
           type="button"
@@ -74,21 +177,19 @@ export function LoginForm() {
         </button>
       </div>
 
-      {error && (
-        <p className="text-sm text-red-500">
-          {error}
-        </p>
-      )}
+      {error && <p className="text-sm text-red-500">{error}</p>}
 
-      <Button type="submit" className="group w-full">
-        <span>Sign in to NEDVI OS</span>
-        <span
-          aria-hidden="true"
-          className="ml-3 transition-transform duration-200 group-hover:translate-x-1"
-        >
-          -&gt;
-        </span>
+      <Button type="submit" className="group w-full" disabled={loading}>
+        <span>{loading ? 'Signing in...' : 'Sign in to NEDVI OS'}</span>
+        {!loading && (
+          <span
+            aria-hidden="true"
+            className="ml-3 transition-transform duration-200 group-hover:translate-x-1"
+          >
+            -&gt;
+          </span>
+        )}
       </Button>
-       </form>
-       )
-       }
+    </form>
+  )
+}
