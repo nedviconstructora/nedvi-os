@@ -10,10 +10,7 @@ type SupabaseAuthResponse = {
   refresh_token?: string
   expires_in?: number
   token_type?: string
-  user?: {
-    id: string
-    email?: string
-  }
+  user?: { id: string; email?: string }
   error?: string
   error_description?: string
   msg?: string
@@ -26,22 +23,24 @@ type Profile = {
 
 export function LoginForm() {
   const router = useRouter()
-
   const [showPassword, setShowPassword] = useState(false)
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [error, setError] = useState('')
+  const [recoveryMessage, setRecoveryMessage] = useState('')
   const [loading, setLoading] = useState(false)
+  const [recovering, setRecovering] = useState(false)
+
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
+  const supabaseKey =
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ||
+    process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY
 
   async function handleLogin(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault()
     setError('')
+    setRecoveryMessage('')
     setLoading(true)
-
-    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
-    const supabaseKey =
-      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ||
-      process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY
 
     if (!supabaseUrl || !supabaseKey) {
       setError('Falta configurar Supabase en .env.local.')
@@ -132,6 +131,61 @@ export function LoginForm() {
     }
   }
 
+  async function handlePasswordRecovery() {
+    setError('')
+    setRecoveryMessage('')
+
+    if (!email.trim()) {
+      setError('Escribe tu correo antes de solicitar el cambio de contraseña.')
+      return
+    }
+
+    if (!supabaseUrl || !supabaseKey) {
+      setError('Falta configurar Supabase en .env.local.')
+      return
+    }
+
+    setRecovering(true)
+
+    try {
+      const redirectTo = `${window.location.origin}/reset-password`
+      const response = await fetch(
+        `${supabaseUrl}/auth/v1/recover?redirect_to=${encodeURIComponent(redirectTo)}`,
+        {
+          method: 'POST',
+          headers: {
+            apikey: supabaseKey,
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ email: email.trim().toLowerCase() }),
+        },
+      )
+
+      const data = (await response.json().catch(() => ({}))) as {
+        msg?: string
+        error_description?: string
+      }
+
+      if (!response.ok) {
+        setError(
+          data.error_description ||
+            data.msg ||
+            'No fue posible enviar el correo de recuperación.',
+        )
+        return
+      }
+
+      setRecoveryMessage(
+        'Te enviamos un enlace para crear una nueva contraseña. Revisa tu correo.',
+      )
+    } catch (recoveryError) {
+      console.error('NEDVI OS recovery error:', recoveryError)
+      setError('No fue posible solicitar la recuperación. Intenta nuevamente.')
+    } finally {
+      setRecovering(false)
+    }
+  }
+
   return (
     <form className="mt-9 space-y-6" onSubmit={handleLogin}>
       <Input
@@ -171,21 +225,23 @@ export function LoginForm() {
       <div className="flex items-center justify-end">
         <button
           type="button"
-          className="text-sm font-medium text-[#9CA3AF] transition hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#163DFF] focus-visible:ring-offset-2 focus-visible:ring-offset-[#20232A]"
+          onClick={handlePasswordRecovery}
+          disabled={recovering}
+          className="text-sm font-medium text-[#9CA3AF] transition hover:text-white disabled:opacity-50"
         >
-          Forgot password?
+          {recovering ? 'Sending...' : 'Forgot password?'}
         </button>
       </div>
 
       {error && <p className="text-sm text-red-500">{error}</p>}
+      {recoveryMessage && (
+        <p className="text-sm text-emerald-400">{recoveryMessage}</p>
+      )}
 
       <Button type="submit" className="group w-full" disabled={loading}>
         <span>{loading ? 'Signing in...' : 'Sign in to NEDVI OS'}</span>
         {!loading && (
-          <span
-            aria-hidden="true"
-            className="ml-3 transition-transform duration-200 group-hover:translate-x-1"
-          >
+          <span aria-hidden="true" className="ml-3 transition-transform duration-200 group-hover:translate-x-1">
             -&gt;
           </span>
         )}
