@@ -1,7 +1,7 @@
 'use client'
 
 import Link from 'next/link'
-import { useEffect, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import {
   ChevronLeft,
   ChevronRight,
@@ -19,39 +19,38 @@ import { CustomerSearch } from '@/features/crm/components/CustomerSearch'
 import { CustomerTable } from '@/features/crm/components/CustomerTable'
 import { useCustomerFilters } from '@/features/crm/hooks/useCustomerFilters'
 import {
-  CRM_STORAGE_KEY,
-  CRM_UPDATED_EVENT,
-  deleteCustomer,
-  readCustomers,
-} from '@/features/crm/services/customerStorage'
+  deleteCustomerFromSupabase,
+  listCustomersFromSupabase,
+} from '@/features/crm/services/supabaseCustomerService'
 import type { Customer } from '@/features/crm/types/customer'
 
 const PAGE_SIZE = 8
 
-type CustomerWorkspaceProps = {
-  customers: Customer[]
-}
+export function CustomerWorkspace() {
+  const [customers, setCustomers] = useState<Customer[]>([])
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState('')
+  const [deletingId, setDeletingId] = useState<string | null>(null)
 
-export function CustomerWorkspace({ customers: initialCustomers }: CustomerWorkspaceProps) {
-  const [customers, setCustomers] = useState(initialCustomers)
-
-  useEffect(() => {
-    const refreshCustomers = () => setCustomers(readCustomers())
-    const handleStorage = (event: StorageEvent) => {
-      if (event.key === CRM_STORAGE_KEY) refreshCustomers()
-    }
-
-    refreshCustomers()
-    window.addEventListener('storage', handleStorage)
-    window.addEventListener('focus', refreshCustomers)
-    window.addEventListener(CRM_UPDATED_EVENT, refreshCustomers)
-
-    return () => {
-      window.removeEventListener('storage', handleStorage)
-      window.removeEventListener('focus', refreshCustomers)
-      window.removeEventListener(CRM_UPDATED_EVENT, refreshCustomers)
+  const loadCustomers = useCallback(async () => {
+    setLoading(true)
+    setError('')
+    try {
+      setCustomers(await listCustomersFromSupabase())
+    } catch (loadError) {
+      setError(
+        loadError instanceof Error
+          ? loadError.message
+          : 'No fue posible cargar los clientes desde Supabase.',
+      )
+    } finally {
+      setLoading(false)
     }
   }, [])
+
+  useEffect(() => {
+    void loadCustomers()
+  }, [loadCustomers])
 
   const {
     query,
@@ -80,20 +79,31 @@ export function CustomerWorkspace({ customers: initialCustomers }: CustomerWorks
   const qualifiedCustomers = customers.filter((customer) => customer.status === 'Qualified').length
   const proposalCustomers = customers.filter((customer) => customer.status === 'Proposal').length
 
-  function handleDeleteCustomer(customer: Customer) {
+  async function handleDeleteCustomer(customer: Customer) {
     const confirmed = window.confirm(
-      `¿Eliminar al cliente ${customer.company}?\n\nEsta acción quitará el cliente del CRM. Las cotizaciones ya creadas conservarán los datos guardados en ellas.`
+      `¿Eliminar al cliente ${customer.company}?\n\nEsta acción lo eliminará de la base de datos de NEDVI OS. Los proyectos vinculados conservarán su registro y quedarán sin cliente asignado.`
     )
 
     if (!confirmed) return
 
-    const deleted = deleteCustomer(customer.id)
-    if (!deleted) {
-      window.alert('No se pudo eliminar el cliente.')
-      return
+    setDeletingId(customer.id)
+    setError('')
+    try {
+      const deleted = await deleteCustomerFromSupabase(customer.id)
+      if (!deleted) {
+        setError('No se pudo eliminar el cliente.')
+        return
+      }
+      await loadCustomers()
+    } catch (deleteError) {
+      setError(
+        deleteError instanceof Error
+          ? deleteError.message
+          : 'No se pudo eliminar el cliente.',
+      )
+    } finally {
+      setDeletingId(null)
     }
-
-    setCustomers(readCustomers())
   }
 
   return (
@@ -116,6 +126,12 @@ export function CustomerWorkspace({ customers: initialCustomers }: CustomerWorks
         <MetricCard label="Propuestas abiertas" value={proposalCustomers.toString()} detail="Pendientes de decisión" icon={TrendingUp} accent="violet" />
       </div>
 
+      {error ? (
+        <div className="rounded-xl border border-red-400/20 bg-red-400/[0.07] px-4 py-3 text-xs text-red-200">
+          {error}
+        </div>
+      ) : null}
+
       <Card className="p-5 sm:p-6">
         <div className="flex flex-col gap-4 lg:flex-row lg:items-center">
           <CustomerSearch value={query} onChange={updateQuery} />
@@ -124,11 +140,31 @@ export function CustomerWorkspace({ customers: initialCustomers }: CustomerWorks
         <CustomerFilters value={filters} onChange={updateFilters} onClear={clearFilters} hasActiveFilters={hasActiveFilters} />
       </Card>
 
-      {visibleCustomers.length ? (
+      {loading ? (
+        <div className="rounded-2xl border border-white/[0.07] bg-[#20232A] p-10 text-center text-sm text-[#9CA3AF]">
+          Cargando clientes desde Supabase...
+        </div>
+      ) : visibleCustomers.length ? (
         <>
-          <CustomerTable customers={visibleCustomers} sortKey={sortKey} sortDirection={sortDirection} onSort={toggleSort} onDelete={handleDeleteCustomer} />
+          <CustomerTable
+            customers={visibleCustomers}
+            sortKey={sortKey}
+            sortDirection={sortDirection}
+            onSort={toggleSort}
+            onDelete={(customer) => {
+              if (deletingId !== customer.id) void handleDeleteCustomer(customer)
+            }}
+          />
           <div className="grid gap-4 md:grid-cols-2 lg:hidden">
-            {visibleCustomers.map((customer) => <CustomerCard customer={customer} onDelete={handleDeleteCustomer} key={customer.id} />)}
+            {visibleCustomers.map((customer) => (
+              <CustomerCard
+                customer={customer}
+                onDelete={(item) => {
+                  if (deletingId !== item.id) void handleDeleteCustomer(item)
+                }}
+                key={customer.id}
+              />
+            ))}
           </div>
           <div className="flex flex-col items-center justify-between gap-3 text-xs text-[#646873] sm:flex-row">
             <span>Mostrando {(page - 1) * PAGE_SIZE + 1}-{Math.min(page * PAGE_SIZE, filteredCustomers.length)} de {filteredCustomers.length}</span>
@@ -143,7 +179,7 @@ export function CustomerWorkspace({ customers: initialCustomers }: CustomerWorks
         <EmptyState
           icon={Users}
           title="No encontramos clientes"
-          description={hasActiveFilters ? 'Prueba ajustando la búsqueda o los filtros para encontrar un cliente.' : 'El directorio de clientes está listo para registrar la primera relación comercial.'}
+          description={hasActiveFilters ? 'Prueba ajustando la búsqueda o los filtros para encontrar un cliente.' : 'El directorio de clientes está conectado a Supabase y listo para registrar relaciones comerciales reales.'}
           action={hasActiveFilters ? (
             <button type="button" onClick={clearFilters} className="text-xs font-semibold text-[#7187ff] transition hover:text-white">Limpiar búsqueda y filtros</button>
           ) : (
@@ -151,6 +187,10 @@ export function CustomerWorkspace({ customers: initialCustomers }: CustomerWorks
           )}
         />
       )}
+
+      <div className="rounded-2xl border border-emerald-400/15 bg-emerald-400/[0.05] px-4 py-3 text-xs text-[#9CA3AF]">
+        <strong className="text-emerald-300">Persistencia real activada:</strong> los clientes se leen y guardan directamente en Supabase.
+      </div>
     </div>
   )
 }
