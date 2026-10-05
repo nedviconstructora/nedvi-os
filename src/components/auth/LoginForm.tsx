@@ -161,8 +161,12 @@ export function LoginForm() {
         }),
       )
 
-      const destination = profile.role === 'cliente' ? '/cliente-demo' : '/dashboard'
-      router.replace(destination)
+      if (profile.role === 'cliente') {
+        window.location.assign('/cliente-demo')
+        return
+      }
+
+      router.replace('/dashboard')
       router.refresh()
     } catch {
       setError('No fue posible conectar con Supabase. Intenta nuevamente.')
