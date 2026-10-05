@@ -40,7 +40,35 @@ export function LoginForm() {
   const [recovering, setRecovering] = useState(false)
 
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
-  const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY
+  const publishableKey = process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY
+  const legacyAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
+  const supabaseKeys = [publishableKey, legacyAnonKey].filter(
+    (value): value is string => Boolean(value?.trim()),
+  )
+
+  async function requestWithAvailableKey(
+    path: string,
+    init: Omit<RequestInit, 'headers'> & { headers?: Record<string, string> },
+  ) {
+    let lastResponse: Response | null = null
+
+    for (const key of supabaseKeys) {
+      const response = await fetch(`${supabaseUrl}${path}`, {
+        ...init,
+        headers: {
+          ...init.headers,
+          apikey: key,
+        },
+      })
+
+      lastResponse = response
+      if (response.status !== 401) {
+        return { response, key }
+      }
+    }
+
+    return { response: lastResponse, key: supabaseKeys[0] }
+  }
 
   async function handleLogin(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault()
@@ -48,27 +76,29 @@ export function LoginForm() {
     setRecoveryMessage('')
     setLoading(true)
 
-    if (!supabaseUrl || !supabaseKey) {
+    if (!supabaseUrl || supabaseKeys.length === 0) {
       setError('Falta configurar Supabase en .env.local.')
       setLoading(false)
       return
     }
 
     try {
-      const authResponse = await fetch(
-        `${supabaseUrl}/auth/v1/token?grant_type=password`,
+      const { response: authResponse, key: workingKey } = await requestWithAvailableKey(
+        '/auth/v1/token?grant_type=password',
         {
           method: 'POST',
-          headers: {
-            apikey: supabaseKey,
-            'Content-Type': 'application/json',
-          },
+          headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
             email: email.trim().toLowerCase(),
             password,
           }),
         },
       )
+
+      if (!authResponse || !workingKey) {
+        setError('No hay una API key pública configurada para Supabase.')
+        return
+      }
 
       const authData = (await authResponse.json()) as SupabaseAuthResponse
 
@@ -87,7 +117,7 @@ export function LoginForm() {
         {
           method: 'GET',
           headers: {
-            apikey: supabaseKey,
+            apikey: workingKey,
             Authorization: `Bearer ${authData.access_token}`,
             Accept: 'application/json',
           },
@@ -124,12 +154,7 @@ export function LoginForm() {
         }),
       )
 
-      if (profile.role === 'cliente') {
-        router.push('/cliente-demo')
-        return
-      }
-
-      router.push('/dashboard')
+      router.push(profile.role === 'cliente' ? '/cliente-demo' : '/dashboard')
     } catch {
       setError('No fue posible conectar con Supabase. Intenta nuevamente.')
     } finally {
@@ -146,7 +171,7 @@ export function LoginForm() {
       return
     }
 
-    if (!supabaseUrl || !supabaseKey) {
+    if (!supabaseUrl || supabaseKeys.length === 0) {
       setError('Falta configurar Supabase en .env.local.')
       return
     }
@@ -155,17 +180,19 @@ export function LoginForm() {
 
     try {
       const redirectTo = `${window.location.origin}/reset-password`
-      const response = await fetch(
-        `${supabaseUrl}/auth/v1/recover?redirect_to=${encodeURIComponent(redirectTo)}`,
+      const { response } = await requestWithAvailableKey(
+        `/auth/v1/recover?redirect_to=${encodeURIComponent(redirectTo)}`,
         {
           method: 'POST',
-          headers: {
-            apikey: supabaseKey,
-            'Content-Type': 'application/json',
-          },
+          headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ email: email.trim().toLowerCase() }),
         },
       )
+
+      if (!response) {
+        setError('No hay una API key pública configurada para Supabase.')
+        return
+      }
 
       const data = (await response.json().catch(() => ({}))) as SupabaseRecoveryError
 
@@ -177,15 +204,11 @@ export function LoginForm() {
           data.error ||
           'No fue posible enviar el correo de recuperación.'
 
-        const statusText = response.status ? ` [HTTP ${response.status}]` : ''
-        const codeText = data.code ? ` (${data.code})` : ''
-        setError(`${detail}${codeText}${statusText}`)
+        setError(`${detail}${data.code ? ` (${data.code})` : ''} [HTTP ${response.status}]`)
         return
       }
 
-      setRecoveryMessage(
-        'Te enviamos un enlace para crear una nueva contraseña. Revisa tu correo.',
-      )
+      setRecoveryMessage('Te enviamos un enlace para crear una nueva contraseña. Revisa tu correo.')
     } catch {
       setError('No fue posible solicitar la recuperación. Intenta nuevamente.')
     } finally {
@@ -195,18 +218,7 @@ export function LoginForm() {
 
   return (
     <form className="mt-9 space-y-6" onSubmit={handleLogin}>
-      <Input
-        id="email"
-        name="email"
-        type="email"
-        label="Work email"
-        placeholder="you@company.com"
-        autoComplete="email"
-        value={email}
-        onChange={(e) => setEmail(e.target.value)}
-        required
-      />
-
+      <Input id="email" name="email" type="email" label="Work email" placeholder="you@company.com" autoComplete="email" value={email} onChange={(e) => setEmail(e.target.value)} required />
       <Input
         id="password"
         name="password"
@@ -218,40 +230,21 @@ export function LoginForm() {
         onChange={(e) => setPassword(e.target.value)}
         required
         rightElement={
-          <button
-            type="button"
-            onClick={() => setShowPassword((value) => !value)}
-            className="rounded-md px-2 py-1 text-[10px] font-bold uppercase tracking-[0.14em] text-[#9CA3AF] transition hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#163DFF]"
-            aria-label={showPassword ? 'Hide password' : 'Show password'}
-          >
+          <button type="button" onClick={() => setShowPassword((value) => !value)} className="rounded-md px-2 py-1 text-[10px] font-bold uppercase tracking-[0.14em] text-[#9CA3AF] transition hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#163DFF]" aria-label={showPassword ? 'Hide password' : 'Show password'}>
             {showPassword ? 'Hide' : 'Show'}
           </button>
         }
       />
-
       <div className="flex items-center justify-end">
-        <button
-          type="button"
-          onClick={handlePasswordRecovery}
-          disabled={recovering}
-          className="text-sm font-medium text-[#9CA3AF] transition hover:text-white disabled:opacity-50"
-        >
+        <button type="button" onClick={handlePasswordRecovery} disabled={recovering} className="text-sm font-medium text-[#9CA3AF] transition hover:text-white disabled:opacity-50">
           {recovering ? 'Sending...' : 'Forgot password?'}
         </button>
       </div>
-
       {error && <p className="text-sm text-red-500">{error}</p>}
-      {recoveryMessage && (
-        <p className="text-sm text-emerald-400">{recoveryMessage}</p>
-      )}
-
+      {recoveryMessage && <p className="text-sm text-emerald-400">{recoveryMessage}</p>}
       <Button type="submit" className="group w-full" disabled={loading}>
         <span>{loading ? 'Signing in...' : 'Sign in to NEDVI OS'}</span>
-        {!loading && (
-          <span aria-hidden="true" className="ml-3 transition-transform duration-200 group-hover:translate-x-1">
-            -&gt;
-          </span>
-        )}
+        {!loading && <span aria-hidden="true" className="ml-3 transition-transform duration-200 group-hover:translate-x-1">-&gt;</span>}
       </Button>
     </form>
   )
