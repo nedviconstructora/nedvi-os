@@ -1,11 +1,18 @@
 import type { Customer } from '@/features/crm/types/customer'
 
 export function formatCustomerDate(value: string): string {
+  if (!value) return 'Sin registrar'
+
+  const normalizedValue = value.includes('T') ? value : `${value}T12:00:00`
+  const date = new Date(normalizedValue)
+
+  if (Number.isNaN(date.getTime())) return 'Sin registrar'
+
   return new Intl.DateTimeFormat('es-MX', {
     day: '2-digit',
     month: 'short',
     year: 'numeric',
-  }).format(new Date(`${value}T12:00:00`))
+  }).format(date)
 }
 
 export function getCustomerInitials(
