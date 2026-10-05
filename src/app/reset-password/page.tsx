@@ -10,6 +10,8 @@ export default function ResetPasswordPage() {
   const [accessToken, setAccessToken] = useState('')
   const [password, setPassword] = useState('')
   const [confirmPassword, setConfirmPassword] = useState('')
+  const [showPassword, setShowPassword] = useState(false)
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false)
   const [error, setError] = useState('')
   const [message, setMessage] = useState('')
   const [loading, setLoading] = useState(false)
@@ -106,8 +108,46 @@ export default function ResetPasswordPage() {
         <h1 className="mt-4 text-3xl font-semibold tracking-[-0.04em]">Crea una nueva contraseña</h1>
         <p className="mt-3 text-sm leading-6 text-[#9CA3AF]">Escribe tu nueva contraseña para recuperar el acceso a tu cuenta.</p>
         <form className="mt-8 space-y-5" onSubmit={handleSubmit}>
-          <Input id="new-password" name="new-password" type="password" label="Nueva contraseña" autoComplete="new-password" value={password} onChange={(e) => setPassword(e.target.value)} required />
-          <Input id="confirm-password" name="confirm-password" type="password" label="Confirmar contraseña" autoComplete="new-password" value={confirmPassword} onChange={(e) => setConfirmPassword(e.target.value)} required />
+          <Input
+            id="new-password"
+            name="new-password"
+            type={showPassword ? 'text' : 'password'}
+            label="Nueva contraseña"
+            autoComplete="new-password"
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+            required
+            rightElement={
+              <button
+                type="button"
+                onClick={() => setShowPassword((value) => !value)}
+                className="rounded-md px-2 py-1 text-[10px] font-bold uppercase tracking-[0.14em] text-[#9CA3AF] transition hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#163DFF]"
+                aria-label={showPassword ? 'Ocultar contraseña' : 'Mostrar contraseña'}
+              >
+                {showPassword ? 'Ocultar' : 'Ver'}
+              </button>
+            }
+          />
+          <Input
+            id="confirm-password"
+            name="confirm-password"
+            type={showConfirmPassword ? 'text' : 'password'}
+            label="Confirmar contraseña"
+            autoComplete="new-password"
+            value={confirmPassword}
+            onChange={(e) => setConfirmPassword(e.target.value)}
+            required
+            rightElement={
+              <button
+                type="button"
+                onClick={() => setShowConfirmPassword((value) => !value)}
+                className="rounded-md px-2 py-1 text-[10px] font-bold uppercase tracking-[0.14em] text-[#9CA3AF] transition hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#163DFF]"
+                aria-label={showConfirmPassword ? 'Ocultar contraseña' : 'Mostrar contraseña'}
+              >
+                {showConfirmPassword ? 'Ocultar' : 'Ver'}
+              </button>
+            }
+          />
           {error && <p className="text-sm text-red-500">{error}</p>}
           {message && <p className="text-sm text-emerald-400">{message}</p>}
           <Button type="submit" className="w-full" disabled={!canSubmit}>{loading ? 'Actualizando...' : 'Guardar nueva contraseña'}</Button>
