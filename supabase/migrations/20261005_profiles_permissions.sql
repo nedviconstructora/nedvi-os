@@ -23,14 +23,14 @@ where p.id = u.id;
 
 update public.profiles
 set permissions = case
-  when lower(unaccent(coalesce(role, ''))) = 'administracion' then array[
+  when translate(lower(coalesce(role, '')), 'áéíóú', 'aeiou') = 'administracion' then array[
     'dashboard','commercial','projects','purchasing','operations','agenda',
     'human-resources','finance','indicators','settings','coral','client-portal'
   ]::text[]
-  when lower(unaccent(coalesce(role, ''))) = 'supervisor' then array[
+  when translate(lower(coalesce(role, '')), 'áéíóú', 'aeiou') = 'supervisor' then array[
     'dashboard','commercial','projects','purchasing','operations','agenda'
   ]::text[]
-  when lower(unaccent(coalesce(role, ''))) = 'cliente' then array['client-portal']::text[]
+  when translate(lower(coalesce(role, '')), 'áéíóú', 'aeiou') = 'cliente' then array['client-portal']::text[]
   else permissions
 end
 where coalesce(array_length(permissions, 1), 0) = 0;
@@ -47,7 +47,7 @@ as $$
     from public.profiles p
     where p.id = auth.uid()
       and p.active = true
-      and lower(unaccent(coalesce(p.role, ''))) = 'administracion'
+      and translate(lower(coalesce(p.role, '')), 'áéíóú', 'aeiou') = 'administracion'
   );
 $$;
 
