@@ -34,7 +34,7 @@ type NavigationItem = {
 }
 
 const navigationItems: NavigationItem[] = [
-  { label: 'Dashboard', icon: LayoutDashboard, href: '/dashboard' },
+  { label: 'Inicio', icon: LayoutDashboard, href: '/dashboard' },
   { label: 'Clientes', icon: UsersRound, href: '/crm' },
   { label: 'Proyectos', icon: HardHat, href: '/projects' },
   { label: 'Correos', icon: Mail },
@@ -104,7 +104,7 @@ export function Sidebar({
             type="button"
             onClick={onCloseMobile}
             className="rounded-lg p-2 text-[#9CA3AF] transition hover:bg-white/[0.06] hover:text-white lg:hidden"
-            aria-label="Close navigation"
+            aria-label="Cerrar navegación"
           >
             <X size={18} strokeWidth={1.8} />
           </button>
