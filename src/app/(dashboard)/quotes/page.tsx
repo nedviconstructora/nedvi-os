@@ -3,11 +3,7 @@ import { createProjectInSupabase } from '@/features/projects/services/projectSup
 
 import { FormEvent, useEffect, useMemo, useState } from 'react'
 import { AppShell } from '@/components/layout/AppShell'
-import {
-  CRM_STORAGE_KEY,
-  CRM_UPDATED_EVENT,
-  readCustomers,
-} from '@/features/crm/services/customerStorage'
+import { getCustomersFromSupabase } from '@/features/crm/services/customerSupabase'
 import type { Customer } from '@/features/crm/types/customer'
 
 type QuoteStatus = 'Borrador' | 'Enviada' | 'Aprobada' | 'Rechazada' | 'Vencida'
@@ -204,20 +200,25 @@ export default function QuotesPage() {
   const [printQuote, setPrintQuote] = useState<Quote | null>(null)
 
   useEffect(() => {
-    const refreshCustomers = () => setCustomers(readCustomers())
-    const handleStorage = (event: StorageEvent) => {
-      if (event.key === CRM_STORAGE_KEY) refreshCustomers()
+    let active = true
+
+    async function refreshCustomers() {
+      try {
+        const nextCustomers = await getCustomersFromSupabase()
+        if (active) setCustomers(nextCustomers)
+      } catch (error) {
+        console.error('Error al cargar clientes para cotizaciones:', error)
+        if (active) setCustomers([])
+      }
     }
 
-    refreshCustomers()
-    window.addEventListener('storage', handleStorage)
-    window.addEventListener('focus', refreshCustomers)
-    window.addEventListener(CRM_UPDATED_EVENT, refreshCustomers)
+    void refreshCustomers()
+    const handleFocus = () => void refreshCustomers()
+    window.addEventListener('focus', handleFocus)
 
     return () => {
-      window.removeEventListener('storage', handleStorage)
-      window.removeEventListener('focus', refreshCustomers)
-      window.removeEventListener(CRM_UPDATED_EVENT, refreshCustomers)
+      active = false
+      window.removeEventListener('focus', handleFocus)
     }
   }, [])
 
