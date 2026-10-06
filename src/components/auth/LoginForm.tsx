@@ -6,11 +6,7 @@ import { Button } from '@/components/ui/Button'
 import { Input } from '@/components/ui/Input'
 import {
   defaultPermissionsForRole,
-  readAccessUsers,
-  readPasswordResetRequests,
   writeAccessSession,
-  writePasswordResetRequests,
-  type PasswordResetRequest,
 } from '@/features/access/services/accessStorage'
 import type { AppRole, ModulePermission } from '@/config/roles'
 import { createClient } from '@/lib/supabase/client'
@@ -75,6 +71,7 @@ export function LoginForm() {
   const [recoveryEmail, setRecoveryEmail] = useState('')
   const [recoveryMessage, setRecoveryMessage] = useState('')
   const [recoveryError, setRecoveryError] = useState('')
+  const [recoverySubmitting, setRecoverySubmitting] = useState(false)
 
   async function handleLogin(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault()
@@ -183,38 +180,31 @@ export function LoginForm() {
     setShowRecovery(true)
   }
 
-  function requestPasswordReset() {
+  async function requestPasswordReset() {
     setRecoveryMessage('')
     setRecoveryError('')
 
     const normalizedEmail = recoveryEmail.trim().toLowerCase()
-    if (!normalizedEmail || !normalizedEmail.includes('@')) {
-      setRecoveryError('Escribe el correo de tu cuenta.')
+    if (!/^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$/.test(normalizedEmail)) {
+      setRecoveryError('Escribe un correo electrónico válido.')
       return
     }
 
-    const accessUsers = readAccessUsers()
-    const user = accessUsers.find((item) => item.email.toLowerCase() === normalizedEmail)
-    const existing = readPasswordResetRequests()
-    const alreadyPending = existing.some(
-      (request) => request.email.toLowerCase() === normalizedEmail && request.status === 'Pendiente',
-    )
+    setRecoverySubmitting(true)
+    try {
+      const supabase = createClient()
+      const { error: resetError } = await supabase.auth.resetPasswordForEmail(normalizedEmail, {
+        redirectTo: `${window.location.origin}/reset-password`,
+      })
+      if (resetError) throw resetError
 
-    if (!alreadyPending) {
-      const request: PasswordResetRequest = {
-        id: crypto.randomUUID(),
-        userId: user?.id ?? normalizedEmail,
-        name: user?.name ?? normalizedEmail.split('@')[0] ?? 'Usuario NEDVI',
-        email: normalizedEmail,
-        status: 'Pendiente',
-        createdAt: new Date().toISOString(),
-      }
-      writePasswordResetRequests([request, ...existing])
+      setRecoveryMessage('Si el correo está registrado, recibirás un enlace para restablecer tu contraseña. Revisa también la carpeta de spam.')
+    } catch (resetError) {
+      console.error('Error al solicitar recuperación:', resetError)
+      setRecoveryError('No se pudo enviar la solicitud. Inténtalo nuevamente en unos minutos.')
+    } finally {
+      setRecoverySubmitting(false)
     }
-
-    setRecoveryMessage(
-      'Solicitud enviada a Administración. Cuando restablezcan tu contraseña, te entregarán una contraseña temporal.',
-    )
   }
 
   return (
@@ -266,7 +256,7 @@ export function LoginForm() {
         <div className="rounded-xl border border-white/[0.09] bg-black/20 p-4">
           <p className="text-sm font-semibold text-white">Recuperar contraseña</p>
           <p className="mt-1 text-xs leading-5 text-[#9CA3AF]">
-            Enviaremos una solicitud interna a Administración para que te asignen una contraseña temporal.
+            Te enviaremos un enlace seguro a tu correo para crear una contraseña nueva.
           </p>
           <div className="mt-4">
             <Input
@@ -293,10 +283,11 @@ export function LoginForm() {
             </button>
             <button
               type="button"
-              onClick={requestPasswordReset}
-              className="h-9 flex-1 rounded-lg bg-[#7DC6FF] px-3 text-xs font-semibold text-black transition hover:brightness-95"
+              onClick={() => void requestPasswordReset()}
+              disabled={recoverySubmitting}
+              className="h-9 flex-1 rounded-lg bg-[#7DC6FF] px-3 text-xs font-semibold text-black transition hover:brightness-95 disabled:opacity-60"
             >
-              Enviar solicitud
+              {recoverySubmitting ? 'Enviando...' : 'Enviar enlace'}
             </button>
           </div>
         </div>
