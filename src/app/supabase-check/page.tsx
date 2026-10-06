@@ -16,8 +16,8 @@ export default function SupabaseCheckPage() {
   const legacyAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || ''
 
   const keys = [
-    { name: 'Publishable', value: publishableKey },
-    { name: 'Legacy anon', value: legacyAnonKey },
+    { name: 'Publicable', value: publishableKey },
+    { name: 'Anónima heredada', value: legacyAnonKey },
   ].filter((item) => item.value)
 
   function mask(value: string) {
@@ -134,15 +134,15 @@ export default function SupabaseCheckPage() {
 
         <div className="mt-8 space-y-4 rounded-xl border border-white/10 bg-black/20 p-5 text-sm">
           <div>
-            <span className="text-[#9CA3AF]">Project URL:</span>
+            <span className="text-[#9CA3AF]">URL del proyecto:</span>
             <p className="mt-1 break-all font-mono">{supabaseUrl || 'No configurada'}</p>
           </div>
           <div>
-            <span className="text-[#9CA3AF]">Publishable Key:</span>
+            <span className="text-[#9CA3AF]">Clave publicable:</span>
             <p className="mt-1 break-all font-mono">{mask(publishableKey)}</p>
           </div>
           <div>
-            <span className="text-[#9CA3AF]">Legacy anon Key:</span>
+            <span className="text-[#9CA3AF]">Clave anónima heredada:</span>
             <p className="mt-1 break-all font-mono">{mask(legacyAnonKey)}</p>
           </div>
           <div>
