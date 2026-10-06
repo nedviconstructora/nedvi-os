@@ -148,7 +148,7 @@ export function CustomerWorkspace() {
         <>
           <CustomerTable customers={visibleCustomers} sortKey={sortKey} sortDirection={sortDirection} onSort={toggleSort} onDelete={handleDelete} />
           <div className="grid gap-4 md:grid-cols-2 lg:hidden">
-            {visibleCustomers.map((customer) => <CustomerCard customer={customer} key={customer.id} />)}
+            {visibleCustomers.map((customer) => <CustomerCard customer={customer} onDelete={handleDelete} key={customer.id} />)}
           </div>
           <div className="flex flex-col items-center justify-between gap-3 text-xs text-[#646873] sm:flex-row">
             <span>Mostrando {(page - 1) * PAGE_SIZE + 1}-{Math.min(page * PAGE_SIZE, filteredCustomers.length)} de {filteredCustomers.length}</span>
