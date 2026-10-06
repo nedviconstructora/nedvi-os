@@ -15,6 +15,44 @@ import {
   projectTypes,
 } from '@/features/crm/types/customer'
 
+type CustomerRow = {
+  id: string
+  folio: string | null
+  company: string
+  contact: string
+  phone: string
+  email: string
+  address: string
+  rfc: string
+  project_type: string | null
+  lead_source: string | null
+  status: string
+  assigned_salesperson: string | null
+  notes: string
+  created_at: string
+  last_contact: string | null
+  timeline: unknown
+}
+
+const CUSTOMER_SELECT = [
+  'id',
+  'folio',
+  'company',
+  'contact',
+  'phone',
+  'email',
+  'address',
+  'rfc',
+  'project_type',
+  'lead_source',
+  'status',
+  'assigned_salesperson',
+  'notes',
+  'created_at',
+  'last_contact',
+  'timeline',
+].join(',')
+
 async function supabaseRequest(path: string, init: RequestInit = {}) {
   const supabase = createClient()
   const {
