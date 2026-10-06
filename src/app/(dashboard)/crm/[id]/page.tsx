@@ -6,7 +6,7 @@ import { useParams, useRouter } from 'next/navigation'
 import { ArrowLeft, Edit3, Mail, MapPin, Phone, Trash2 } from 'lucide-react'
 import { AppShell } from '@/components/layout/AppShell'
 import { Card, CardHeader } from '@/components/ui/Card'
-import { CustomerPortalAccess } from '@/features/crm/components/CustomerPortalAccess'
+import { CustomerPortalAccess } from '@/features/access/components/CustomerPortalAccess'
 import { CustomerStatusBadge } from '@/features/crm/components/CustomerStatusBadge'
 import { CustomerTimeline } from '@/features/crm/components/CustomerTimeline'
 import {
@@ -147,13 +147,7 @@ export default function CustomerDetailPage() {
                   </div>
                 </Card>
 
-                <CustomerPortalAccess
-                  customerId={customer.id}
-                  customerName={customer.company}
-                  customerEmail={customer.email}
-                  contactName={customer.contact}
-                  folio={customer.folio}
-                />
+                <CustomerPortalAccess customer={customer} />
               </div>
 
               <Card>
