@@ -16,7 +16,7 @@ const geistMono = Geist_Mono({
 
 export const metadata: Metadata = {
   title: 'NEDVI OS',
-  description: 'NEDVI OS enterprise platform',
+  description: 'Plataforma empresarial NEDVI OS',
 }
 
 export default function RootLayout({
