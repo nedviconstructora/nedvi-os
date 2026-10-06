@@ -209,10 +209,10 @@ export function Sidebar({
         <p className={`mb-3 px-3 text-[10px] font-semibold uppercase tracking-[0.16em] text-black/70 transition-opacity ${collapsed ? 'lg:text-center lg:opacity-0' : ''}`}>Sistema</p>
 
         {canUse('dashboard') ? (
-          <Link href="/dashboard" title={collapsed ? 'Dashboard' : undefined} onClick={onCloseMobile} className={primaryItemClasses(isPathActive('/dashboard'))}>
+          <Link href="/dashboard" title={collapsed ? 'Inicio' : undefined} onClick={onCloseMobile} className={primaryItemClasses(isPathActive('/dashboard'))}>
             {isPathActive('/dashboard') ? <span className="absolute left-0 h-5 w-0.5 rounded-r-full bg-black" /> : null}
             <LayoutDashboard size={18} strokeWidth={isPathActive('/dashboard') ? 2 : 1.8} className="shrink-0 text-black" />
-            <span className={`whitespace-nowrap transition-opacity duration-200 ${collapsed ? 'lg:hidden' : 'opacity-100'}`}>Dashboard</span>
+            <span className={`whitespace-nowrap transition-opacity duration-200 ${collapsed ? 'lg:hidden' : 'opacity-100'}`}>Inicio</span>
           </Link>
         ) : null}
 
