@@ -6,27 +6,59 @@ import { useParams } from 'next/navigation'
 import { ArrowLeft, Edit3 } from 'lucide-react'
 import { AppShell } from '@/components/layout/AppShell'
 import { CustomerForm } from '@/features/crm/components/CustomerForm'
-import { readCustomerById } from '@/features/crm/services/customerStorage'
+import { getCustomerByIdFromSupabase } from '@/features/crm/services/customerSupabase'
 import type { Customer } from '@/features/crm/types/customer'
 
 export default function EditCustomerPage() {
   const params = useParams<{ id: string }>()
   const customerId = params.id
   const [customer, setCustomer] = useState<Customer | null | undefined>(undefined)
+  const [error, setError] = useState<string | null>(null)
 
   useEffect(() => {
-    setCustomer(readCustomerById(customerId) ?? null)
+    let active = true
+
+    async function loadCustomer() {
+      setError(null)
+
+      try {
+        const nextCustomer = await getCustomerByIdFromSupabase(customerId)
+        if (active) setCustomer(nextCustomer ?? null)
+      } catch (loadError) {
+        console.error('Error al cargar cliente desde Supabase:', loadError)
+        if (active) {
+          setCustomer(null)
+          setError(
+            loadError instanceof Error
+              ? loadError.message
+              : 'No se pudo cargar el cliente desde Supabase.',
+          )
+        }
+      }
+    }
+
+    void loadCustomer()
+
+    return () => {
+      active = false
+    }
   }, [customerId])
 
   return (
     <AppShell>
       <div className="mx-auto w-full max-w-4xl space-y-7">
+        {error ? (
+          <div className="rounded-2xl border border-red-400/20 bg-red-400/[0.06] px-5 py-4 text-xs text-red-200">
+            {error}
+          </div>
+        ) : null}
+
         {customer === undefined ? (
-          <div className="rounded-2xl border border-white/[0.07] bg-[#20232A] p-8 text-sm text-[#9CA3AF]">Cargando cliente...</div>
+          <div className="rounded-2xl border border-white/[0.07] bg-[#20232A] p-8 text-sm text-[#9CA3AF]">Cargando cliente desde Supabase...</div>
         ) : customer === null ? (
           <div className="rounded-2xl border border-red-400/20 bg-red-400/[0.06] p-8">
             <h1 className="text-xl font-semibold text-white">Cliente no encontrado</h1>
-            <p className="mt-2 text-sm text-[#9CA3AF]">El registro ya no existe o no está disponible en este dispositivo.</p>
+            <p className="mt-2 text-sm text-[#9CA3AF]">El registro no existe o tu usuario no tiene permiso para consultarlo.</p>
             <Link href="/crm" className="mt-5 inline-flex items-center gap-2 text-xs font-semibold text-[#7187ff] transition hover:text-white"><ArrowLeft size={14} /> Volver a clientes</Link>
           </div>
         ) : (
@@ -38,7 +70,7 @@ export default function EditCustomerPage() {
                 <div>
                   <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[#7187ff]">CRM / Editar registro</p>
                   <h1 className="mt-2 text-3xl font-semibold tracking-[-0.05em] text-white">Editar {customer.company}</h1>
-                  <p className="mt-2 text-sm text-[#9CA3AF]">Actualiza los datos de contacto y el contexto comercial del cliente.</p>
+                  <p className="mt-2 text-sm text-[#9CA3AF]">Actualiza los datos de contacto y el contexto comercial del cliente directamente en Supabase.</p>
                 </div>
               </div>
             </header>
