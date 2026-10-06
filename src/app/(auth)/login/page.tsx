@@ -42,7 +42,7 @@ export default function LoginPage() {
             Work moves better when everything connects.
           </h1>
           <p className="mt-7 max-w-md text-base leading-7 text-[#9CA3AF]">
-            One intelligent workspace for the people, processes, and decisions that move your business forward.
+            Un espacio inteligente para las personas, procesos y decisiones que impulsan tu negocio.
           </p>
         </div>
         <div className="relative z-10 flex items-end justify-between text-xs text-[#646873]">
@@ -71,7 +71,7 @@ export default function LoginPage() {
                 Inicia sesión en tu espacio de trabajo
               </h2>
               <p className="mt-3 text-sm leading-6 text-[#9CA3AF]">
-                Access your NEDVI OS workspace and pick up where you left off.
+                Accede a NEDVI OS y continúa exactamente donde te quedaste.
               </p>
             </div>
             <LoginForm />
