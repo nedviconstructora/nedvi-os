@@ -1,4 +1,4 @@
-import type { Project, ProjectStatus } from '@/features/projects/types/project'
+import type { Project, ProjectStatus, ProjectType } from '@/features/projects/types/project'
 
 export function formatProjectDate(value: string): string {
   if (!value) return 'Sin registrar'
@@ -7,7 +7,7 @@ export function formatProjectDate(value: string): string {
   const date = new Date(normalizedValue)
   if (Number.isNaN(date.getTime())) return 'Sin registrar'
 
-  return new Intl.DateTimeFormat('en-US', {
+  return new Intl.DateTimeFormat('es-MX', {
     day: '2-digit',
     month: 'short',
     year: 'numeric',
@@ -15,7 +15,7 @@ export function formatProjectDate(value: string): string {
 }
 
 export function formatCurrency(value: number): string {
-  return new Intl.NumberFormat('en-US', {
+  return new Intl.NumberFormat('es-MX', {
     style: 'currency',
     currency: 'USD',
     maximumFractionDigits: 0,
@@ -34,11 +34,11 @@ export function getProjectInitials(project: Pick<Project, 'name'>): string {
 
 export function getProjectStatusLabel(status: ProjectStatus): string {
   const labels: Record<ProjectStatus, string> = {
-    Planning: 'Planning',
-    Active: 'Active',
-    'At Risk': 'At risk',
-    Completed: 'Completed',
-    'On Hold': 'On hold',
+    Planning: 'Planeación',
+    Active: 'Activo',
+    'At Risk': 'En riesgo',
+    Completed: 'Completado',
+    'On Hold': 'En pausa',
   }
 
   return labels[status]
@@ -47,4 +47,16 @@ export function getProjectStatusLabel(status: ProjectStatus): string {
 export function getBudgetUsage(project: Pick<Project, 'budget' | 'spent'>): number {
   if (!project.budget) return 0
   return Math.round((project.spent / project.budget) * 100)
+}
+
+export function getProjectTypeLabel(type: ProjectType): string {
+  const labels: Record<ProjectType, string> = {
+    Residential: 'Residencial',
+    Commercial: 'Comercial',
+    Industrial: 'Industrial',
+    Infrastructure: 'Infraestructura',
+    Renovation: 'Remodelación',
+  }
+
+  return labels[type]
 }
