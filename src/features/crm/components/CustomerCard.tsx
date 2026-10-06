@@ -28,8 +28,8 @@ export function CustomerCard({ customer }: CustomerCardProps) {
         <p className="flex items-start gap-2"><MapPin size={14} className="mt-0.5 shrink-0 text-[#646873]" /><span className="line-clamp-2">{customer.address}</span></p>
       </div>
       <div className="mt-5 flex items-center justify-between border-t border-white/[0.06] pt-4">
-        <span className="text-[11px] text-[#646873]">Last contact {formatCustomerDate(customer.lastContact)}</span>
-        <Link href={`/crm/${customer.id}`} className="inline-flex items-center gap-1 text-xs font-semibold text-[#7187ff] transition hover:text-white">View <ArrowUpRight size={13} /></Link>
+        <span className="text-[11px] text-[#646873]">Último contacto {formatCustomerDate(customer.lastContact)}</span>
+        <Link href={`/crm/${customer.id}`} className="inline-flex items-center gap-1 text-xs font-semibold text-[#7187ff] transition hover:text-white">Ver <ArrowUpRight size={13} /></Link>
       </div>
     </Card>
   )
