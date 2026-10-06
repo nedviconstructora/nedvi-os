@@ -116,6 +116,18 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: updateError.message || 'No pudimos actualizar los permisos.' }, { status: 500 })
     }
 
+    const { error: profileUpdateError } = await admin
+      .from('profiles')
+      .update({ permissions })
+      .eq('id', targetUser.id)
+
+    if (profileUpdateError) {
+      return NextResponse.json(
+        { error: profileUpdateError.message || 'No pudimos sincronizar los permisos del perfil.' },
+        { status: 500 },
+      )
+    }
+
     return NextResponse.json({ userId: targetUser.id, permissions }, { status: 200 })
   } catch (error) {
     console.error(error)
