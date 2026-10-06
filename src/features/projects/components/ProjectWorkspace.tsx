@@ -1,12 +1,13 @@
 'use client'
 
 import Link from 'next/link'
-import { useEffect, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import {
   ChevronLeft,
   ChevronRight,
   FolderKanban,
   Plus,
+  RefreshCw,
   ShieldAlert,
   Timer,
   TrendingUp,
@@ -18,50 +19,42 @@ import { ProjectFilters } from '@/features/projects/components/ProjectFilters'
 import { ProjectSearch } from '@/features/projects/components/ProjectSearch'
 import { ProjectTable } from '@/features/projects/components/ProjectTable'
 import { useProjectFilters } from '@/features/projects/hooks/useProjectFilters'
-import {
-  PROJECTS_STORAGE_KEY,
-  PROJECTS_UPDATED_EVENT,
-  readProjects,
-} from '@/features/projects/services/projectStorage'
-import { syncQuoteProjectsIntoProjectStorage } from '@/features/projects/services/quoteProjectSync'
+import { readProjectsFromSupabase } from '@/features/projects/services/projectSupabaseService'
 import type { Project } from '@/features/projects/types/project'
 
 const PAGE_SIZE = 6
 
-type ProjectWorkspaceProps = {
-  projects: Project[]
-}
+export function ProjectWorkspace() {
+  const [projects, setProjects] = useState<Project[]>([])
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
 
-export function ProjectWorkspace({ projects: initialProjects }: ProjectWorkspaceProps) {
-  const [projects, setProjects] = useState<Project[]>(initialProjects)
+  const loadProjects = useCallback(async () => {
+    setError(null)
 
-  useEffect(() => {
-    const loadProjects = () => {
-      syncQuoteProjectsIntoProjectStorage()
-      setProjects(readProjects())
-    }
-
-    loadProjects()
-
-    const handleStorage = (event: StorageEvent) => {
-      if (
-        event.key === PROJECTS_STORAGE_KEY ||
-        event.key === 'nedvi_projects_from_quotes'
-      ) {
-        loadProjects()
-      }
-    }
-
-    window.addEventListener('storage', handleStorage)
-    window.addEventListener(PROJECTS_UPDATED_EVENT, loadProjects)
-    window.addEventListener('focus', loadProjects)
-
-    return () => {
-      window.removeEventListener('storage', handleStorage)
-      window.removeEventListener(PROJECTS_UPDATED_EVENT, loadProjects)
-      window.removeEventListener('focus', loadProjects)
+    try {
+      const nextProjects = await readProjectsFromSupabase()
+      setProjects(nextProjects)
+    } catch (loadError) {
+      console.error('Error al cargar proyectos desde Supabase:', loadError)
+      setError(
+        loadError instanceof Error
+          ? loadError.message
+          : 'No se pudieron cargar los proyectos desde Supabase.',
+      )
+    } finally {
+      setLoading(false)
     }
   }, [])
+
+  useEffect(() => {
+    void loadProjects()
+
+    const handleFocus = () => void loadProjects()
+    window.addEventListener('focus', handleFocus)
+
+    return () => window.removeEventListener('focus', handleFocus)
+  }, [loadProjects])
 
   const {
     query,
@@ -121,6 +114,22 @@ export function ProjectWorkspace({ projects: initialProjects }: ProjectWorkspace
         </Link>
       </header>
 
+      {error ? (
+        <div className="flex flex-col gap-4 rounded-2xl border border-red-400/20 bg-red-400/[0.06] p-5 sm:flex-row sm:items-center sm:justify-between">
+          <div>
+            <p className="text-sm font-semibold text-white">No pudimos cargar Proyectos desde Supabase</p>
+            <p className="mt-1 text-xs leading-5 text-red-200">{error}</p>
+          </div>
+          <button
+            type="button"
+            onClick={() => void loadProjects()}
+            className="inline-flex h-10 items-center justify-center gap-2 rounded-xl border border-red-300/20 px-4 text-xs font-semibold text-red-100 transition hover:bg-red-300/10"
+          >
+            <RefreshCw size={14} /> Reintentar
+          </button>
+        </div>
+      ) : null}
+
       <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
         <MetricCard
           label="Total de proyectos"
@@ -155,8 +164,9 @@ export function ProjectWorkspace({ projects: initialProjects }: ProjectWorkspace
         <div className="flex flex-col gap-4 lg:flex-row lg:items-center">
           <ProjectSearch value={query} onChange={updateQuery} />
           <span className="text-xs text-[#646873]">
-            {filteredProjects.length}{' '}
-            {filteredProjects.length === 1 ? 'proyecto' : 'proyectos'}
+            {loading
+              ? 'Cargando desde Supabase...'
+              : `${filteredProjects.length} ${filteredProjects.length === 1 ? 'proyecto' : 'proyectos'}`}
           </span>
         </div>
         <ProjectFilters
@@ -167,7 +177,11 @@ export function ProjectWorkspace({ projects: initialProjects }: ProjectWorkspace
         />
       </Card>
 
-      {visibleProjects.length ? (
+      {loading ? (
+        <div className="rounded-2xl border border-white/[0.07] bg-[#20232A] p-8 text-sm text-[#9CA3AF]">
+          Cargando proyectos desde Supabase...
+        </div>
+      ) : visibleProjects.length ? (
         <>
           <ProjectTable
             projects={visibleProjects}
@@ -227,7 +241,9 @@ export function ProjectWorkspace({ projects: initialProjects }: ProjectWorkspace
           description={
             hasActiveFilters
               ? 'Ajusta la búsqueda o los filtros para encontrar un proyecto.'
-              : 'La cartera de proyectos está lista para registrar el primer proyecto.'
+              : error
+                ? 'Corrige la conexión con Supabase y vuelve a intentar.'
+                : 'La cartera de proyectos está lista para registrar el primer proyecto.'
           }
           action={
             hasActiveFilters ? (
