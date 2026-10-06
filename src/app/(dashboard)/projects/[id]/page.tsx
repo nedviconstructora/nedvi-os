@@ -5,25 +5,46 @@ import { useEffect, useState } from 'react'
 import { useParams } from 'next/navigation'
 import { AppShell } from '@/components/layout/AppShell'
 import { ProjectDetail } from '@/features/projects/components/ProjectDetail'
-import { readProjectById } from '@/features/projects/services/projectStorage'
+import { readProjectByIdFromSupabase } from '@/features/projects/services/projectSupabaseService'
 import type { Project } from '@/features/projects/types/project'
 
 export default function ProjectDetailPage() {
   const params = useParams<{ id: string }>()
-  const [project, setProject] = useState<Project | null>(null)
-  const [loaded, setLoaded] = useState(false)
+  const [project, setProject] = useState<Project | null | undefined>(undefined)
+  const [error, setError] = useState<string | null>(null)
 
   useEffect(() => {
-    const foundProject = readProjectById(params.id)
-    setProject(foundProject ?? null)
-    setLoaded(true)
+    let active = true
+
+    async function loadProject() {
+      setError(null)
+      try {
+        const foundProject = await readProjectByIdFromSupabase(params.id)
+        if (active) setProject(foundProject ?? null)
+      } catch (loadError) {
+        console.error('Error al cargar proyecto desde Supabase:', loadError)
+        if (active) {
+          setProject(null)
+          setError(
+            loadError instanceof Error
+              ? loadError.message
+              : 'No se pudo cargar el proyecto desde Supabase.',
+          )
+        }
+      }
+    }
+
+    void loadProject()
+    return () => {
+      active = false
+    }
   }, [params.id])
 
-  if (!loaded) {
+  if (project === undefined) {
     return (
       <AppShell>
         <div className="mx-auto w-full max-w-[1600px] py-16 text-center text-sm text-[#646873]">
-          Cargando proyecto...
+          Cargando proyecto desde Supabase...
         </div>
       </AppShell>
     )
@@ -35,7 +56,7 @@ export default function ProjectDetailPage() {
         <div className="mx-auto w-full max-w-xl py-20 text-center">
           <h1 className="text-2xl font-semibold text-white">Proyecto no encontrado</h1>
           <p className="mt-3 text-sm text-[#646873]">
-            El proyecto pudo haber sido eliminado o no existe en este dispositivo.
+            El proyecto no existe en Supabase o tu usuario no tiene permiso para consultarlo.
           </p>
           <Link
             href="/projects"
