@@ -1,5 +1,22 @@
 import { NextResponse } from 'next/server'
+import { createClient as createAdminClient } from '@supabase/supabase-js'
 import { createClient as createServerClient } from '@/utils/supabase/server'
+
+function getAdminClient() {
+  const url = process.env.NEXT_PUBLIC_SUPABASE_URL
+  const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY
+
+  if (!url || !serviceRoleKey) {
+    throw new Error('Falta la configuración privada de Supabase.')
+  }
+
+  return createAdminClient(url, serviceRoleKey, {
+    auth: {
+      autoRefreshToken: false,
+      persistSession: false,
+    },
+  })
+}
 
 function normalizeRole(value: unknown) {
   return String(value ?? '')
@@ -48,7 +65,8 @@ export async function GET(request: Request) {
     return NextResponse.json({ error: 'Usuario no válido.' }, { status: 400 })
   }
 
-  const { data, error } = await auth.supabase
+  const admin = getAdminClient()
+  const { data, error } = await admin
     .from('project_members')
     .select('project_id')
     .eq('user_id', userId)
@@ -83,8 +101,10 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: 'Usuario o cliente no válido.' }, { status: 400 })
   }
 
+  const admin = getAdminClient()
+
   const { data: validProjects, error: validationError } = requestedProjectIds.length
-    ? await auth.supabase
+    ? await admin
         .from('projects')
         .select('id')
         .eq('customer_id', customerId)
@@ -97,7 +117,7 @@ export async function POST(request: Request) {
 
   const validProjectIds = (validProjects ?? []).map((project) => project.id)
 
-  const { error: clearError } = await auth.supabase
+  const { error: clearError } = await admin
     .from('project_members')
     .delete()
     .eq('user_id', userId)
@@ -107,7 +127,7 @@ export async function POST(request: Request) {
   }
 
   if (validProjectIds.length) {
-    const { error: insertError } = await auth.supabase
+    const { error: insertError } = await admin
       .from('project_members')
       .insert(validProjectIds.map((projectId) => ({ project_id: projectId, user_id: userId })))
 
