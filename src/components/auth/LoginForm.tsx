@@ -236,7 +236,7 @@ export function LoginForm() {
         id="email"
         name="email"
         type="email"
-        label="Work email"
+        label="Correo de trabajo"
         placeholder="you@company.com"
         autoComplete="email"
         value={email}
@@ -248,8 +248,8 @@ export function LoginForm() {
         id="password"
         name="password"
         type={showPassword ? 'text' : 'password'}
-        label="Password"
-        placeholder="Enter your password"
+        label="Contraseña"
+        placeholder="Ingresa tu contraseña"
         autoComplete="current-password"
         value={password}
         onChange={(e) => setPassword(e.target.value)}
@@ -259,7 +259,7 @@ export function LoginForm() {
             type="button"
             onClick={() => setShowPassword((value) => !value)}
             className="rounded-md px-2 py-1 text-[10px] font-bold uppercase tracking-[0.14em] text-[#9CA3AF] transition hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#163DFF]"
-            aria-label={showPassword ? 'Hide password' : 'Show password'}
+            aria-label={showPassword ? 'Ocultar contraseña' : 'Mostrar contraseña'}
           >
             {showPassword ? 'Hide' : 'Show'}
           </button>
@@ -273,7 +273,7 @@ export function LoginForm() {
           disabled={recovering}
           className="text-sm font-medium text-[#9CA3AF] transition hover:text-white disabled:opacity-50"
         >
-          {recovering ? 'Sending...' : 'Forgot password?'}
+          {recovering ? 'Enviando...' : '¿Olvidaste tu contraseña?'}
         </button>
       </div>
 
@@ -286,7 +286,7 @@ export function LoginForm() {
         className="group w-full"
         disabled={loading}
       >
-        <span>{loading ? 'Signing in...' : 'Sign in to NEDVI OS'}</span>
+        <span>{loading ? 'Iniciando sesión...' : 'Entrar a NEDVI OS'}</span>
         {!loading && (
           <span aria-hidden="true" className="ml-3 transition-transform duration-200 group-hover:translate-x-1">
             -&gt;
