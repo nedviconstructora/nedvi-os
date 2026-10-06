@@ -164,3 +164,14 @@ export async function updateProjectInSupabase(
   if (error) throw error
   return rowToProject(data as ProjectRow)
 }
+
+
+export async function deleteProjectFromSupabase(id: string): Promise<void> {
+  const supabase = createClient()
+  const { error } = await supabase
+    .from('projects')
+    .delete()
+    .eq('id', id)
+
+  if (error) throw error
+}
