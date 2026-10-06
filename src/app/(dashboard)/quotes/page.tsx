@@ -1,4 +1,5 @@
 'use client'
+import { createProjectInSupabase } from '@/features/projects/services/projectSupabaseService'
 
 import { FormEvent, useEffect, useMemo, useState } from 'react'
 import { AppShell } from '@/components/layout/AppShell'
@@ -504,42 +505,45 @@ export default function QuotesPage() {
     )
   }
 
-  function convertToProject(quote: Quote) {
+  async function convertToProject(quote: Quote) {
     if (quote.status !== 'Aprobada') {
       alert('Primero cambia la cotización a estado Aprobada.')
       return
     }
 
-    const raw = localStorage.getItem(PROJECT_INTAKE_KEY)
-    let projects: unknown[] = []
-
     try {
-      projects = raw ? JSON.parse(raw) : []
-      if (!Array.isArray(projects)) projects = []
-    } catch {
-      projects = []
-    }
+      const project = await createProjectInSupabase({
+        name: quote.project,
+        clientId: quote.customerId,
+        client: quote.client,
+        clientContact: quote.customerInfo?.contact ?? '',
+        projectType: 'Commercial',
+        address: quote.customerInfo?.address ?? '',
+        latitude: 0,
+        longitude: 0,
+        budget: quote.total,
+        startDate: '',
+        estimatedCompletion: '',
+        manager: quote.owner ?? '',
+        status: 'Planning',
+        description: `Proyecto creado desde la cotización ${quote.folio}.`,
+      })
 
-    const projectRecord = {
-      id: crypto.randomUUID(),
-      folio: quote.folio,
-      customerId: quote.customerId,
-      client: quote.client,
-      name: quote.project,
-      quoteId: quote.id,
-      quoteTotal: quote.total,
-      quoteCurrency: quote.currency,
-      createdAt: new Date().toISOString().slice(0, 10),
-      source: 'Cotización aprobada',
-    }
+      setQuotes((current) =>
+        current.map((item) =>
+          item.id === quote.id ? { ...item, convertedToProject: true } : item,
+        ),
+      )
 
-    localStorage.setItem(PROJECT_INTAKE_KEY, JSON.stringify([projectRecord, ...projects]))
-    setQuotes((current) =>
-      current.map((item) =>
-        item.id === quote.id ? { ...item, convertedToProject: true } : item,
-      ),
-    )
-    alert(`Proyecto creado desde ${quote.folio}. El mismo folio continuará en el proceso.`)
+      alert(`Proyecto ${project.folio ?? project.name} creado en Supabase desde ${quote.folio}.`)
+    } catch (error) {
+      console.error('Error al crear proyecto desde cotización:', error)
+      alert(
+        error instanceof Error
+          ? `No se pudo crear el proyecto: ${error.message}`
+          : 'No se pudo crear el proyecto en Supabase.',
+      )
+    }
   }
 
   function printPdf(quote: Quote) {
