@@ -1,5 +1,6 @@
 'use client'
 
+import { createClient } from '@/lib/supabase/client'
 import type {
   Customer,
   CustomerFormValues,
@@ -14,112 +15,33 @@ import {
   projectTypes,
 } from '@/features/crm/types/customer'
 
-type StoredSession = {
-  access_token?: string
-}
+async function supabaseRequest(path: string, init: RequestInit = {}) {
+  const supabase = createClient()
+  const {
+    data: { session },
+  } = await supabase.auth.getSession()
 
-type CustomerRow = {
-  id: string
-  folio: string | null
-  company: string
-  contact: string
-  phone: string
-  email: string
-  address: string
-  rfc: string
-  project_type: string | null
-  lead_source: string | null
-  status: string
-  assigned_salesperson: string | null
-  notes: string
-  created_at: string
-  last_contact: string | null
-  timeline: unknown
-}
-
-const CUSTOMER_SELECT = [
-  'id',
-  'folio',
-  'company',
-  'contact',
-  'phone',
-  'email',
-  'address',
-  'rfc',
-  'project_type',
-  'lead_source',
-  'status',
-  'assigned_salesperson',
-  'notes',
-  'created_at',
-  'last_contact',
-  'timeline',
-].join(',')
-
-function getStoredSession(): StoredSession | null {
-  if (typeof window === 'undefined') return null
-
-  const rawSession = window.localStorage.getItem('nedvi_session')
-  if (!rawSession) return null
-
-  try {
-    return JSON.parse(rawSession) as StoredSession
-  } catch {
-    return null
-  }
-}
-
-function getSupabaseConfig() {
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL?.trim()
-  const keys = [
-    process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY,
-  ].filter((value): value is string => Boolean(value?.trim()))
-  const accessToken = getStoredSession()?.access_token?.trim()
+  const publicKey = process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY?.trim()
 
-  if (!supabaseUrl) {
-    throw new Error('Falta NEXT_PUBLIC_SUPABASE_URL en .env.local.')
+  if (!supabaseUrl || !publicKey) {
+    throw new Error('Falta la configuración pública de Supabase en .env.local.')
   }
 
-  if (keys.length === 0) {
-    throw new Error('Falta una API key pública de Supabase en .env.local.')
-  }
-
-  if (!accessToken) {
+  if (!session?.access_token) {
     throw new Error('No hay una sesión activa de NEDVI OS. Inicia sesión nuevamente.')
   }
 
-  return { supabaseUrl, keys, accessToken }
-}
-
-async function supabaseRequest(path: string, init: RequestInit = {}) {
-  const { supabaseUrl, keys, accessToken } = getSupabaseConfig()
-  let lastResponse: Response | null = null
-
-  for (const key of keys) {
-    const response = await fetch(`${supabaseUrl}${path}`, {
-      ...init,
-      headers: {
-        Accept: 'application/json',
-        apikey: key,
-        Authorization: `Bearer ${accessToken}`,
-        ...init.headers,
-      },
-      cache: 'no-store',
-    })
-
-    lastResponse = response
-
-    if (response.status !== 401) {
-      return response
-    }
-  }
-
-  if (!lastResponse) {
-    throw new Error('No fue posible conectar con Supabase.')
-  }
-
-  return lastResponse
+  return fetch(`${supabaseUrl}${path}`, {
+    ...init,
+    headers: {
+      Accept: 'application/json',
+      apikey: publicKey,
+      Authorization: `Bearer ${session.access_token}`,
+      ...init.headers,
+    },
+    cache: 'no-store',
+  })
 }
 
 function isCustomerStatus(value: string): value is CustomerStatus {
