@@ -313,3 +313,159 @@ export async function POST(request: Request) {
     )
   }
 }
+
+
+export async function PATCH(request: Request) {
+  try {
+    const serverSupabase = await createServerClient()
+    const {
+      data: { user: currentUser },
+    } = await serverSupabase.auth.getUser()
+
+    if (!currentUser) {
+      return NextResponse.json({ error: 'Sesión no válida.' }, { status: 401 })
+    }
+
+    const { data: currentProfile } = await serverSupabase
+      .from('profiles')
+      .select('role, active')
+      .eq('id', currentUser.id)
+      .maybeSingle()
+
+    if (!currentProfile?.active || normalizeRole(currentProfile.role) !== 'administracion') {
+      return NextResponse.json(
+        { error: 'Solo Administración puede modificar usuarios.' },
+        { status: 403 },
+      )
+    }
+
+    const body = (await request.json()) as {
+      userId?: string
+      active?: boolean
+    }
+
+    const userId = body.userId?.trim()
+    if (!userId || typeof body.active !== 'boolean') {
+      return NextResponse.json({ error: 'Datos de usuario no válidos.' }, { status: 400 })
+    }
+
+    if (userId === currentUser.id) {
+      return NextResponse.json(
+        { error: 'La cuenta principal no puede desactivarse desde esta pantalla.' },
+        { status: 400 },
+      )
+    }
+
+    const admin = getAdminClient()
+
+    const { error: profileError } = await admin
+      .from('profiles')
+      .update({ active: body.active })
+      .eq('id', userId)
+
+    if (profileError) {
+      return NextResponse.json(
+        { error: profileError.message || 'No pudimos actualizar el estado del usuario.' },
+        { status: 500 },
+      )
+    }
+
+    const { error: authError } = await admin.auth.admin.updateUserById(userId, {
+      ban_duration: body.active ? 'none' : '876000h',
+    })
+
+    if (authError) {
+      await admin.from('profiles').update({ active: !body.active }).eq('id', userId)
+      return NextResponse.json(
+        { error: authError.message || 'No pudimos sincronizar el estado de acceso.' },
+        { status: 500 },
+      )
+    }
+
+    return NextResponse.json({ userId, active: body.active }, { status: 200 })
+  } catch (error) {
+    console.error('Error actualizando estado de usuario:', error)
+    return NextResponse.json(
+      { error: 'No pudimos actualizar el estado del usuario.' },
+      { status: 500 },
+    )
+  }
+}
+
+export async function DELETE(request: Request) {
+  try {
+    const serverSupabase = await createServerClient()
+    const {
+      data: { user: currentUser },
+    } = await serverSupabase.auth.getUser()
+
+    if (!currentUser) {
+      return NextResponse.json({ error: 'Sesión no válida.' }, { status: 401 })
+    }
+
+    const { data: currentProfile } = await serverSupabase
+      .from('profiles')
+      .select('role, active')
+      .eq('id', currentUser.id)
+      .maybeSingle()
+
+    if (!currentProfile?.active || normalizeRole(currentProfile.role) !== 'administracion') {
+      return NextResponse.json(
+        { error: 'Solo Administración puede eliminar usuarios.' },
+        { status: 403 },
+      )
+    }
+
+    const body = (await request.json()) as { userId?: string }
+    const userId = body.userId?.trim()
+
+    if (!userId) {
+      return NextResponse.json({ error: 'Usuario no válido.' }, { status: 400 })
+    }
+
+    if (userId === currentUser.id) {
+      return NextResponse.json(
+        { error: 'La cuenta principal no puede eliminarse desde esta pantalla.' },
+        { status: 400 },
+      )
+    }
+
+    const admin = getAdminClient()
+
+    const nullableReferences = [
+      ['project_documents', 'uploaded_by'],
+      ['project_evidence', 'uploaded_by'],
+      ['project_milestones', 'created_by'],
+      ['project_progress_updates', 'created_by'],
+      ['project_reports', 'created_by'],
+      ['project_tasks', 'created_by'],
+    ] as const
+
+    for (const [table, column] of nullableReferences) {
+      const { error } = await admin.from(table).update({ [column]: null }).eq(column, userId)
+      if (error) {
+        console.error(`Error limpiando referencia ${table}.${column}:`, error)
+        return NextResponse.json(
+          { error: 'No pudimos preparar la eliminación del usuario.' },
+          { status: 500 },
+        )
+      }
+    }
+
+    const { error: deleteError } = await admin.auth.admin.deleteUser(userId)
+    if (deleteError) {
+      return NextResponse.json(
+        { error: deleteError.message || 'No pudimos eliminar el usuario.' },
+        { status: 500 },
+      )
+    }
+
+    return NextResponse.json({ userId }, { status: 200 })
+  } catch (error) {
+    console.error('Error eliminando usuario:', error)
+    return NextResponse.json(
+      { error: 'No pudimos eliminar el usuario.' },
+      { status: 500 },
+    )
+  }
+}
