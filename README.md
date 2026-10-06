@@ -26,3 +26,7 @@ npm run dev
 - `src/lib`: Framework-agnostic utilities
 - `src/services`: External systems and data access
 - `src/types`: Shared TypeScript types
+
+## Deployment
+
+Staging deployments are generated from `feature/portal-documentos` through Vercel.
