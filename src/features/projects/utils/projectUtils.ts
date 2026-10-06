@@ -1,11 +1,16 @@
 import type { Project, ProjectStatus } from '@/features/projects/types/project'
 
 export function formatProjectDate(value: string): string {
-  return new Intl.DateTimeFormat('en-US', {
+  if (!value) return 'Pendiente'
+
+  const date = new Date(`${value}T12:00:00`)
+  if (Number.isNaN(date.getTime())) return 'Pendiente'
+
+  return new Intl.DateTimeFormat('es-MX', {
     day: '2-digit',
     month: 'short',
     year: 'numeric',
-  }).format(new Date(`${value}T12:00:00`))
+  }).format(date)
 }
 
 export function formatCurrency(value: number): string {
