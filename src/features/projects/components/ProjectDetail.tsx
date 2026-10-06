@@ -3,7 +3,7 @@
 import Link from 'next/link'
 import { ArrowLeft, CalendarDays, Edit3, Trash2, UsersRound } from 'lucide-react'
 import type { Project } from '@/features/projects/types/project'
-import { formatProjectDate, getProjectInitials } from '@/features/projects/utils/projectUtils'
+import { formatProjectDate, getProjectInitials, getProjectTypeLabel } from '@/features/projects/utils/projectUtils'
 import { Card, CardHeader } from '@/components/ui/Card'
 import { BudgetCard } from '@/features/projects/components/BudgetCard'
 import { DailyLog } from '@/features/projects/components/DailyLog'
@@ -37,7 +37,7 @@ export function ProjectDetail({ project, onDelete, deleting = false }: ProjectDe
               <h1 className="text-3xl font-semibold tracking-[-0.05em] text-white">{project.name}</h1>
               <ProjectStatusBadge status={project.status} />
             </div>
-            <p className="mt-2 text-sm text-[#9CA3AF]">{project.client} · {project.projectType}</p>
+            <p className="mt-2 text-sm text-[#9CA3AF]">{project.client} · {getProjectTypeLabel(project.projectType)}</p>
             {project.folio ? <p className="mt-1 text-xs font-medium text-[#7187ff]">{project.folio}</p> : null}
           </div>
         </div>
