@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server'
+import { createClient as createAdminClient } from '@supabase/supabase-js'
 import { createClient as createServerClient } from '@/utils/supabase/server'
 import type { ModulePermission } from '@/config/roles'
 
@@ -36,6 +37,39 @@ function normalizeRole(value: unknown) {
     .toLowerCase()
     .normalize('NFD')
     .replace(/[\u0300-\u036f]/g, '')
+}
+
+
+function getAdminClient() {
+  const url = process.env.NEXT_PUBLIC_SUPABASE_URL
+  const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY
+
+  if (!url || !serviceRoleKey) {
+    throw new Error('Falta la configuración privada de Supabase.')
+  }
+
+  return createAdminClient(url, serviceRoleKey, {
+    auth: {
+      autoRefreshToken: false,
+      persistSession: false,
+    },
+  })
+}
+
+function databaseRole(value: unknown) {
+  const normalized = normalizeRole(value)
+  if (normalized === 'administracion' || normalized === 'administrador' || normalized === 'admin') {
+    return 'administracion'
+  }
+  if (normalized === 'supervisor' || normalized === 'obra') return 'obra'
+  return 'cliente'
+}
+
+function temporaryPassword() {
+  const alphabet = 'ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz23456789'
+  const values = new Uint32Array(18)
+  crypto.getRandomValues(values)
+  return `Nedvi-${Array.from(values, (value) => alphabet[value % alphabet.length]).join('')}!`
 }
 
 function roleLabel(role: string) {
@@ -109,6 +143,172 @@ export async function GET() {
     console.error('Error cargando usuarios desde Supabase:', error)
     return NextResponse.json(
       { error: 'No pudimos consultar los usuarios de Supabase.' },
+      { status: 500 },
+    )
+  }
+}
+
+
+export async function POST(request: Request) {
+  try {
+    const serverSupabase = await createServerClient()
+    const {
+      data: { user: currentUser },
+      error: currentUserError,
+    } = await serverSupabase.auth.getUser()
+
+    if (currentUserError || !currentUser) {
+      return NextResponse.json({ error: 'Sesión no válida.' }, { status: 401 })
+    }
+
+    const { data: currentProfile } = await serverSupabase
+      .from('profiles')
+      .select('role, active')
+      .eq('id', currentUser.id)
+      .maybeSingle()
+
+    if (!currentProfile?.active || normalizeRole(currentProfile.role) !== 'administracion') {
+      return NextResponse.json(
+        { error: 'Solo Administración puede aprobar usuarios.' },
+        { status: 403 },
+      )
+    }
+
+    const body = (await request.json()) as {
+      name?: string
+      email?: string
+      phone?: string
+      position?: string
+      role?: string
+      permissions?: ModulePermission[]
+    }
+
+    const name = body.name?.trim()
+    const email = body.email?.trim().toLowerCase()
+    const phone = body.phone?.trim() ?? ''
+    const position = body.position?.trim() ?? ''
+    const role = databaseRole(body.role)
+    const permissions =
+      role === 'administracion'
+        ? DEFAULT_PERMISSIONS.administracion
+        : Array.isArray(body.permissions)
+          ? body.permissions
+          : DEFAULT_PERMISSIONS[role] ?? []
+
+    if (!name || !email || !email.includes('@')) {
+      return NextResponse.json(
+        { error: 'Nombre y correo válido son obligatorios.' },
+        { status: 400 },
+      )
+    }
+
+    const admin = getAdminClient()
+    let authUserId: string | undefined
+    let createdNewUser = false
+
+    const { data: created, error: createError } = await admin.auth.admin.createUser({
+      email,
+      password: temporaryPassword(),
+      email_confirm: true,
+      user_metadata: {
+        full_name: name,
+        first_name: name.split(' ')[0] || name,
+        role,
+      },
+    })
+
+    if (created.user) {
+      authUserId = created.user.id
+      createdNewUser = true
+    } else if (createError?.message?.toLowerCase().includes('already')) {
+      const { data: listed, error: listError } = await admin.auth.admin.listUsers({
+        page: 1,
+        perPage: 1000,
+      })
+
+      if (listError) {
+        return NextResponse.json(
+          { error: 'No pudimos recuperar el usuario existente.' },
+          { status: 500 },
+        )
+      }
+
+      authUserId = listed.users.find(
+        (user) => user.email?.trim().toLowerCase() === email,
+      )?.id
+    } else {
+      return NextResponse.json(
+        { error: createError?.message || 'No pudimos crear el usuario en Supabase.' },
+        { status: 400 },
+      )
+    }
+
+    if (!authUserId) {
+      return NextResponse.json(
+        { error: 'No pudimos resolver el usuario aprobado.' },
+        { status: 500 },
+      )
+    }
+
+    const firstName = name.split(' ')[0] || name
+    const initials = name
+      .split(' ')
+      .filter(Boolean)
+      .slice(0, 2)
+      .map((part) => part[0]?.toUpperCase())
+      .join('')
+
+    const { data: profile, error: profileError } = await admin
+      .from('profiles')
+      .upsert({
+        id: authUserId,
+        email,
+        full_name: name,
+        first_name: firstName,
+        initials,
+        role,
+        phone,
+        position,
+        permissions,
+        active: true,
+        deleted_at: null,
+      })
+      .select('id,email,full_name,first_name,role,phone,active,position,permissions,created_at')
+      .single()
+
+    if (profileError || !profile) {
+      if (createdNewUser) {
+        await admin.auth.admin.deleteUser(authUserId)
+      }
+
+      console.error('Error persistiendo usuario aprobado:', profileError)
+      return NextResponse.json(
+        { error: 'No pudimos guardar el usuario aprobado en Supabase.' },
+        { status: 500 },
+      )
+    }
+
+    return NextResponse.json(
+      {
+        user: {
+          id: profile.id,
+          name: profile.full_name || profile.first_name || email,
+          email: profile.email || email,
+          phone: profile.phone || '',
+          position: profile.position || '',
+          role: roleLabel(normalizeRole(profile.role)),
+          permissions: profile.permissions ?? permissions,
+          status: profile.active ? 'Activo' : 'Inactivo',
+          createdAt: profile.created_at,
+        },
+        needsPasswordSetup: createdNewUser,
+      },
+      { status: createdNewUser ? 201 : 200 },
+    )
+  } catch (error) {
+    console.error('Error aprobando usuario:', error)
+    return NextResponse.json(
+      { error: 'No pudimos aprobar el usuario.' },
       { status: 500 },
     )
   }
