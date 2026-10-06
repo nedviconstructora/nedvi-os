@@ -106,15 +106,33 @@ export default function UsersAndPermissionsPage() {
 
   const isAdmin = currentUser.role === 'Administración'
 
-  function refresh() {
+  async function refresh() {
     setRequests(readRegistrationRequests())
     setPasswordRequests(readPasswordResetRequests())
-    setUsers(readAccessUsers())
+
+    try {
+      const response = await fetch('/api/access/users', { cache: 'no-store' })
+      const data = (await response.json()) as { users?: AccessUser[]; error?: string }
+
+      if (!response.ok || !Array.isArray(data.users)) {
+        throw new Error(data.error || 'No se pudieron cargar los usuarios de Supabase.')
+      }
+
+      const syncedUsers = data.users.filter(
+        (user) => user.email.toLowerCase() !== currentUser.email.toLowerCase(),
+      )
+
+      setUsers(syncedUsers)
+      writeAccessUsers(syncedUsers)
+    } catch (loadError) {
+      console.error('Error al sincronizar usuarios desde Supabase:', loadError)
+      setUsers(readAccessUsers())
+    }
   }
 
   useEffect(() => {
-    refresh()
-    const handleStorage = () => refresh()
+    void refresh()
+    const handleStorage = () => void refresh()
     window.addEventListener('storage', handleStorage)
     window.addEventListener('focus', handleStorage)
     return () => {
@@ -554,7 +572,7 @@ export default function UsersAndPermissionsPage() {
       ) : null}
 
       <div className="rounded-2xl border border-[#5496CC]/15 bg-[#5496CC]/5 p-4 text-xs leading-5 text-[var(--muted)]">
-        <strong className="text-[var(--foreground)]">Etapa actual:</strong> usuarios, contraseñas temporales y solicitudes se guardan localmente en este navegador. Al conectar Supabase Auth, estos controles administrarán cuentas reales desde el servidor.
+        <strong className="text-[var(--foreground)]">Etapa actual:</strong> la lista de usuarios se sincroniza con Supabase. Las solicitudes y algunos controles administrativos temporales todavía conservan respaldo local mientras terminamos la migración completa.
       </div>
 
       {passwordUser ? (
