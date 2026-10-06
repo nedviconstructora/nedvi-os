@@ -180,6 +180,22 @@ export function LoginForm() {
     setShowRecovery(true)
   }
 
+  function recoveryRedirectUrl() {
+    if (window.location.hostname === 'localhost') {
+      return 'http://localhost:3000/auth/reset-password'
+    }
+
+    if (window.location.hostname === 'nedvi-os.vercel.app') {
+      return 'https://nedvi-os.vercel.app/auth/reset-password'
+    }
+
+    if (window.location.hostname.endsWith('.vercel.app')) {
+      return 'https://nedvi-os-git-feature-portal-documentos-nedviconstructora.vercel.app/auth/reset-password'
+    }
+
+    return `${window.location.origin}/auth/reset-password`
+  }
+
   async function requestPasswordReset() {
     setRecoveryMessage('')
     setRecoveryError('')
@@ -194,7 +210,7 @@ export function LoginForm() {
     try {
       const supabase = createClient()
       const { error: resetError } = await supabase.auth.resetPasswordForEmail(normalizedEmail, {
-        redirectTo: `${window.location.origin}/auth/reset-password`,
+        redirectTo: recoveryRedirectUrl(),
       })
       if (resetError) throw resetError
 
