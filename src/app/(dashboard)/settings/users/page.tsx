@@ -77,14 +77,6 @@ function initials(name: string) {
     .join('')
 }
 
-async function sha256(value: string) {
-  const bytes = new TextEncoder().encode(value)
-  const hashBuffer = await crypto.subtle.digest('SHA-256', bytes)
-  return Array.from(new Uint8Array(hashBuffer))
-    .map((byte) => byte.toString(16).padStart(2, '0'))
-    .join('')
-}
-
 export default function UsersAndPermissionsPage() {
   const [tab, setTab] = useState<Tab>('users')
   const [requests, setRequests] = useState<RegistrationRequest[]>([])
@@ -268,15 +260,36 @@ export default function UsersAndPermissionsPage() {
     setReviewingId(null)
   }
 
-  function toggleUserStatus(userId: string) {
+  async function toggleUserStatus(userId: string) {
     if (!isAdmin) return
-    const nextUsers = users.map((user) =>
-      user.id === userId
-        ? { ...user, status: user.status === 'Activo' ? ('Inactivo' as const) : ('Activo' as const) }
-        : user,
-    )
-    writeAccessUsers(nextUsers)
-    setUsers(nextUsers)
+
+    const user = users.find((item) => item.id === userId)
+    if (!user) return
+
+    const nextActive = user.status !== 'Activo'
+
+    try {
+      const response = await fetch('/api/access/users', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        cache: 'no-store',
+        body: JSON.stringify({ userId, active: nextActive }),
+      })
+      const data = (await response.json()) as { error?: string }
+
+      if (!response.ok) {
+        throw new Error(data.error || 'No se pudo actualizar el estado del usuario.')
+      }
+
+      await refresh()
+    } catch (error) {
+      console.error('Error actualizando estado del usuario:', error)
+      window.alert(
+        error instanceof Error
+          ? error.message
+          : 'No se pudo actualizar el estado del usuario.',
+      )
+    }
   }
 
   function openPasswordModal(user: AccessUser) {
@@ -303,48 +316,83 @@ export default function UsersAndPermissionsPage() {
       return
     }
 
-    const passwordHash = await sha256(newPassword)
-    const updatedAt = new Date().toISOString()
-    const nextUsers = users.map((user) =>
-      user.id === passwordUser.id
-        ? { ...user, passwordHash, passwordUpdatedAt: updatedAt }
-        : user,
-    )
-    const nextPasswordRequests = passwordRequests.map((request) =>
-      request.userId === passwordUser.id && request.status === 'Pendiente'
-        ? { ...request, status: 'Atendida' as const, reviewedAt: updatedAt }
-        : request,
-    )
+    try {
+      const response = await fetch('/api/access/password-reset', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        cache: 'no-store',
+        body: JSON.stringify({
+          userId: passwordUser.id,
+          email: passwordUser.email,
+          password: newPassword,
+        }),
+      })
+      const data = (await response.json()) as { error?: string }
 
-    writeAccessUsers(nextUsers)
-    writePasswordResetRequests(nextPasswordRequests)
-    setUsers(nextUsers)
-    setPasswordRequests(nextPasswordRequests)
-    setPasswordSaved(true)
-    setNewPassword('')
-    setConfirmPassword('')
+      if (!response.ok) {
+        throw new Error(data.error || 'No se pudo actualizar la contraseña.')
+      }
+
+      const updatedAt = new Date().toISOString()
+      const nextPasswordRequests = passwordRequests.map((request) =>
+        request.userId === passwordUser.id && request.status === 'Pendiente'
+          ? { ...request, status: 'Atendida' as const, reviewedAt: updatedAt }
+          : request,
+      )
+
+      writePasswordResetRequests(nextPasswordRequests)
+      setPasswordRequests(nextPasswordRequests)
+      setPasswordSaved(true)
+      setNewPassword('')
+      setConfirmPassword('')
+      await refresh()
+    } catch (error) {
+      console.error('Error actualizando contraseña en Supabase:', error)
+      setPasswordError(
+        error instanceof Error
+          ? error.message
+          : 'No se pudo actualizar la contraseña.',
+      )
+    }
   }
 
-  function confirmDeleteUser() {
+  async function confirmDeleteUser() {
     if (!isAdmin || !deleteUser) return
 
-    const nextUsers = users.filter((user) => user.id !== deleteUser.id)
-    const nextRequests = requests.filter(
-      (request) =>
-        request.id !== deleteUser.id &&
-        request.email.toLowerCase() !== deleteUser.email.toLowerCase(),
-    )
-    const nextPasswordRequests = passwordRequests.filter(
-      (request) => request.userId !== deleteUser.id,
-    )
+    try {
+      const response = await fetch('/api/access/users', {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json' },
+        cache: 'no-store',
+        body: JSON.stringify({ userId: deleteUser.id }),
+      })
+      const data = (await response.json()) as { error?: string }
 
-    writeAccessUsers(nextUsers)
-    writeRegistrationRequests(nextRequests)
-    writePasswordResetRequests(nextPasswordRequests)
-    setUsers(nextUsers)
-    setRequests(nextRequests)
-    setPasswordRequests(nextPasswordRequests)
-    setDeleteUser(null)
+      if (!response.ok) {
+        throw new Error(data.error || 'No se pudo eliminar el usuario.')
+      }
+
+      const nextRequests = requests.filter(
+        (request) =>
+          request.id !== deleteUser.id &&
+          request.email.toLowerCase() !== deleteUser.email.toLowerCase(),
+      )
+      const nextPasswordRequests = passwordRequests.filter(
+        (request) => request.userId !== deleteUser.id,
+      )
+
+      writeRegistrationRequests(nextRequests)
+      writePasswordResetRequests(nextPasswordRequests)
+      setRequests(nextRequests)
+      setPasswordRequests(nextPasswordRequests)
+      setDeleteUser(null)
+      await refresh()
+    } catch (error) {
+      console.error('Error eliminando usuario en Supabase:', error)
+      window.alert(
+        error instanceof Error ? error.message : 'No se pudo eliminar el usuario.',
+      )
+    }
   }
 
   return (
