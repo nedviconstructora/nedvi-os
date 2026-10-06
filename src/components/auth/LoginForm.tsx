@@ -24,6 +24,7 @@ type Profile = {
   initials: string | null
   role: NedviRole
   active: boolean
+  permissions: ModulePermission[] | null
 }
 
 const VALID_PERMISSIONS: ModulePermission[] = [
@@ -96,7 +97,7 @@ export function LoginForm() {
 
       const { data: profileData, error: profileError } = await supabase
         .from('profiles')
-        .select('id, full_name, first_name, initials, role, active')
+        .select('id, full_name, first_name, initials, role, active, permissions')
         .eq('id', data.user.id)
         .single()
 
@@ -117,8 +118,9 @@ export function LoginForm() {
       const appRole = toAppRole(profile.role)
       const name = profile.full_name || data.user.email || 'Usuario NEDVI'
       const firstName = profile.first_name || name.split(' ')[0] || name
+      const profilePermissions = readCustomPermissions(profile.permissions)
       const customPermissions = readCustomPermissions(data.user.user_metadata?.permissions)
-      const permissions = customPermissions ?? defaultPermissionsForRole(appRole)
+      const permissions = profilePermissions ?? customPermissions ?? defaultPermissionsForRole(appRole)
 
       let customerId: string | undefined
       let customerFolio: string | undefined
