@@ -28,7 +28,7 @@ export function AppShell({ children }: AppShellProps) {
             type="button"
             onClick={() => setMobileMenuOpen(false)}
             className="fixed inset-0 z-30 bg-black/60 backdrop-blur-sm lg:hidden"
-            aria-label="Close navigation overlay"
+            aria-label="Cerrar fondo de navegación"
           />
         ) : null}
         <div className="flex min-w-0 flex-1 flex-col">
