@@ -3,7 +3,7 @@ import { useEffect, useMemo, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { Copy, Eye, KeyRound, Link2, Power, ShieldCheck } from 'lucide-react'
 import type { Customer } from '@/features/crm/types/customer'
-import { readProjects } from '@/features/projects/services/projectStorage'
+import { readProjectsFromSupabase } from '@/features/projects/services/projectSupabaseService'
 import type { Project } from '@/features/projects/types/project'
 import { defaultPermissionsForRole, readAccessSession, readAccessUsers, writeAccessSession, writeAccessUsers, type AccessUser } from '@/features/access/services/accessStorage'
 
@@ -13,7 +13,7 @@ function tempPassword(){ const a='ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvw
 
 export function CustomerPortalAccess({customer}:{customer:Customer}){
  const router=useRouter(); const [users,setUsers]=useState<AccessUser[]>([]); const [projects,setProjects]=useState<Project[]>([]); const [selected,setSelected]=useState<string[]>([]); const [email,setEmail]=useState(customer.email); const [password,setPassword]=useState(''); const [message,setMessage]=useState(''); const [saving,setSaving]=useState(false)
- useEffect(()=>{ const u=readAccessUsers(); const p=readProjects().filter(x=>x.clientId===customer.id||x.client===customer.company); const linked=u.find(x=>x.customerId===customer.id); setUsers(u); setProjects(p); setEmail(linked?.email??customer.email); setSelected(linked ? (linked.projectIds ?? []) : []) },[customer])
+ useEffect(()=>{let active=true;async function load(){try{const [response,p]=await Promise.all([fetch('/api/access/users',{cache:'no-store'}),readProjectsFromSupabase()]);const data=await response.json() as {users?:AccessUser[]};const u=response.ok&&Array.isArray(data.users)?data.users:readAccessUsers();if(!active)return;const customerProjects=p.filter(x=>x.clientId===customer.id||x.client===customer.company);const linked=u.find(x=>x.customerId===customer.id||x.email.toLowerCase()===customer.email.toLowerCase());setUsers(u);setProjects(customerProjects);setEmail(linked?.email??customer.email);setSelected(linked?.projectIds?.length?linked.projectIds:customerProjects.map(x=>x.id))}catch(error){console.error('Error al sincronizar acceso del cliente:',error);if(!active)return;const u=readAccessUsers();setUsers(u);setProjects([]);setEmail(customer.email);setSelected([])}}void load();return()=>{active=false}},[customer])
  const accessUser=useMemo(()=>users.find(x=>x.customerId===customer.id),[users,customer.id])
  function toggle(id:string){setSelected(c=>c.includes(id)?c.filter(x=>x!==id):[...c,id])}
  async function save(){
