@@ -19,7 +19,7 @@ import { ProjectFilters } from '@/features/projects/components/ProjectFilters'
 import { ProjectSearch } from '@/features/projects/components/ProjectSearch'
 import { ProjectTable } from '@/features/projects/components/ProjectTable'
 import { useProjectFilters } from '@/features/projects/hooks/useProjectFilters'
-import { readProjectsFromSupabase } from '@/features/projects/services/projectSupabaseService'
+import { deleteProjectFromSupabase, readProjectsFromSupabase } from '@/features/projects/services/projectSupabaseService'
 import type { Project } from '@/features/projects/types/project'
 
 const PAGE_SIZE = 6
@@ -28,6 +28,7 @@ export function ProjectWorkspace() {
   const [projects, setProjects] = useState<Project[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  const [deletingId, setDeletingId] = useState<string | null>(null)
 
   const loadProjects = useCallback(async () => {
     setError(null)
@@ -46,6 +47,31 @@ export function ProjectWorkspace() {
       setLoading(false)
     }
   }, [])
+
+  const handleDeleteProject = useCallback(async (project: Project) => {
+    const confirmed = window.confirm(
+      `¿Eliminar el proyecto "${project.name}"? Esta acción también eliminará sus datos vinculados en Supabase.`,
+    )
+
+    if (!confirmed) return
+
+    setDeletingId(project.id)
+    setError(null)
+
+    try {
+      await deleteProjectFromSupabase(project.id)
+      await loadProjects()
+    } catch (deleteError) {
+      console.error('Error al eliminar proyecto:', deleteError)
+      setError(
+        deleteError instanceof Error
+          ? deleteError.message
+          : 'No se pudo eliminar el proyecto desde Supabase.',
+      )
+    } finally {
+      setDeletingId(null)
+    }
+  }, [loadProjects])
 
   useEffect(() => {
     void loadProjects()
@@ -188,11 +214,18 @@ export function ProjectWorkspace() {
             sortKey={sortKey}
             sortDirection={sortDirection}
             onSort={toggleSort}
+            onDelete={handleDeleteProject}
+            deletingId={deletingId}
           />
 
           <div className="grid gap-4 md:grid-cols-2 lg:hidden">
             {visibleProjects.map((project) => (
-              <ProjectCard project={project} key={project.id} />
+              <ProjectCard
+                project={project}
+                key={project.id}
+                onDelete={handleDeleteProject}
+                deleting={deletingId === project.id}
+              />
             ))}
           </div>
 
