@@ -1,0 +1,27 @@
+name: Build Check
+
+on:
+  push:
+    branches:
+      - feature/portal-documentos
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    env:
+      NEXT_PUBLIC_SUPABASE_URL: https://auiiobawsmvzcrlhwnnq.supabase.co
+      NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY: sb_publishable_uthrUi6YjaAHI2yiA7aGmA_yrXQhWGV
+      SUPABASE_SERVICE_ROLE_KEY: build-check-placeholder
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - name: Install dependencies
+        run: npm ci
+      - name: Build
+        run: npm run build
