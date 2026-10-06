@@ -121,7 +121,16 @@ export async function GET() {
     const admin = getAdminClient()
     const { data: customerLinks } = await admin
       .from('customer_users')
-      .select('user_id,customer_id,customers(folio)')
+      .select('user_id,customer_id')
+
+    const customerIds = [...new Set((customerLinks ?? []).map((link) => link.customer_id))]
+    const { data: linkedCustomers } = customerIds.length
+      ? await admin.from('customers').select('id,folio').in('id', customerIds)
+      : { data: [] }
+
+    const folioByCustomerId = new Map(
+      (linkedCustomers ?? []).map((customer) => [customer.id, customer.folio ?? undefined]),
+    )
 
     const { data: memberships } = await admin
       .from('project_members')
@@ -132,9 +141,7 @@ export async function GET() {
         link.user_id,
         {
           customerId: link.customer_id,
-          customerFolio: Array.isArray(link.customers)
-            ? link.customers[0]?.folio ?? undefined
-            : link.customers?.folio ?? undefined,
+          customerFolio: folioByCustomerId.get(link.customer_id),
         },
       ]),
     )
