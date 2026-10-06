@@ -103,6 +103,8 @@ export default function UsersAndPermissionsPage() {
   const [passwordError, setPasswordError] = useState('')
   const [passwordSaved, setPasswordSaved] = useState(false)
   const [deleteUser, setDeleteUser] = useState<AccessUser | null>(null)
+  const [approvingId, setApprovingId] = useState<string | null>(null)
+  const [approvalError, setApprovalError] = useState('')
 
   const isAdmin = currentUser.role === 'Administración'
 
@@ -187,50 +189,71 @@ export default function UsersAndPermissionsPage() {
     )
   }
 
-  function approveRequest(request: RegistrationRequest) {
-    if (!isAdmin) return
+  async function approveRequest(request: RegistrationRequest) {
+    if (!isAdmin || approvingId) return
 
     const permissions =
       draftRole === 'Administración'
         ? defaultPermissionsForRole('Administración')
         : draftPermissions
-    const reviewedAt = new Date().toISOString()
 
-    const nextRequests = requests.map((item) =>
-      item.id === request.id
-        ? {
-            ...item,
-            status: 'Aprobada' as const,
-            role: draftRole,
-            permissions,
-            reviewedAt,
-          }
-        : item,
-    )
+    setApprovingId(request.id)
+    setApprovalError('')
 
-    const nextUser: AccessUser = {
-      id: request.id,
-      name: request.name,
-      email: request.email,
-      phone: request.phone,
-      position: request.position,
-      role: draftRole,
-      permissions,
-      status: 'Activo',
-      createdAt: reviewedAt,
+    try {
+      const response = await fetch('/api/access/users', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        cache: 'no-store',
+        body: JSON.stringify({
+          name: request.name,
+          email: request.email,
+          phone: request.phone,
+          position: request.position,
+          role: draftRole,
+          permissions,
+        }),
+      })
+
+      const data = (await response.json()) as {
+        user?: AccessUser
+        error?: string
+        needsPasswordSetup?: boolean
+      }
+
+      if (!response.ok || !data.user) {
+        throw new Error(data.error || 'No se pudo aprobar el usuario en Supabase.')
+      }
+
+      const reviewedAt = new Date().toISOString()
+      const nextRequests = requests.map((item) =>
+        item.id === request.id
+          ? {
+              ...item,
+              status: 'Aprobada' as const,
+              role: draftRole,
+              permissions,
+              reviewedAt,
+            }
+          : item,
+      )
+
+      writeRegistrationRequests(nextRequests)
+      setRequests(nextRequests)
+      setReviewingId(null)
+      setTab('users')
+
+      await refresh()
+    } catch (error) {
+      console.error('Error aprobando usuario en Supabase:', error)
+      setApprovalError(
+        error instanceof Error
+          ? error.message
+          : 'No se pudo aprobar el usuario en Supabase.',
+      )
+    } finally {
+      setApprovingId(null)
     }
-
-    const nextUsers = [
-      nextUser,
-      ...users.filter((user) => user.email.toLowerCase() !== request.email.toLowerCase()),
-    ]
-
-    writeRegistrationRequests(nextRequests)
-    writeAccessUsers(nextUsers)
-    setRequests(nextRequests)
-    setUsers(nextUsers)
-    setReviewingId(null)
-    setTab('users')
   }
 
   function rejectRequest(request: RegistrationRequest) {
@@ -524,9 +547,10 @@ export default function UsersAndPermissionsPage() {
                         </div>
                       </div>
                     </div>
+                    {approvalError && isReviewing ? <p className="mt-4 text-sm text-red-500">{approvalError}</p> : null}
                     <div className="mt-6 flex flex-col-reverse gap-3 border-t border-[var(--border)] pt-5 sm:flex-row sm:justify-end">
-                      <button type="button" onClick={() => rejectRequest(request)} className="inline-flex h-10 items-center justify-center gap-2 rounded-xl border border-red-500/20 bg-red-500/5 px-4 text-sm font-semibold text-red-500"><X size={16} /> Rechazar</button>
-                      <button type="button" onClick={() => approveRequest(request)} className="inline-flex h-10 items-center justify-center gap-2 rounded-xl bg-[#7DC6FF] px-5 text-sm font-semibold text-black"><Check size={16} /> Aprobar usuario</button>
+                      <button type="button" onClick={() => rejectRequest(request)} disabled={approvingId === request.id} className="inline-flex h-10 items-center justify-center gap-2 rounded-xl border border-red-500/20 bg-red-500/5 px-4 text-sm font-semibold text-red-500 disabled:opacity-50"><X size={16} /> Rechazar</button>
+                      <button type="button" onClick={() => void approveRequest(request)} disabled={approvingId === request.id} className="inline-flex h-10 items-center justify-center gap-2 rounded-xl bg-[#7DC6FF] px-5 text-sm font-semibold text-black disabled:cursor-wait disabled:opacity-60"><Check size={16} /> {approvingId === request.id ? 'Guardando en Supabase...' : 'Aprobar usuario'}</button>
                     </div>
                   </div>
                 ) : null}
