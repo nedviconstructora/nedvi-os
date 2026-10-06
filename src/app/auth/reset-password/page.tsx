@@ -18,31 +18,52 @@ export default function ResetPasswordPage() {
     const supabase = createClient()
     let mounted = true
 
-    void supabase.auth.getSession().then(({ data }) => {
+    async function initializeRecovery() {
+      const code = new URLSearchParams(window.location.search).get('code')
+
+      if (code) {
+        const { error: exchangeError } = await supabase.auth.exchangeCodeForSession(code)
+
+        if (!mounted) return
+
+        if (exchangeError) {
+          console.error('Error validando código de recuperación:', exchangeError)
+          setError('El enlace de recuperación no es válido o ya venció. Solicita uno nuevo.')
+          return
+        }
+
+        window.history.replaceState({}, '', '/auth/reset-password')
+      }
+
+      const {
+        data: { session },
+      } = await supabase.auth.getSession()
+
       if (!mounted) return
-      if (data.session) setReady(true)
-    })
+
+      if (session) {
+        setReady(true)
+        setError('')
+      } else if (!code) {
+        setError('El enlace de recuperación no es válido o ya venció. Solicita uno nuevo desde el inicio de sesión.')
+      }
+    }
+
+    void initializeRecovery()
 
     const {
       data: { subscription },
     } = supabase.auth.onAuthStateChange((event, session) => {
       if (!mounted) return
+
       if ((event === 'PASSWORD_RECOVERY' || event === 'SIGNED_IN') && session) {
         setReady(true)
         setError('')
       }
     })
 
-    const timer = window.setTimeout(() => {
-      if (!mounted) return
-      setError((current) =>
-        current || 'El enlace de recuperación no es válido o ya venció. Solicita uno nuevo desde el inicio de sesión.',
-      )
-    }, 5000)
-
     return () => {
       mounted = false
-      window.clearTimeout(timer)
       subscription.unsubscribe()
     }
   }, [])
