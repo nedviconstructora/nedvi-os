@@ -23,11 +23,7 @@ import {
   X,
 } from 'lucide-react'
 import { AppShell } from '@/components/layout/AppShell'
-import {
-  CRM_STORAGE_KEY,
-  CRM_UPDATED_EVENT,
-  readCustomers,
-} from '@/features/crm/services/customerStorage'
+import { getCustomersFromSupabase } from '@/features/crm/services/customerSupabase'
 import type { Customer } from '@/features/crm/types/customer'
 
 type ExecutionTime = 'Jornada normal' | 'Fin de semana' | 'Extraordinaria'
@@ -202,20 +198,26 @@ export default function SiteSurveysPage() {
   }, [])
 
   useEffect(() => {
-    const loadCustomers = () => setCustomers(readCustomers())
-    const handleStorage = (event: StorageEvent) => {
-      if (event.key === CRM_STORAGE_KEY) loadCustomers()
+    let active = true
+
+    const loadCustomers = async () => {
+      try {
+        const nextCustomers = await getCustomersFromSupabase()
+        if (active) setCustomers(nextCustomers)
+      } catch (error) {
+        console.error('Error al cargar clientes de Levantamientos desde Supabase:', error)
+        if (active) setCustomers([])
+      }
     }
 
-    loadCustomers()
-    window.addEventListener(CRM_UPDATED_EVENT, loadCustomers)
-    window.addEventListener('storage', handleStorage)
-    window.addEventListener('focus', loadCustomers)
+    void loadCustomers()
+
+    const handleFocus = () => void loadCustomers()
+    window.addEventListener('focus', handleFocus)
 
     return () => {
-      window.removeEventListener(CRM_UPDATED_EVENT, loadCustomers)
-      window.removeEventListener('storage', handleStorage)
-      window.removeEventListener('focus', loadCustomers)
+      active = false
+      window.removeEventListener('focus', handleFocus)
     }
   }, [])
 
