@@ -6,12 +6,12 @@ import { useParams } from 'next/navigation'
 import { ArrowLeft, Edit3 } from 'lucide-react'
 import { AppShell } from '@/components/layout/AppShell'
 import { ProjectForm } from '@/features/projects/components/ProjectForm'
-import { readProjectById } from '@/features/projects/services/projectStorage'
+import { readProjectByIdFromSupabase } from '@/features/projects/services/projectSupabaseService'
 import type { Project } from '@/features/projects/types/project'
 
 export default function EditProjectPage() {
   const params = useParams<{ id: string }>()
-  const [project, setProject] = useState<Project | null>(null)
+  const [project, setProject] = useState<Project | null | undefined>(undefined)
   const [loaded, setLoaded] = useState(false)
 
   useEffect(() => {
@@ -19,11 +19,11 @@ export default function EditProjectPage() {
     setLoaded(true)
   }, [params.id])
 
-  if (!loaded) {
+  if (project === undefined) {
     return (
       <AppShell>
         <div className="mx-auto w-full max-w-4xl py-16 text-center text-sm text-[#646873]">
-          Cargando proyecto...
+          Cargando proyecto desde Supabase...
         </div>
       </AppShell>
     )
