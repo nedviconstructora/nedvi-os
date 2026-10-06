@@ -19,7 +19,7 @@ import { CustomerFilters } from '@/features/crm/components/CustomerFilters'
 import { CustomerSearch } from '@/features/crm/components/CustomerSearch'
 import { CustomerTable } from '@/features/crm/components/CustomerTable'
 import { useCustomerFilters } from '@/features/crm/hooks/useCustomerFilters'
-import { getCustomersFromSupabase } from '@/features/crm/services/customerSupabase'
+import { deleteCustomerFromSupabase, getCustomersFromSupabase } from '@/features/crm/services/customerSupabase'
 import type { Customer } from '@/features/crm/types/customer'
 
 const PAGE_SIZE = 8
@@ -55,6 +55,23 @@ export function CustomerWorkspace() {
 
     return () => window.removeEventListener('focus', handleFocus)
   }, [loadCustomers])
+
+  async function handleDelete(customer: Customer) {
+    const confirmed = window.confirm(`¿Eliminar a ${customer.company}? Esta acción quitará el cliente de Supabase.`)
+    if (!confirmed) return
+
+    try {
+      await deleteCustomerFromSupabase(customer.id)
+      setCustomers((current) => current.filter((item) => item.id !== customer.id))
+    } catch (deleteError) {
+      console.error('Error al eliminar cliente desde Supabase:', deleteError)
+      setError(
+        deleteError instanceof Error
+          ? deleteError.message
+          : 'No se pudo eliminar el cliente desde Supabase.',
+      )
+    }
+  }
 
   const {
     query,
@@ -129,7 +146,7 @@ export function CustomerWorkspace() {
         <div className="rounded-2xl border border-white/[0.07] bg-[#20232A] p-8 text-sm text-[#9CA3AF]">Cargando clientes desde Supabase...</div>
       ) : visibleCustomers.length ? (
         <>
-          <CustomerTable customers={visibleCustomers} sortKey={sortKey} sortDirection={sortDirection} onSort={toggleSort} />
+          <CustomerTable customers={visibleCustomers} sortKey={sortKey} sortDirection={sortDirection} onSort={toggleSort} onDelete={handleDelete} />
           <div className="grid gap-4 md:grid-cols-2 lg:hidden">
             {visibleCustomers.map((customer) => <CustomerCard customer={customer} key={customer.id} />)}
           </div>
