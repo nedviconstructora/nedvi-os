@@ -51,11 +51,11 @@ export function ProjectWorkspace() {
   return <div className="mx-auto w-full max-w-[1600px] space-y-7">
     <header className="flex flex-col justify-between gap-5 sm:flex-row sm:items-end">
       <div>
-        <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[#7187ff]">Operations workspace</p>
-        <h1 className="mt-2 text-3xl font-semibold tracking-[-0.05em] text-white sm:text-4xl">Construction projects</h1>
-        <p className="mt-2 max-w-xl text-sm text-[#9CA3AF]">Track delivery, budgets, site activity, and the people moving every project forward.</p>
+        <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[#7187ff]">Espacio de operaciones</p>
+        <h1 className="mt-2 text-3xl font-semibold tracking-[-0.05em] text-white sm:text-4xl">Proyectos de construcción</h1>
+        <p className="mt-2 max-w-xl text-sm text-[#9CA3AF]">Controla avances, presupuestos, actividad en obra y responsables de cada proyecto.</p>
       </div>
-      <Link href="/projects/new" className="inline-flex h-11 items-center justify-center gap-2 rounded-xl bg-[#163DFF] px-4 text-xs font-semibold text-white shadow-[0_10px_25px_rgba(22,61,255,0.2)] transition hover:bg-[#3155ff] hover:shadow-[0_14px_30px_rgba(22,61,255,0.3)] focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-[#163DFF]/30"><Plus size={16} /> New project</Link>
+      <Link href="/projects/new" className="inline-flex h-11 items-center justify-center gap-2 rounded-xl bg-[#163DFF] px-4 text-xs font-semibold text-white shadow-[0_10px_25px_rgba(22,61,255,0.2)] transition hover:bg-[#3155ff] hover:shadow-[0_14px_30px_rgba(22,61,255,0.3)] focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-[#163DFF]/30"><Plus size={16} /> Nuevo proyecto</Link>
     </header>
 
     {error ? <div className="flex flex-col gap-4 rounded-2xl border border-red-400/20 bg-red-400/[0.06] p-5 sm:flex-row sm:items-center sm:justify-between">
@@ -64,16 +64,16 @@ export function ProjectWorkspace() {
     </div> : null}
 
     <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-      <MetricCard label="Total projects" value={projects.length.toString()} detail="Across all project stages" icon={FolderKanban} />
-      <MetricCard label="Active projects" value={activeProjects.toString()} detail="Currently in delivery" icon={TrendingUp} accent="emerald" />
-      <MetricCard label="Projects at risk" value={atRiskProjects.toString()} detail="Require attention" icon={ShieldAlert} accent="amber" />
-      <MetricCard label="In planning" value={planningProjects.toString()} detail="Preparing to start" icon={Timer} accent="sky" />
+      <MetricCard label="Total de proyectos" value={projects.length.toString()} detail="En todas las etapas" icon={FolderKanban} />
+      <MetricCard label="Proyectos activos" value={activeProjects.toString()} detail="Actualmente en ejecución" icon={TrendingUp} accent="emerald" />
+      <MetricCard label="Proyectos en riesgo" value={atRiskProjects.toString()} detail="Requieren atención" icon={ShieldAlert} accent="amber" />
+      <MetricCard label="En planeación" value={planningProjects.toString()} detail="Preparándose para iniciar" icon={Timer} accent="sky" />
     </div>
 
     <Card className="p-5 sm:p-6">
       <div className="flex flex-col gap-4 lg:flex-row lg:items-center">
         <ProjectSearch value={query} onChange={updateQuery} />
-        <span className="text-xs text-[#646873]">{loading ? 'Cargando desde Supabase...' : `${filteredProjects.length} project${filteredProjects.length === 1 ? '' : 's'}`}</span>
+        <span className="text-xs text-[#646873]">{loading ? 'Cargando desde Supabase...' : `${filteredProjects.length} ${filteredProjects.length === 1 ? 'proyecto' : 'proyectos'}`}</span>
       </div>
       <ProjectFilters value={filters} onChange={updateFilters} onClear={clearFilters} hasActiveFilters={hasActiveFilters} />
     </Card>
@@ -85,13 +85,13 @@ export function ProjectWorkspace() {
         <div className="flex flex-col items-center justify-between gap-3 text-xs text-[#646873] sm:flex-row">
           <span>Showing {((page - 1) * PAGE_SIZE) + 1}-{Math.min(page * PAGE_SIZE, filteredProjects.length)} of {filteredProjects.length}</span>
           <div className="flex items-center gap-2">
-            <button type="button" onClick={() => setPage((currentPage) => Math.max(1, currentPage - 1))} disabled={page === 1} className="inline-flex h-9 items-center gap-1 rounded-lg border border-white/[0.08] px-3 text-xs font-medium text-[#9CA3AF] transition hover:bg-white/[0.05] hover:text-white disabled:cursor-not-allowed disabled:opacity-40"><ChevronLeft size={14} /> Previous</button>
+            <button type="button" onClick={() => setPage((currentPage) => Math.max(1, currentPage - 1))} disabled={page === 1} className="inline-flex h-9 items-center gap-1 rounded-lg border border-white/[0.08] px-3 text-xs font-medium text-[#9CA3AF] transition hover:bg-white/[0.05] hover:text-white disabled:cursor-not-allowed disabled:opacity-40"><ChevronLeft size={14} /> Anterior</button>
             <span className="px-2 text-[#9CA3AF]">Page {page} of {totalPages}</span>
-            <button type="button" onClick={() => setPage((currentPage) => Math.min(totalPages, currentPage + 1))} disabled={page === totalPages} className="inline-flex h-9 items-center gap-1 rounded-lg border border-white/[0.08] px-3 text-xs font-medium text-[#9CA3AF] transition hover:bg-white/[0.05] hover:text-white disabled:cursor-not-allowed disabled:opacity-40">Next <ChevronRight size={14} /></button>
+            <button type="button" onClick={() => setPage((currentPage) => Math.min(totalPages, currentPage + 1))} disabled={page === totalPages} className="inline-flex h-9 items-center gap-1 rounded-lg border border-white/[0.08] px-3 text-xs font-medium text-[#9CA3AF] transition hover:bg-white/[0.05] hover:text-white disabled:cursor-not-allowed disabled:opacity-40">Siguiente <ChevronRight size={14} /></button>
           </div>
         </div>
       </> :
-      <EmptyState icon={FolderKanban} title="No projects found" description={hasActiveFilters ? 'Try adjusting your search or filters to find a matching project.' : error ? 'Corrige la conexión con Supabase y vuelve a intentar.' : 'Your project portfolio is ready for its first record.'} action={hasActiveFilters ? <button type="button" onClick={clearFilters} className="text-xs font-semibold text-[#7187ff] transition hover:text-white">Clear search and filters</button> : error ? <button type="button" onClick={() => void loadProjects()} className="inline-flex h-10 items-center gap-2 rounded-lg border border-white/[0.08] px-4 text-xs font-semibold text-[#d5d7df] transition hover:bg-white/[0.05]"><RefreshCw size={14} /> Reintentar</button> : <Link href="/projects/new" className="inline-flex h-10 items-center gap-2 rounded-lg bg-[#163DFF] px-4 text-xs font-semibold text-white transition hover:bg-[#3155ff]"><Plus size={14} /> Add project</Link>} />
+      <EmptyState icon={FolderKanban} title="No se encontraron proyectos" description={hasActiveFilters ? 'Prueba ajustando la búsqueda o los filtros para encontrar un proyecto.' : error ? 'Corrige la conexión con Supabase y vuelve a intentar.' : 'Tu portafolio de proyectos está listo para registrar el primer proyecto.'} action={hasActiveFilters ? <button type="button" onClick={clearFilters} className="text-xs font-semibold text-[#7187ff] transition hover:text-white">Limpiar búsqueda y filtros</button> : error ? <button type="button" onClick={() => void loadProjects()} className="inline-flex h-10 items-center gap-2 rounded-lg border border-white/[0.08] px-4 text-xs font-semibold text-[#d5d7df] transition hover:bg-white/[0.05]"><RefreshCw size={14} /> Reintentar</button> : <Link href="/projects/new" className="inline-flex h-10 items-center gap-2 rounded-lg bg-[#163DFF] px-4 text-xs font-semibold text-white transition hover:bg-[#3155ff]"><Plus size={14} /> Agregar proyecto</Link>} />
     }
   </div>
 }
