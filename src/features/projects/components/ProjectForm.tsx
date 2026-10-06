@@ -4,7 +4,7 @@ import Link from 'next/link'
 import { useEffect, useMemo, useState, type FormEvent } from 'react'
 import { useRouter } from 'next/navigation'
 import { ExternalLink, Save } from 'lucide-react'
-import { readCustomers } from '@/features/crm/services/customerStorage'
+import { getCustomersFromSupabase } from '@/features/crm/services/customerSupabase'
 import type { Customer } from '@/features/crm/types/customer'
 import {
   createProjectInSupabase,
@@ -60,17 +60,40 @@ export function ProjectForm({
   const [saving, setSaving] = useState(false)
 
   useEffect(() => {
-    const availableCustomers = readCustomers()
-    setCustomers(availableCustomers)
+    let active = true
 
-    if (!initialValues?.clientId && initialValues?.client) {
-      const matchingCustomer = availableCustomers.find(
-        (customer) => customer.company === initialValues.client
-      )
+    async function loadCustomers() {
+      try {
+        const availableCustomers = await getCustomersFromSupabase()
+        if (!active) return
 
-      if (matchingCustomer) {
-        setSelectedClientId(matchingCustomer.id)
+        setCustomers(availableCustomers)
+
+        if (!initialValues?.clientId && initialValues?.client) {
+          const matchingCustomer = availableCustomers.find(
+            (customer) => customer.company === initialValues.client,
+          )
+
+          if (matchingCustomer) {
+            setSelectedClientId(matchingCustomer.id)
+          }
+        }
+      } catch (loadError) {
+        console.error('Error al cargar clientes desde Supabase:', loadError)
+        if (active) {
+          setError(
+            loadError instanceof Error
+              ? loadError.message
+              : 'No se pudieron cargar los clientes desde Supabase.',
+          )
+        }
       }
+    }
+
+    void loadCustomers()
+
+    return () => {
+      active = false
     }
   }, [initialValues?.client, initialValues?.clientId])
 
