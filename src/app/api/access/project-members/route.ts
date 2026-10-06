@@ -117,22 +117,42 @@ export async function POST(request: Request) {
 
   const validProjectIds = (validProjects ?? []).map((project) => project.id)
 
-  const { error: clearError } = await admin
+  const { data: existingMemberships, error: existingError } = await admin
     .from('project_members')
-    .delete()
+    .select('project_id')
     .eq('user_id', userId)
 
-  if (clearError) {
-    return NextResponse.json({ error: 'No pudimos actualizar los proyectos asignados.' }, { status: 500 })
+  if (existingError) {
+    return NextResponse.json({ error: 'No pudimos consultar los proyectos asignados.' }, { status: 500 })
   }
 
-  if (validProjectIds.length) {
+  const existingIds = new Set((existingMemberships ?? []).map((row) => row.project_id))
+  const desiredIds = new Set(validProjectIds)
+  const toInsert = validProjectIds.filter((projectId) => !existingIds.has(projectId))
+  const toDelete = Array.from(existingIds).filter((projectId) => !desiredIds.has(projectId))
+
+  if (toInsert.length) {
     const { error: insertError } = await admin
       .from('project_members')
-      .insert(validProjectIds.map((projectId) => ({ project_id: projectId, user_id: userId })))
+      .upsert(
+        toInsert.map((projectId) => ({ project_id: projectId, user_id: userId })),
+        { onConflict: 'project_id,user_id' },
+      )
 
     if (insertError) {
       return NextResponse.json({ error: 'No pudimos guardar los proyectos asignados.' }, { status: 500 })
+    }
+  }
+
+  if (toDelete.length) {
+    const { error: deleteError } = await admin
+      .from('project_members')
+      .delete()
+      .eq('user_id', userId)
+      .in('project_id', toDelete)
+
+    if (deleteError) {
+      return NextResponse.json({ error: 'No pudimos quitar proyectos desasignados.' }, { status: 500 })
     }
   }
 
