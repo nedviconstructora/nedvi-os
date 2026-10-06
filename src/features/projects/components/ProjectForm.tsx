@@ -5,6 +5,7 @@ import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { Save } from 'lucide-react'
 import { projectStatuses, projectTypes } from '@/features/projects/types/project'
+import { getProjectStatusLabel, getProjectTypeLabel } from '@/features/projects/utils/projectUtils'
 import type { Project, ProjectFormValues, ProjectStatus, ProjectType } from '@/features/projects/types/project'
 import {
   createProjectInSupabase,
@@ -114,28 +115,28 @@ export function ProjectForm({ initialValues, mode, projectId }: ProjectFormProps
   return <form className="space-y-7" onSubmit={handleSubmit}>
     <div className="space-y-5">
       <div>
-        <h2 className="text-sm font-semibold text-white">Project information</h2>
-        <p className="mt-1 text-xs text-[#646873]">Set the core scope and ownership for this construction project.</p>
+        <h2 className="text-sm font-semibold text-white">Información del proyecto</h2>
+        <p className="mt-1 text-xs text-[#646873]">Define el alcance y los responsables principales de este proyecto.</p>
       </div>
       <div className="grid gap-5 md:grid-cols-2">
-        <label className={labelClassName}>Project name<input name="name" required defaultValue={initialValues?.name} placeholder="e.g. Torre Litoral" className={inputClassName} /></label>
-        <label className={labelClassName}>Client<select name="customerId" required defaultValue={initialValues?.customerId ?? ''} className={inputClassName} disabled={loadingCustomers}><option value="">{loadingCustomers ? 'Cargando clientes...' : 'Seleccionar cliente'}</option>{customers.map((customer) => <option value={customer.id} key={customer.id}>{customer.company}{customer.folio ? ' · ' + customer.folio : ''}</option>)}</select></label>
-        <label className={labelClassName}>Project type<select name="projectType" required defaultValue={initialValues?.projectType ?? ''} className={inputClassName}><option value="">Select a project type</option>{projectTypes.map((type) => <option value={type} key={type}>{type}</option>)}</select></label>
-        <label className={labelClassName + ' md:col-span-2'}>Address<input name="address" defaultValue={initialValues?.address} placeholder="Street, city, state" className={inputClassName} /></label>
-        <label className={labelClassName}>Latitude<input name="latitude" type="number" step="any" defaultValue={initialValues?.latitude} placeholder="20.6742" className={inputClassName} /></label>
-        <label className={labelClassName}>Longitude<input name="longitude" type="number" step="any" defaultValue={initialValues?.longitude} placeholder="-103.3848" className={inputClassName} /></label>
+        <label className={labelClassName}>Nombre del proyecto<input name="name" required defaultValue={initialValues?.name} placeholder="Ej. Torre Litoral" className={inputClassName} /></label>
+        <label className={labelClassName}>Cliente<select name="customerId" required defaultValue={initialValues?.customerId ?? ''} className={inputClassName} disabled={loadingCustomers}><option value="">{loadingCustomers ? 'Cargando clientes...' : 'Seleccionar cliente'}</option>{customers.map((customer) => <option value={customer.id} key={customer.id}>{customer.company}{customer.folio ? ' · ' + customer.folio : ''}</option>)}</select></label>
+        <label className={labelClassName}>Tipo de proyecto<select name="projectType" required defaultValue={initialValues?.projectType ?? ''} className={inputClassName}><option value="">Seleccionar tipo de proyecto</option>{projectTypes.map((type) => <option value={type} key={type}>{getProjectTypeLabel(type)}</option>)}</select></label>
+        <label className={labelClassName + ' md:col-span-2'}>Dirección<input name="address" defaultValue={initialValues?.address} placeholder="Calle, ciudad, estado" className={inputClassName} /></label>
+        <label className={labelClassName}>Latitud<input name="latitude" type="number" step="any" defaultValue={initialValues?.latitude} placeholder="20.6742" className={inputClassName} /></label>
+        <label className={labelClassName}>Longitud<input name="longitude" type="number" step="any" defaultValue={initialValues?.longitude} placeholder="-103.3848" className={inputClassName} /></label>
       </div>
     </div>
 
     <div className="space-y-5 border-t border-white/[0.06] pt-7">
-      <div><h2 className="text-sm font-semibold text-white">Schedule and ownership</h2><p className="mt-1 text-xs text-[#646873]">Keep timing, budget, and accountability visible from day one.</p></div>
+      <div><h2 className="text-sm font-semibold text-white">Calendario y responsables</h2><p className="mt-1 text-xs text-[#646873]">Mantén visibles las fechas, el presupuesto y los responsables desde el primer día.</p></div>
       <div className="grid gap-5 md:grid-cols-2">
-        <label className={labelClassName}>Budget<input name="budget" type="number" min="0" defaultValue={initialValues?.budget} placeholder="0" className={inputClassName} /></label>
-        <label className={labelClassName}>Project manager<input name="manager" defaultValue={initialValues?.manager} placeholder="Responsable del proyecto" className={inputClassName} /></label>
-        <label className={labelClassName}>Start date<input name="startDate" type="date" defaultValue={initialValues?.startDate} className={inputClassName} /></label>
-        <label className={labelClassName}>Estimated completion<input name="estimatedCompletion" type="date" defaultValue={initialValues?.estimatedCompletion} className={inputClassName} /></label>
-        <label className={labelClassName}>Status<select name="status" defaultValue={initialValues?.status ?? 'Planning'} className={inputClassName}>{projectStatuses.map((statusOption) => <option value={statusOption} key={statusOption}>{statusOption}</option>)}</select></label>
-        <label className={labelClassName + ' md:col-span-2'}>Description<textarea name="description" rows={4} defaultValue={initialValues?.description} placeholder="Describe scope, delivery strategy, and key constraints..." className={inputClassName + ' h-auto resize-y py-3'} /></label>
+        <label className={labelClassName}>Presupuesto<input name="budget" type="number" min="0" defaultValue={initialValues?.budget} placeholder="0" className={inputClassName} /></label>
+        <label className={labelClassName}>Responsable del proyecto<input name="manager" defaultValue={initialValues?.manager} placeholder="Responsable del proyecto" className={inputClassName} /></label>
+        <label className={labelClassName}>Fecha de inicio<input name="startDate" type="date" defaultValue={initialValues?.startDate} className={inputClassName} /></label>
+        <label className={labelClassName}>Finalización estimada<input name="estimatedCompletion" type="date" defaultValue={initialValues?.estimatedCompletion} className={inputClassName} /></label>
+        <label className={labelClassName}>Estado<select name="status" defaultValue={initialValues?.status ?? 'Planning'} className={inputClassName}>{projectStatuses.map((statusOption) => <option value={statusOption} key={statusOption}>{getProjectStatusLabel(statusOption)}</option>)}</select></label>
+        <label className={labelClassName + ' md:col-span-2'}>Descripción<textarea name="description" rows={4} defaultValue={initialValues?.description} placeholder="Describe el alcance, la estrategia de ejecución y las restricciones principales..." className={inputClassName + ' h-auto resize-y py-3'} /></label>
       </div>
     </div>
 
@@ -144,8 +145,8 @@ export function ProjectForm({ initialValues, mode, projectId }: ProjectFormProps
     <div className="flex flex-col-reverse items-stretch justify-between gap-4 border-t border-white/[0.06] pt-6 sm:flex-row sm:items-center">
       <p className="text-xs leading-5 text-[#646873]">Los cambios se guardan directamente en Supabase y quedan ligados al cliente seleccionado.</p>
       <div className="flex justify-end gap-3">
-        <Link href={mode === 'edit' && projectId ? '/projects/' + projectId : '/projects'} className="inline-flex h-11 items-center justify-center rounded-xl px-4 text-xs font-semibold text-[#9CA3AF] transition hover:bg-white/[0.05] hover:text-white">Cancel</Link>
-        <button type="submit" disabled={saving || loadingCustomers} className="inline-flex h-11 items-center justify-center gap-2 rounded-xl bg-[#163DFF] px-4 text-xs font-semibold text-white shadow-[0_10px_25px_rgba(22,61,255,0.2)] transition hover:bg-[#3155ff] focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-[#163DFF]/30 disabled:cursor-wait disabled:opacity-60"><Save size={15} />{saving ? 'Guardando en Supabase...' : mode === 'create' ? 'Create project' : 'Save changes'}</button>
+        <Link href={mode === 'edit' && projectId ? '/projects/' + projectId : '/projects'} className="inline-flex h-11 items-center justify-center rounded-xl px-4 text-xs font-semibold text-[#9CA3AF] transition hover:bg-white/[0.05] hover:text-white">Cancelar</Link>
+        <button type="submit" disabled={saving || loadingCustomers} className="inline-flex h-11 items-center justify-center gap-2 rounded-xl bg-[#163DFF] px-4 text-xs font-semibold text-white shadow-[0_10px_25px_rgba(22,61,255,0.2)] transition hover:bg-[#3155ff] focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-[#163DFF]/30 disabled:cursor-wait disabled:opacity-60"><Save size={15} />{saving ? 'Guardando en Supabase...' : mode === 'create' ? 'Crear proyecto' : 'Guardar cambios'}</button>
       </div>
     </div>
   </form>
