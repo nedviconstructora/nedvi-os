@@ -51,12 +51,12 @@ export default function EditProjectPage() {
       ) : (
         <>
           <header>
-            <Link href={'/projects/' + project.id} className="inline-flex items-center gap-2 text-xs font-medium text-[#9CA3AF] transition hover:text-white"><ArrowLeft size={14} /> Back to project</Link>
+            <Link href={'/projects/' + project.id} className="inline-flex items-center gap-2 text-xs font-medium text-[#9CA3AF] transition hover:text-white"><ArrowLeft size={14} /> Volver al proyecto</Link>
             <div className="mt-6 flex items-start gap-4">
               <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-[#163DFF]/[0.14] text-[#8296ff]"><Edit3 size={19} /></span>
               <div>
-                <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[#7187ff]">Projects / Edit record</p>
-                <h1 className="mt-2 text-3xl font-semibold tracking-[-0.05em] text-white">Edit {project.name}</h1>
+                <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[#7187ff]">Proyectos / Editar registro</p>
+                <h1 className="mt-2 text-3xl font-semibold tracking-[-0.05em] text-white">Editar {project.name}</h1>
                 <p className="mt-2 text-sm text-[#9CA3AF]">Keep scope, schedule, ownership, and delivery context current.</p>
               </div>
             </div>
