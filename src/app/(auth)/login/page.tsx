@@ -65,10 +65,10 @@ export default function LoginPage() {
           <div className="rounded-2xl border border-white/[0.07] bg-[#20232A] p-7 shadow-[0_24px_80px_rgba(0,0,0,0.28)] sm:p-10">
             <div>
               <p className="mb-4 text-[11px] font-semibold uppercase tracking-[0.18em] text-[#163DFF]">
-                Welcome back
+                Bienvenido de nuevo
               </p>
               <h2 className="text-3xl font-semibold tracking-[-0.045em] text-white sm:text-[2.2rem]">
-                Sign in to your workspace
+                Inicia sesión en tu espacio de trabajo
               </h2>
               <p className="mt-3 text-sm leading-6 text-[#9CA3AF]">
                 Access your NEDVI OS workspace and pick up where you left off.
