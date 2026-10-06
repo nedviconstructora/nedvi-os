@@ -31,7 +31,7 @@ export function Header({ onOpenMenu, isDark, onToggleTheme }: HeaderProps) {
           type="button"
           onClick={onOpenMenu}
           className="rounded-lg p-2 text-[#9CA3AF] transition hover:bg-white/[0.06] hover:text-white lg:hidden"
-          aria-label="Open navigation"
+          aria-label="Abrir navegación"
         >
           <Menu size={20} strokeWidth={1.8} />
         </button>
@@ -45,9 +45,9 @@ export function Header({ onOpenMenu, isDark, onToggleTheme }: HeaderProps) {
           <Search className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 text-[#646873]" size={16} strokeWidth={1.8} />
           <input
             type="search"
-            placeholder="Search anything..."
+            placeholder="Buscar en NEDVI OS..."
             className="h-10 w-full rounded-xl border border-white/[0.07] bg-[#17181C] pl-10 pr-16 text-xs text-white outline-none transition placeholder:text-[#646873] hover:border-white/[0.13] focus:border-[#163DFF] focus:ring-4 focus:ring-[#163DFF]/10"
-            aria-label="Search workspace"
+            aria-label="Buscar en el espacio de trabajo"
           />
           <kbd className="absolute right-3 top-1/2 -translate-y-1/2 rounded border border-white/[0.08] px-1.5 py-0.5 text-[10px] text-[#646873]">
             ⌘ K
@@ -84,7 +84,7 @@ export function Header({ onOpenMenu, isDark, onToggleTheme }: HeaderProps) {
             <p className="text-[10px] text-[#646873]">Admin</p>
           </div>
         </div>
-        <Building2 className="ml-2 hidden text-[#646873] xl:block" size={17} strokeWidth={1.7} aria-label="Company workspace" />
+        <Building2 className="ml-2 hidden text-[#646873] xl:block" size={17} strokeWidth={1.7} aria-label="Espacio de la empresa" />
       </div>
     </header>
   )
