@@ -5,7 +5,7 @@ import { readProjects } from '@/features/projects/services/projectStorage'
 type ProjectRow = {
   id: string
   folio: string | null
-  client_id: string | null
+  customer_id: string | null
   client_name: string | null
   client_contact: string | null
   name: string
@@ -27,7 +27,7 @@ function rowToProject(row: ProjectRow): Project {
   return {
     id: row.id,
     folio: row.folio ?? undefined,
-    clientId: row.client_id ?? undefined,
+    clientId: row.customer_id ?? undefined,
     name: row.name,
     client: row.client_name ?? '',
     clientContact: row.client_contact ?? '',
@@ -106,7 +106,7 @@ export async function readProjectByIdFromSupabase(id: string): Promise<Project |
 export async function createProjectInSupabase(values: ProjectFormValues): Promise<Project> {
   const supabase = createClient()
   const payload = {
-    client_id: values.clientId || null,
+    customer_id: values.clientId || null,
     client_name: values.client,
     client_contact: values.clientContact,
     name: values.name,
@@ -142,7 +142,7 @@ export async function updateProjectInSupabase(
   const { data, error } = await supabase
     .from('projects')
     .update({
-      client_id: values.clientId || null,
+      customer_id: values.clientId || null,
       client_name: values.client,
       client_contact: values.clientContact,
       name: values.name,
