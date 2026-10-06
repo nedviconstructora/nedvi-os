@@ -5,7 +5,7 @@ import { Card, CardHeader } from '@/components/ui/Card'
 type ProjectResourcesProps = { materials: Project['materials']; equipment: Project['equipment'] }
 
 export function ProjectResources({ materials, equipment }: ProjectResourcesProps) {
-  return <Card className="overflow-hidden"><CardHeader title="Site resources" description="Materials and equipment assigned to this project" action={<Boxes size={17} className="text-[#7187ff]" />} /><div className="grid gap-6 p-5 sm:grid-cols-2 sm:p-6"><ResourceGroup title="Materials" icon={Boxes} items={materials} /><ResourceGroup title="Equipment" icon={HardHat} items={equipment} /></div></Card>
+  return <Card className="overflow-hidden"><CardHeader title="Recursos de obra" description="Materiales y equipo asignados a este proyecto" action={<Boxes size={17} className="text-[#7187ff]" />} /><div className="grid gap-6 p-5 sm:grid-cols-2 sm:p-6"><ResourceGroup title="Materiales" icon={Boxes} items={materials} /><ResourceGroup title="Equipo" icon={HardHat} items={equipment} /></div></Card>
 }
 
 type ResourceGroupProps = { title: string; icon: typeof Boxes; items: string[] }
