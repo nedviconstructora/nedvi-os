@@ -432,26 +432,6 @@ export async function DELETE(request: Request) {
 
     const admin = getAdminClient()
 
-    const nullableReferences = [
-      ['project_documents', 'uploaded_by'],
-      ['project_evidence', 'uploaded_by'],
-      ['project_milestones', 'created_by'],
-      ['project_progress_updates', 'created_by'],
-      ['project_reports', 'created_by'],
-      ['project_tasks', 'created_by'],
-    ] as const
-
-    for (const [table, column] of nullableReferences) {
-      const { error } = await admin.from(table).update({ [column]: null }).eq(column, userId)
-      if (error) {
-        console.error(`Error limpiando referencia ${table}.${column}:`, error)
-        return NextResponse.json(
-          { error: 'No pudimos preparar la eliminación del usuario.' },
-          { status: 500 },
-        )
-      }
-    }
-
     const { error: deleteError } = await admin.auth.admin.deleteUser(userId)
     if (deleteError) {
       return NextResponse.json(
