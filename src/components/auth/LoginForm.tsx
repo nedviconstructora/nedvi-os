@@ -117,7 +117,11 @@ export function LoginForm() {
       const firstName = profile.first_name || name.split(' ')[0] || name
       const profilePermissions = readCustomPermissions(profile.permissions)
       const customPermissions = readCustomPermissions(data.user.user_metadata?.permissions)
-      const permissions = profilePermissions ?? customPermissions ?? defaultPermissionsForRole(appRole)
+      const basePermissions = profilePermissions ?? customPermissions ?? defaultPermissionsForRole(appRole)
+      const permissions =
+        appRole === 'Cliente'
+          ? Array.from(new Set<ModulePermission>([...basePermissions, 'client-portal']))
+          : basePermissions
 
       let customerId: string | undefined
       let customerFolio: string | undefined
@@ -139,14 +143,12 @@ export function LoginForm() {
 
         customerFolio = customer?.folio ?? undefined
 
-        if (customerId) {
-          const { data: projects } = await supabase
-            .from('projects')
-            .select('id')
-            .eq('customer_id', customerId)
+        const { data: memberships } = await supabase
+          .from('project_members')
+          .select('project_id')
+          .eq('user_id', data.user.id)
 
-          projectIds = projects?.map((project) => project.id) ?? []
-        }
+        projectIds = memberships?.map((membership) => membership.project_id) ?? []
       }
 
       writeAccessSession({
