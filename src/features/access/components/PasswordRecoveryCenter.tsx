@@ -90,9 +90,10 @@ export function PasswordRecoveryCenter() {
           ? { ...item, status: 'Atendida' as const, reviewedAt: now }
           : item,
       )
-      const nextUsers = users.map((item) =>
-        item.id === result.userId || item.email.toLowerCase() === request.email.toLowerCase()
-          ? { ...item, id: result.userId, passwordHash, passwordUpdatedAt: now }
+      const resolvedUserId = result.userId
+      const nextUsers: AccessUser[] = users.map((item) =>
+        item.id === resolvedUserId || item.email.toLowerCase() === request.email.toLowerCase()
+          ? { ...item, id: resolvedUserId, passwordHash, passwordUpdatedAt: now }
           : item,
       )
 
