@@ -159,6 +159,7 @@ export async function POST(request: Request) {
       first_name: firstName,
       initials,
       role: 'cliente',
+      permissions: ['client-portal'],
       active: true,
     })
 
