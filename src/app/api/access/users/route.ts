@@ -118,6 +118,34 @@ export async function GET() {
       return NextResponse.json({ error: error.message }, { status: 500 })
     }
 
+    const admin = getAdminClient()
+    const { data: customerLinks } = await admin
+      .from('customer_users')
+      .select('user_id,customer_id,customers(folio)')
+
+    const { data: memberships } = await admin
+      .from('project_members')
+      .select('user_id,project_id')
+
+    const customerLinkByUser = new Map(
+      (customerLinks ?? []).map((link) => [
+        link.user_id,
+        {
+          customerId: link.customer_id,
+          customerFolio: Array.isArray(link.customers)
+            ? link.customers[0]?.folio ?? undefined
+            : link.customers?.folio ?? undefined,
+        },
+      ]),
+    )
+
+    const projectIdsByUser = new Map<string, string[]>()
+    for (const membership of memberships ?? []) {
+      const current = projectIdsByUser.get(membership.user_id) ?? []
+      current.push(membership.project_id)
+      projectIdsByUser.set(membership.user_id, current)
+    }
+
     const users = (profiles ?? []).map((profile) => {
       const normalizedRole = normalizeRole(profile.role)
       const permissions =
@@ -135,6 +163,9 @@ export async function GET() {
         permissions,
         status: profile.active ? 'Activo' : 'Inactivo',
         createdAt: profile.created_at,
+        customerId: customerLinkByUser.get(profile.id)?.customerId,
+        customerFolio: customerLinkByUser.get(profile.id)?.customerFolio,
+        projectIds: projectIdsByUser.get(profile.id) ?? [],
       }
     })
 
