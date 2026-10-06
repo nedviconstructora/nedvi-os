@@ -9,6 +9,8 @@ export default function ResetPasswordPage() {
   const router = useRouter()
   const [password, setPassword] = useState('')
   const [confirmPassword, setConfirmPassword] = useState('')
+  const [showPassword, setShowPassword] = useState(false)
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false)
   const [ready, setReady] = useState(false)
   const [submitting, setSubmitting] = useState(false)
   const [message, setMessage] = useState('')
@@ -134,30 +136,48 @@ export default function ResetPasswordPage() {
             <label htmlFor="new-password" className="mb-2 block text-xs font-semibold uppercase tracking-[0.12em] text-[#A8B0BC]">
               Nueva contraseña
             </label>
-            <input
-              id="new-password"
-              type="password"
-              autoComplete="new-password"
-              value={password}
-              onChange={(event) => setPassword(event.target.value)}
-              className="h-11 w-full rounded-xl border border-white/[0.1] bg-white/[0.04] px-3 text-sm text-white outline-none transition focus:border-[#7DC6FF]/60"
-              required
-            />
+            <div className="relative">
+              <input
+                id="new-password"
+                type={showPassword ? 'text' : 'password'}
+                autoComplete="new-password"
+                value={password}
+                onChange={(event) => setPassword(event.target.value)}
+                className="h-11 w-full rounded-xl border border-white/[0.1] bg-white/[0.04] px-3 pr-20 text-sm text-white outline-none transition focus:border-[#7DC6FF]/60"
+                required
+              />
+              <button
+                type="button"
+                onClick={() => setShowPassword((value) => !value)}
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-[11px] font-semibold text-[#7DC6FF] transition hover:text-white"
+              >
+                {showPassword ? 'Ocultar' : 'Mostrar'}
+              </button>
+            </div>
           </div>
 
           <div>
             <label htmlFor="confirm-password" className="mb-2 block text-xs font-semibold uppercase tracking-[0.12em] text-[#A8B0BC]">
               Confirmar contraseña
             </label>
-            <input
-              id="confirm-password"
-              type="password"
-              autoComplete="new-password"
-              value={confirmPassword}
-              onChange={(event) => setConfirmPassword(event.target.value)}
-              className="h-11 w-full rounded-xl border border-white/[0.1] bg-white/[0.04] px-3 text-sm text-white outline-none transition focus:border-[#7DC6FF]/60"
-              required
-            />
+            <div className="relative">
+              <input
+                id="confirm-password"
+                type={showConfirmPassword ? 'text' : 'password'}
+                autoComplete="new-password"
+                value={confirmPassword}
+                onChange={(event) => setConfirmPassword(event.target.value)}
+                className="h-11 w-full rounded-xl border border-white/[0.1] bg-white/[0.04] px-3 pr-20 text-sm text-white outline-none transition focus:border-[#7DC6FF]/60"
+                required
+              />
+              <button
+                type="button"
+                onClick={() => setShowConfirmPassword((value) => !value)}
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-[11px] font-semibold text-[#7DC6FF] transition hover:text-white"
+              >
+                {showConfirmPassword ? 'Ocultar' : 'Mostrar'}
+              </button>
+            </div>
           </div>
 
           {!ready && !error ? (
