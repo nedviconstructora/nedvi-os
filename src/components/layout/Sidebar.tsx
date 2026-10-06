@@ -121,7 +121,7 @@ export function Sidebar({
                 : ''
             }`}
           >
-            Workspace
+            Espacio de trabajo
           </p>
 
           {navigationItems.map(
