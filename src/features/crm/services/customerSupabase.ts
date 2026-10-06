@@ -160,36 +160,33 @@ export async function getCustomerByIdFromSupabase(
 export async function createCustomerInSupabase(
   values: CustomerFormValues,
 ): Promise<Customer> {
-  const response = await supabaseRequest(`/rest/v1/customers?select=${CUSTOMER_SELECT}`, {
+  const response = await fetch('/api/crm/customers', {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
-      Prefer: 'return=representation',
     },
-    body: JSON.stringify({
-      company: values.company,
-      contact: values.contact,
-      phone: values.phone,
-      email: values.email,
-      address: values.address,
-      rfc: values.rfc,
-      project_type: values.projectType,
-      lead_source: values.leadSource,
-      status: values.status,
-      assigned_salesperson: values.assignedSalesperson || null,
-      notes: values.notes,
-      last_contact: new Date().toISOString(),
-    }),
+    cache: 'no-store',
+    body: JSON.stringify(values),
   })
 
   if (!response.ok) {
-    throw await readError(response, 'No se pudo crear el cliente en Supabase.')
+    const payload = (await response.json().catch(() => null)) as { error?: string } | null
+    throw new Error(payload?.error || `No se pudo crear el cliente en Supabase. [HTTP ${response.status}]`)
   }
 
-  const rows = (await response.json()) as CustomerRow[]
-  if (!rows[0]) throw new Error('Supabase no devolvió el cliente creado.')
+  const payload = (await response.json()) as { customer?: CustomerRow }
+  if (!payload.customer) {
+    throw new Error('El servidor no devolvió el cliente creado.')
+  }
 
-  return mapCustomerRow(rows[0])
+  const customer = mapCustomerRow(payload.customer)
+
+  const persistedCustomer = await getCustomerByIdFromSupabase(customer.id)
+  if (!persistedCustomer) {
+    throw new Error('Supabase no confirmó la persistencia del cliente creado.')
+  }
+
+  return persistedCustomer
 }
 
 export async function updateCustomerInSupabase(
