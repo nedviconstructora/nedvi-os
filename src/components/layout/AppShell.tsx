@@ -10,7 +10,6 @@ import {
   readAccessSession,
   type AccessSession,
 } from '@/features/access/services/accessStorage'
-import { syncQuoteProjectsIntoProjectStorage } from '@/features/projects/services/quoteProjectSync'
 
 type AppShellProps = {
   children: ReactNode
@@ -19,7 +18,6 @@ type AppShellProps = {
 type Theme = 'light' | 'dark'
 
 const THEME_STORAGE_KEY = 'nedvi-theme'
-const QUOTE_PROJECTS_STORAGE_KEY = 'nedvi_projects_from_quotes'
 
 const ACTION_DATE_RULES: Array<{ prefix: string; labels: string[] }> = [
   { prefix: '/site-surveys', labels: ['Fecha'] },
@@ -82,25 +80,6 @@ export function AppShell({ children }: AppShellProps) {
     setTheme(initialTheme)
     applyTheme(initialTheme)
   }, [])
-
-  useEffect(() => {
-    const syncProjects = () => {
-      syncQuoteProjectsIntoProjectStorage()
-    }
-
-    const handleStorage = (event: StorageEvent) => {
-      if (event.key === QUOTE_PROJECTS_STORAGE_KEY) syncProjects()
-    }
-
-    syncProjects()
-    window.addEventListener('focus', syncProjects)
-    window.addEventListener('storage', handleStorage)
-
-    return () => {
-      window.removeEventListener('focus', syncProjects)
-      window.removeEventListener('storage', handleStorage)
-    }
-  }, [pathname])
 
   useEffect(() => {
     if (!accessUser) return
