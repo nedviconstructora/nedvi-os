@@ -1,5 +1,6 @@
 import { createClient } from '@/lib/supabase/client'
 import type { Project, ProjectFormValues, ProjectStatus, ProjectType } from '@/features/projects/types/project'
+import { readProjects } from '@/features/projects/services/projectStorage'
 
 type ProjectRow = {
   id: string
@@ -56,6 +57,29 @@ function rowToProject(row: ProjectRow): Project {
   }
 }
 
+function mergeLocalProjectDetails(project: Project): Project {
+  if (typeof window === 'undefined') return project
+
+  const localProject = readProjects().find((item) => item.id === project.id)
+  if (!localProject) return project
+
+  return {
+    ...localProject,
+    ...project,
+    assignedEmployees: localProject.assignedEmployees ?? [],
+    materials: localProject.materials ?? [],
+    equipment: localProject.equipment ?? [],
+    timeline: localProject.timeline ?? [],
+    photos: localProject.photos ?? [],
+    documents: localProject.documents ?? [],
+    dailyLogs: localProject.dailyLogs ?? [],
+    tasks: localProject.tasks ?? [],
+    inspections: localProject.inspections ?? [],
+    safetyIncidents: localProject.safetyIncidents ?? [],
+    progressHistory: localProject.progressHistory ?? [],
+  }
+}
+
 export async function readProjectsFromSupabase(): Promise<Project[]> {
   const supabase = createClient()
   const { data, error } = await supabase
@@ -64,7 +88,19 @@ export async function readProjectsFromSupabase(): Promise<Project[]> {
     .order('created_at', { ascending: false })
 
   if (error) throw error
-  return ((data ?? []) as ProjectRow[]).map(rowToProject)
+  return ((data ?? []) as ProjectRow[]).map(rowToProject).map(mergeLocalProjectDetails)
+}
+
+export async function readProjectByIdFromSupabase(id: string): Promise<Project | undefined> {
+  const supabase = createClient()
+  const { data, error } = await supabase
+    .from('projects')
+    .select('*')
+    .eq('id', id)
+    .maybeSingle()
+
+  if (error) throw error
+  return data ? mergeLocalProjectDetails(rowToProject(data as ProjectRow)) : undefined
 }
 
 export async function createProjectInSupabase(values: ProjectFormValues): Promise<Project> {
