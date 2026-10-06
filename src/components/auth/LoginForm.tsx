@@ -185,7 +185,7 @@ export function LoginForm() {
     setRecoveryError('')
 
     const normalizedEmail = recoveryEmail.trim().toLowerCase()
-    if (!/^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$/.test(normalizedEmail)) {
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(normalizedEmail)) {
       setRecoveryError('Escribe un correo electrónico válido.')
       return
     }
