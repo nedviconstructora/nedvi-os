@@ -1,11 +1,12 @@
 'use client'
 
 import Link from 'next/link'
-import { useEffect, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import {
   ChevronLeft,
   ChevronRight,
   Plus,
+  RefreshCw,
   Target,
   TrendingUp,
   UserCheck,
@@ -18,40 +19,42 @@ import { CustomerFilters } from '@/features/crm/components/CustomerFilters'
 import { CustomerSearch } from '@/features/crm/components/CustomerSearch'
 import { CustomerTable } from '@/features/crm/components/CustomerTable'
 import { useCustomerFilters } from '@/features/crm/hooks/useCustomerFilters'
-import {
-  CRM_STORAGE_KEY,
-  CRM_UPDATED_EVENT,
-  deleteCustomer,
-  readCustomers,
-} from '@/features/crm/services/customerStorage'
+import { getCustomersFromSupabase } from '@/features/crm/services/customerSupabase'
 import type { Customer } from '@/features/crm/types/customer'
 
 const PAGE_SIZE = 8
 
-type CustomerWorkspaceProps = {
-  customers: Customer[]
-}
+export function CustomerWorkspace() {
+  const [customers, setCustomers] = useState<Customer[]>([])
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
 
-export function CustomerWorkspace({ customers: initialCustomers }: CustomerWorkspaceProps) {
-  const [customers, setCustomers] = useState(initialCustomers)
+  const loadCustomers = useCallback(async () => {
+    setError(null)
 
-  useEffect(() => {
-    const refreshCustomers = () => setCustomers(readCustomers())
-    const handleStorage = (event: StorageEvent) => {
-      if (event.key === CRM_STORAGE_KEY) refreshCustomers()
-    }
-
-    refreshCustomers()
-    window.addEventListener('storage', handleStorage)
-    window.addEventListener('focus', refreshCustomers)
-    window.addEventListener(CRM_UPDATED_EVENT, refreshCustomers)
-
-    return () => {
-      window.removeEventListener('storage', handleStorage)
-      window.removeEventListener('focus', refreshCustomers)
-      window.removeEventListener(CRM_UPDATED_EVENT, refreshCustomers)
+    try {
+      const nextCustomers = await getCustomersFromSupabase()
+      setCustomers(nextCustomers)
+    } catch (loadError) {
+      console.error('Error al cargar clientes desde Supabase:', loadError)
+      setError(
+        loadError instanceof Error
+          ? loadError.message
+          : 'No se pudieron cargar los clientes desde Supabase.',
+      )
+    } finally {
+      setLoading(false)
     }
   }, [])
+
+  useEffect(() => {
+    void loadCustomers()
+
+    const handleFocus = () => void loadCustomers()
+    window.addEventListener('focus', handleFocus)
+
+    return () => window.removeEventListener('focus', handleFocus)
+  }, [loadCustomers])
 
   const {
     query,
@@ -80,22 +83,6 @@ export function CustomerWorkspace({ customers: initialCustomers }: CustomerWorks
   const qualifiedCustomers = customers.filter((customer) => customer.status === 'Qualified').length
   const proposalCustomers = customers.filter((customer) => customer.status === 'Proposal').length
 
-  function handleDeleteCustomer(customer: Customer) {
-    const confirmed = window.confirm(
-      `¿Eliminar al cliente ${customer.company}?\n\nEsta acción quitará el cliente del CRM. Las cotizaciones ya creadas conservarán los datos guardados en ellas.`
-    )
-
-    if (!confirmed) return
-
-    const deleted = deleteCustomer(customer.id)
-    if (!deleted) {
-      window.alert('No se pudo eliminar el cliente.')
-      return
-    }
-
-    setCustomers(readCustomers())
-  }
-
   return (
     <div className="mx-auto w-full max-w-[1600px] space-y-7">
       <header className="flex flex-col justify-between gap-5 sm:flex-row sm:items-end">
@@ -109,6 +96,18 @@ export function CustomerWorkspace({ customers: initialCustomers }: CustomerWorks
         </Link>
       </header>
 
+      {error ? (
+        <div className="flex flex-col gap-4 rounded-2xl border border-red-400/20 bg-red-400/[0.06] p-5 sm:flex-row sm:items-center sm:justify-between">
+          <div>
+            <p className="text-sm font-semibold text-white">No pudimos cargar Clientes desde Supabase</p>
+            <p className="mt-1 text-xs leading-5 text-red-200">{error}</p>
+          </div>
+          <button type="button" onClick={() => void loadCustomers()} className="inline-flex h-10 items-center justify-center gap-2 rounded-xl border border-red-300/20 px-4 text-xs font-semibold text-red-100 transition hover:bg-red-300/10">
+            <RefreshCw size={14} /> Reintentar
+          </button>
+        </div>
+      ) : null}
+
       <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
         <MetricCard label="Total de clientes" value={customers.length.toString()} detail="En todos los estados" icon={Users} />
         <MetricCard label="Cuentas activas" value={activeCustomers.toString()} detail="Relaciones en operación" icon={UserCheck} accent="emerald" />
@@ -119,16 +118,20 @@ export function CustomerWorkspace({ customers: initialCustomers }: CustomerWorks
       <Card className="p-5 sm:p-6">
         <div className="flex flex-col gap-4 lg:flex-row lg:items-center">
           <CustomerSearch value={query} onChange={updateQuery} />
-          <span className="text-xs text-[#646873]">{filteredCustomers.length} {filteredCustomers.length === 1 ? 'resultado' : 'resultados'}</span>
+          <span className="text-xs text-[#646873]">
+            {loading ? 'Cargando desde Supabase...' : `${filteredCustomers.length} ${filteredCustomers.length === 1 ? 'resultado' : 'resultados'}`}
+          </span>
         </div>
         <CustomerFilters value={filters} onChange={updateFilters} onClear={clearFilters} hasActiveFilters={hasActiveFilters} />
       </Card>
 
-      {visibleCustomers.length ? (
+      {loading ? (
+        <div className="rounded-2xl border border-white/[0.07] bg-[#20232A] p-8 text-sm text-[#9CA3AF]">Cargando clientes desde Supabase...</div>
+      ) : visibleCustomers.length ? (
         <>
-          <CustomerTable customers={visibleCustomers} sortKey={sortKey} sortDirection={sortDirection} onSort={toggleSort} onDelete={handleDeleteCustomer} />
+          <CustomerTable customers={visibleCustomers} sortKey={sortKey} sortDirection={sortDirection} onSort={toggleSort} />
           <div className="grid gap-4 md:grid-cols-2 lg:hidden">
-            {visibleCustomers.map((customer) => <CustomerCard customer={customer} onDelete={handleDeleteCustomer} key={customer.id} />)}
+            {visibleCustomers.map((customer) => <CustomerCard customer={customer} key={customer.id} />)}
           </div>
           <div className="flex flex-col items-center justify-between gap-3 text-xs text-[#646873] sm:flex-row">
             <span>Mostrando {(page - 1) * PAGE_SIZE + 1}-{Math.min(page * PAGE_SIZE, filteredCustomers.length)} de {filteredCustomers.length}</span>
@@ -143,9 +146,11 @@ export function CustomerWorkspace({ customers: initialCustomers }: CustomerWorks
         <EmptyState
           icon={Users}
           title="No encontramos clientes"
-          description={hasActiveFilters ? 'Prueba ajustando la búsqueda o los filtros para encontrar un cliente.' : 'El directorio de clientes está listo para registrar la primera relación comercial.'}
+          description={hasActiveFilters ? 'Prueba ajustando la búsqueda o los filtros para encontrar un cliente.' : error ? 'Corrige la conexión con Supabase y vuelve a intentar.' : 'El directorio de clientes está listo para registrar la primera relación comercial.'}
           action={hasActiveFilters ? (
             <button type="button" onClick={clearFilters} className="text-xs font-semibold text-[#7187ff] transition hover:text-white">Limpiar búsqueda y filtros</button>
+          ) : error ? (
+            <button type="button" onClick={() => void loadCustomers()} className="inline-flex h-10 items-center gap-2 rounded-lg border border-white/[0.08] px-4 text-xs font-semibold text-[#d5d7df] transition hover:bg-white/[0.05]"><RefreshCw size={14} /> Reintentar</button>
           ) : (
             <Link href="/crm/new" className="inline-flex h-10 items-center gap-2 rounded-lg bg-[#163DFF] px-4 text-xs font-semibold text-white transition hover:bg-[#3155ff]"><Plus size={14} /> Agregar cliente</Link>
           )}
