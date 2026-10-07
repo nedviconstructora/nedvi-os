@@ -2,7 +2,6 @@
 
 import { useEffect, useState, type ReactNode } from 'react'
 import { ShieldCheck, UserRoundCog, X } from 'lucide-react'
-import { createClient } from '@/lib/supabase/client'
 import { currentUser } from '@/data/currentUser'
 import { defaultPermissionsForRole, readAccessUsers, writeAccessUsers } from '@/features/access/services/accessStorage'
 import { PasswordRecoveryCenter } from '@/features/access/components/PasswordRecoveryCenter'
@@ -86,40 +85,63 @@ export default function UsersSettingsLayout({ children }: { children: ReactNode 
     setSavingId(user.id)
     setMessage('')
 
-    const authorized = readAccessUsers()
-    const nextAuthorized = authorized.map((item) =>
-      item.id === user.id
-        ? {
-            ...item,
-            role: toUiRole(role),
-            permissions: defaultPermissionsForRole(toUiRole(role)),
-          }
-        : item,
-    )
-    writeAccessUsers(nextAuthorized)
+    try {
+      const uiRole = toUiRole(role)
+      const permissions = defaultPermissionsForRole(uiRole)
 
-    if (user.email) {
-      const supabase = createClient()
-      const { data: authMatch } = await supabase
-        .from('profiles')
-        .select('id')
-        .eq('id', user.id)
-        .maybeSingle()
+      const response = await fetch('/api/access/users', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        cache: 'no-store',
+        body: JSON.stringify({
+          userId: user.id,
+          role: uiRole,
+          permissions,
+        }),
+      })
 
-      if (authMatch?.id) {
-        const { error } = await supabase.from('profiles').update({ role }).eq('id', authMatch.id)
-        if (error) {
-          setMessage(`El rol se actualizó en NEDVI OS, pero Supabase no pudo sincronizarlo: ${error.message}`)
-          setUsers((current) => current.map((item) => item.id === user.id ? { ...item, role } : item))
-          setSavingId(null)
-          return
-        }
+      const result = (await response.json()) as {
+        userId?: string
+        role?: UiRole
+        permissions?: ReturnType<typeof defaultPermissionsForRole>
+        error?: string
       }
-    }
 
-    setUsers((current) => current.map((item) => item.id === user.id ? { ...item, role } : item))
-    setMessage(`Rol de ${user.name} actualizado a ${ROLE_OPTIONS.find((item) => item.value === role)?.label ?? role}.`)
-    setSavingId(null)
+      if (!response.ok || !result.userId || !result.role) {
+        throw new Error(result.error || 'No pudimos guardar el cambio de rol.')
+      }
+
+      const authorized = readAccessUsers()
+      const nextAuthorized = authorized.map((item) =>
+        item.id === user.id
+          ? {
+              ...item,
+              role: result.role!,
+              permissions: result.permissions ?? permissions,
+            }
+          : item,
+      )
+      writeAccessUsers(nextAuthorized)
+
+      setUsers((current) =>
+        current.map((item) =>
+          item.id === user.id ? { ...item, role: toDbRole(result.role!) } : item,
+        ),
+      )
+
+      setMessage(
+        `Rol de ${user.name} actualizado a ${ROLE_OPTIONS.find((item) => item.value === role)?.label ?? role} y guardado en Supabase.`,
+      )
+    } catch (error) {
+      console.error('Error actualizando rol:', error)
+      setMessage(
+        error instanceof Error
+          ? error.message
+          : 'No pudimos guardar el cambio de rol.',
+      )
+    } finally {
+      setSavingId(null)
+    }
   }
 
   return (
