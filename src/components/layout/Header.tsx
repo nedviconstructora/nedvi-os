@@ -247,12 +247,12 @@ export function Header({ onOpenMenu, isDark, onToggleTheme, showCompanyLogo = fa
   }
 
   return (
-    <header className="flex h-[88px] shrink-0 items-center justify-between border-b border-[var(--border)] bg-[var(--surface)]/95 px-5 text-[var(--foreground)] backdrop-blur-xl transition-colors duration-300 sm:px-8">
+    <header className="nedvi-app-header flex h-[88px] shrink-0 items-center justify-between border-b px-5 text-white backdrop-blur-xl transition-colors duration-300 sm:px-8">
       <div className="flex min-w-0 items-center gap-4">
         <button
           type="button"
           onClick={onOpenMenu}
-          className="rounded-lg p-2 text-[var(--muted)] transition hover:bg-[#5496CC]/10 hover:text-[var(--foreground)] lg:hidden"
+          className="rounded-lg p-2 text-[var(--muted)] transition hover:bg-[#5496CC]/10 hover:text-white lg:hidden"
           aria-label="Abrir navegación"
         >
           <Menu size={20} strokeWidth={1.8} />
@@ -270,10 +270,10 @@ export function Header({ onOpenMenu, isDark, onToggleTheme, showCompanyLogo = fa
           <input
             type="search"
             placeholder="Buscar en NEDVI OS..."
-            className="h-10 w-full rounded-xl border border-[var(--border)] bg-[var(--surface-soft)] pl-10 pr-16 text-xs text-[var(--foreground)] outline-none transition placeholder:text-[var(--muted)] hover:border-[#5496CC]/60 focus:border-[#5496CC] focus:ring-4 focus:ring-[#5496CC]/10"
+            className="h-10 w-full rounded-xl border border-white/[0.14] bg-white/[0.08] pl-10 pr-16 text-xs text-white outline-none transition placeholder:text-white/45 hover:border-white/25 hover:bg-white/[0.11] focus:border-[#7DB7E8] focus:ring-4 focus:ring-[#7DB7E8]/10"
             aria-label="Buscar en NEDVI OS"
           />
-          <kbd className="absolute right-3 top-1/2 -translate-y-1/2 rounded border border-[var(--border)] px-1.5 py-0.5 text-[10px] text-[var(--muted)]">
+          <kbd className="absolute right-3 top-1/2 -translate-y-1/2 rounded border border-white/[0.14] px-1.5 py-0.5 text-[10px] text-white/55">
             ⌘ K
           </kbd>
         </div>
@@ -285,14 +285,14 @@ export function Header({ onOpenMenu, isDark, onToggleTheme, showCompanyLogo = fa
             <span className="flex h-10 w-12 items-center justify-center rounded-xl bg-[#5496CC] p-1.5 shadow-sm">
               <img src="/logo-blanco.svg" alt="NEDVI Constructora" className="h-full w-full object-contain" />
             </span>
-            <span className="hidden text-xs font-semibold tracking-[0.08em] text-[var(--foreground)] xl:block">NEDVI</span>
+            <span className="hidden text-xs font-semibold tracking-[0.08em] text-white xl:block">NEDVI</span>
           </div>
         ) : null}
 
         <button
           type="button"
           onClick={onToggleTheme}
-          className="rounded-xl p-2.5 text-[#5496CC] transition hover:bg-[#5496CC]/10"
+          className="rounded-xl p-2.5 text-[#9ED2F8] transition hover:bg-white/10 hover:text-white"
           aria-label={isDark ? 'Cambiar a tema claro' : 'Cambiar a tema oscuro'}
           aria-pressed={isDark}
           title={isDark ? 'Tema claro' : 'Tema oscuro'}
@@ -306,8 +306,8 @@ export function Header({ onOpenMenu, isDark, onToggleTheme, showCompanyLogo = fa
             onClick={() => setNotificationsOpen((current) => !current)}
             className={`relative rounded-xl p-2.5 transition ${
               notificationsOpen
-                ? 'bg-[#5496CC]/12 text-[#5496CC]'
-                : 'text-[var(--muted)] hover:bg-[#5496CC]/10 hover:text-[var(--foreground)]'
+                ? 'bg-white/10 text-[#9ED2F8]'
+                : 'text-white/70 hover:bg-white/10 hover:text-white'
             }`}
             aria-label="Abrir notificaciones"
             aria-expanded={notificationsOpen}
@@ -428,7 +428,7 @@ export function Header({ onOpenMenu, isDark, onToggleTheme, showCompanyLogo = fa
 
         <div className="mx-2 hidden h-6 w-px bg-[var(--border)] sm:block" />
 
-        <div className="ml-1 flex items-center gap-3 rounded-2xl border border-[var(--border)] bg-[var(--surface-soft)] px-3 py-2 shadow-sm sm:px-4">
+        <div className="ml-1 flex items-center gap-3 rounded-2xl border border-white/[0.12] bg-white/[0.07] px-3 py-2 shadow-sm backdrop-blur-md sm:px-4">
           <input
             ref={avatarInputRef}
             type="file"
@@ -473,7 +473,7 @@ export function Header({ onOpenMenu, isDark, onToggleTheme, showCompanyLogo = fa
           </button>
 
           <div className="hidden min-w-0 sm:block">
-            <p className="max-w-44 truncate text-sm font-semibold text-[var(--foreground)]">
+            <p className="max-w-44 truncate text-sm font-semibold text-white">
               {user.name}
             </p>
             <p className="mt-0.5 max-w-44 truncate text-xs font-medium text-[#5496CC]">
@@ -483,14 +483,14 @@ export function Header({ onOpenMenu, isDark, onToggleTheme, showCompanyLogo = fa
               type="button"
               onClick={() => avatarInputRef.current?.click()}
               disabled={uploadingAvatar}
-              className="mt-1 text-[10px] font-semibold text-[var(--muted)] transition hover:text-[#5496CC] disabled:opacity-60"
+              className="mt-1 text-[10px] font-semibold text-white/60 transition hover:text-white disabled:opacity-60"
             >
               {uploadingAvatar ? 'Subiendo...' : avatarUrl ? 'Cambiar foto' : 'Agregar foto'}
             </button>
           </div>
         </div>
 
-        <Building2 className="ml-2 hidden text-[var(--muted)] xl:block" size={17} strokeWidth={1.7} aria-label="Espacio de trabajo de la empresa" />
+        <Building2 className="ml-2 hidden text-white/60 xl:block" size={17} strokeWidth={1.7} aria-label="Espacio de trabajo de la empresa" />
       </div>
     </header>
   )
