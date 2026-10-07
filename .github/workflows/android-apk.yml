@@ -1,0 +1,167 @@
+name: Android APK
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - main
+    paths:
+      - capacitor.config.json
+      - public/icon.png
+      - .github/workflows/android-apk.yml
+
+jobs:
+  apk:
+    name: Build NEDVI OS APK
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Setup Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "21"
+
+      - name: Install web dependencies
+        run: npm ci
+
+      - name: Install Capacitor build tools
+        run: npm install --no-save @capacitor/core@latest @capacitor/cli@latest @capacitor/android@latest
+
+      - name: Create Android project
+        run: npx cap add android
+
+      - name: Configure Android permissions
+        shell: python
+        run: |
+          from pathlib import Path
+
+          manifest = Path("android/app/src/main/AndroidManifest.xml")
+          text = manifest.read_text()
+
+          permissions = [
+              '<uses-permission android:name="android.permission.CAMERA" />',
+              '<uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />',
+              '<uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />',
+              '<uses-permission android:name="android.permission.POST_NOTIFICATIONS" />',
+          ]
+
+          anchor = '<application'
+          index = text.find(anchor)
+          if index == -1:
+              raise SystemExit("No se encontró <application> en AndroidManifest.xml")
+
+          prefix = text[:index]
+          suffix = text[index:]
+
+          for permission in permissions:
+              if permission not in prefix:
+                  prefix += "    " + permission + "\n"
+
+          text = prefix + suffix
+
+          if 'android:usesCleartextTraffic=' not in text:
+              text = text.replace(
+                  '<application',
+                  '<application android:usesCleartextTraffic="false"',
+                  1,
+              )
+
+          manifest.write_text(text)
+
+      - name: Apply NEDVI launcher icon
+        shell: python
+        run: |
+          from pathlib import Path
+          from PIL import Image
+
+          source = Path("public/icon.png")
+          if not source.exists():
+              raise SystemExit("No existe public/icon.png")
+
+          image = Image.open(source).convert("RGBA")
+          res = Path("android/app/src/main/res")
+
+          sizes = {
+              "mipmap-mdpi": 48,
+              "mipmap-hdpi": 72,
+              "mipmap-xhdpi": 96,
+              "mipmap-xxhdpi": 144,
+              "mipmap-xxxhdpi": 192,
+          }
+
+          for folder, size in sizes.items():
+              target = res / folder
+              target.mkdir(parents=True, exist_ok=True)
+              resized = image.resize((size, size), Image.Resampling.LANCZOS)
+              resized.save(target / "ic_launcher.png")
+              resized.save(target / "ic_launcher_round.png")
+
+          adaptive = res / "mipmap-anydpi-v26"
+          if adaptive.exists():
+              for child in adaptive.iterdir():
+                  child.unlink()
+              adaptive.rmdir()
+
+      - name: Install image tooling
+        run: python -m pip install --disable-pip-version-check pillow
+
+      - name: Apply NEDVI launcher icon after Pillow install
+        shell: python
+        run: |
+          from pathlib import Path
+          from PIL import Image
+
+          source = Path("public/icon.png")
+          image = Image.open(source).convert("RGBA")
+          res = Path("android/app/src/main/res")
+
+          sizes = {
+              "mipmap-mdpi": 48,
+              "mipmap-hdpi": 72,
+              "mipmap-xhdpi": 96,
+              "mipmap-xxhdpi": 144,
+              "mipmap-xxxhdpi": 192,
+          }
+
+          for folder, size in sizes.items():
+              target = res / folder
+              target.mkdir(parents=True, exist_ok=True)
+              resized = image.resize((size, size), Image.Resampling.LANCZOS)
+              resized.save(target / "ic_launcher.png")
+              resized.save(target / "ic_launcher_round.png")
+
+          adaptive = res / "mipmap-anydpi-v26"
+          if adaptive.exists():
+              for child in adaptive.iterdir():
+                  child.unlink()
+              adaptive.rmdir()
+
+      - name: Sync Capacitor
+        run: npx cap sync android
+
+      - name: Build installable debug APK
+        working-directory: android
+        run: ./gradlew assembleDebug
+
+      - name: Prepare APK
+        run: |
+          mkdir -p dist
+          cp android/app/build/outputs/apk/debug/app-debug.apk dist/NEDVI-OS.apk
+
+      - name: Upload APK artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: NEDVI-OS-Android
+          path: dist/NEDVI-OS.apk
+          if-no-files-found: error
+          retention-days: 30
