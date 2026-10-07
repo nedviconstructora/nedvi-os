@@ -636,7 +636,7 @@ export default function SiteSurveysPage() {
               <section className="rounded-2xl border border-[var(--border)] p-5">
                 <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                   <div><h3 className="font-bold text-[var(--foreground)]">Archivos, fotos, planos y datos</h3><p className="mt-1 text-xs text-[var(--muted)]">Adjunta imágenes, PDF, planos CAD o documentos. Máximo {MAX_FILES} archivos.</p></div>
-                  <label className="inline-flex cursor-pointer items-center gap-2 rounded-xl border border-[#5496CC]/40 px-4 py-2.5 text-sm font-semibold text-[#5496CC] hover:bg-[#5496CC]/10"><Upload size={15} /> Subir archivos<input type="file" multiple accept="image/*,.pdf,.dwg,.dxf,.doc,.docx,.xls,.xlsx,.csv,.txt" onChange={handleFiles} className="hidden" /></label>
+                  <label className="inline-flex cursor-pointer items-center gap-2 rounded-xl border border-[#5496CC]/40 px-4 py-2.5 text-sm font-semibold text-[#5496CC] hover:bg-[#5496CC]/10"><Upload size={15} /> Subir planos / trazos / documentos<input type="file" multiple accept="image/*,.pdf,.dwg,.dxf,.doc,.docx,.xls,.xlsx,.csv,.txt" onChange={handleFiles} className="hidden" /></label>
                 </div>
                 {form.attachments.length ? <div className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">{form.attachments.map((file) => <div key={file.id} className="flex items-center gap-3 rounded-xl border border-[var(--border)] p-3"><span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-[#5496CC]/10 text-[#5496CC]">{file.type.startsWith('image/') ? <ImageIcon size={17} /> : <FileText size={17} />}</span><div className="min-w-0 flex-1"><p className="truncate text-sm font-semibold text-[var(--foreground)]">{file.name}</p><p className="text-xs text-[var(--muted)]">{fileSize(file.size)}</p></div><button type="button" onClick={() => removeAttachment(file.id)} className="rounded-lg p-2 text-red-500 hover:bg-red-500/10"><Trash2 size={14} /></button></div>)}</div> : <div className="mt-4 rounded-xl border border-dashed border-[var(--border)] p-8 text-center text-sm text-[var(--muted)]">Todavía no hay archivos adjuntos.</div>}
               </section>
@@ -677,6 +677,22 @@ export default function SiteSurveysPage() {
 function DrawingPad({ value, onChange }: { value: string; onChange: (value: string) => void }) {
   const canvasRef = useRef<HTMLCanvasElement | null>(null)
   const drawingRef = useRef(false)
+  const [strokeColor, setStrokeColor] = useState('#172033')
+
+  const drawingColors = [
+    '#172033',
+    '#2563EB',
+    '#0EA5E9',
+    '#10B981',
+    '#22C55E',
+    '#F59E0B',
+    '#F97316',
+    '#EF4444',
+    '#A855F7',
+    '#EC4899',
+    '#64748B',
+    '#000000',
+  ]
 
   useEffect(() => {
     const canvas = canvasRef.current
@@ -715,7 +731,7 @@ function DrawingPad({ value, onChange }: { value: string; onChange: (value: stri
     const current = point(event)
     context.beginPath()
     context.moveTo(current.x, current.y)
-    context.strokeStyle = '#172033'
+    context.strokeStyle = strokeColor
     context.lineWidth = 3
     context.lineCap = 'round'
     context.lineJoin = 'round'
@@ -754,10 +770,48 @@ function DrawingPad({ value, onChange }: { value: string; onChange: (value: stri
 
   return (
     <div>
+      <div className="mb-3 flex flex-col gap-3 rounded-xl border border-[var(--border)] bg-[var(--surface-soft)] p-3 sm:flex-row sm:items-center sm:justify-between">
+        <div>
+          <p className="text-xs font-semibold text-[var(--foreground)]">Color del trazo</p>
+          <p className="mt-0.5 text-[11px] text-[var(--muted)]">Selecciona un color antes de dibujar.</p>
+        </div>
+        <div className="flex flex-wrap items-center gap-2">
+          {drawingColors.map((color) => (
+            <button
+              key={color}
+              type="button"
+              onClick={() => setStrokeColor(color)}
+              aria-label={`Seleccionar color ${color}`}
+              title={color}
+              className={`h-8 w-8 rounded-lg border-2 transition hover:scale-105 ${
+                strokeColor === color ? 'border-[#5496CC] ring-2 ring-[#5496CC]/20' : 'border-white/40'
+              }`}
+              style={{ backgroundColor: color }}
+            />
+          ))}
+          <label className="relative flex h-8 items-center gap-2 rounded-lg border border-[var(--border)] bg-[var(--surface)] px-2 text-[11px] font-semibold text-[var(--foreground)]">
+            Personalizado
+            <input
+              type="color"
+              value={strokeColor}
+              onChange={(event) => setStrokeColor(event.target.value)}
+              className="h-5 w-6 cursor-pointer border-0 bg-transparent p-0"
+              aria-label="Seleccionar color personalizado"
+            />
+          </label>
+        </div>
+      </div>
+
       <div className="overflow-hidden rounded-xl border border-[var(--border)] bg-white">
         <canvas ref={canvasRef} width={1100} height={480} onPointerDown={start} onPointerMove={move} onPointerUp={finish} onPointerCancel={finish} className="block h-[360px] w-full touch-none cursor-crosshair sm:h-[420px]" />
       </div>
-      <div className="mt-3 flex justify-end"><button type="button" onClick={clear} className="rounded-lg border border-[var(--border)] px-3 py-2 text-xs font-semibold text-[var(--foreground)] hover:border-red-400 hover:text-red-500">Limpiar croquis</button></div>
+      <div className="mt-3 flex items-center justify-between gap-3">
+        <span className="inline-flex items-center gap-2 text-xs text-[var(--muted)]">
+          <span className="h-3 w-3 rounded-full border border-black/10" style={{ backgroundColor: strokeColor }} />
+          Color activo
+        </span>
+        <button type="button" onClick={clear} className="rounded-lg border border-[var(--border)] px-3 py-2 text-xs font-semibold text-[var(--foreground)] hover:border-red-400 hover:text-red-500">Limpiar croquis</button>
+      </div>
     </div>
   )
 }
