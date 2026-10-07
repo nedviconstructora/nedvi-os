@@ -218,7 +218,7 @@ export function ProjectForm({
           </p>
         </div>
 
-        <div className="grid gap-5 md:grid-cols-2">
+        <div className="grid gap-y-5 md:grid-cols-2 md:gap-x-8">
           <label className={labelClassName}>
             Nombre del proyecto
             <input
