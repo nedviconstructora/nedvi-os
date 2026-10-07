@@ -24,6 +24,8 @@ type UnitMeasure =
   | 'Lotes'
   | 'Salidas'
   | 'Conjuntos'
+  | 'Galones'
+  | 'Circuitos'
   | 'Otros'
 
 type QuoteItem = {
@@ -84,6 +86,8 @@ const unitOptions: UnitMeasure[] = [
   'Lotes',
   'Salidas',
   'Conjuntos',
+  'Galones',
+  'Circuitos',
   'Otros',
 ]
 
