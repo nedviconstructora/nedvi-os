@@ -65,7 +65,7 @@ export function Header({ onOpenMenu, isDark, onToggleTheme, showCompanyLogo = fa
   }, [])
 
   useEffect(() => {
-    if (!('Notification' in window)) {
+    if (typeof Notification === 'undefined') {
       setNotificationPermission('unsupported')
       return
     }
@@ -74,7 +74,7 @@ export function Header({ onOpenMenu, isDark, onToggleTheme, showCompanyLogo = fa
   }, [])
 
   async function enableNotifications() {
-    if (!('Notification' in window)) {
+    if (typeof Notification === 'undefined') {
       window.alert('Este navegador no admite notificaciones.')
       return
     }
