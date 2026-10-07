@@ -34,6 +34,7 @@ export function ProjectEvidenceManager({ project }: Props) {
   const [editingId, setEditingId] = useState<string | null>(null)
   const [draft, setDraft] = useState<EvidenceDraft>(emptyDraft)
   const fileRef = useRef<HTMLInputElement>(null)
+  const cameraRef = useRef<HTMLInputElement>(null)
 
   function persist(photos: ProjectPhoto[]) {
     const projects = readProjects()
@@ -171,6 +172,7 @@ export function ProjectEvidenceManager({ project }: Props) {
           <div className="grid gap-5 lg:grid-cols-[0.9fr_1.1fr]">
             <div>
               <input ref={fileRef} type="file" accept="image/*" className="hidden" onChange={handleImage} />
+              <input ref={cameraRef} type="file" accept="image/*" capture="environment" className="hidden" onChange={handleImage} />
               <button
                 type="button"
                 onClick={() => fileRef.current?.click()}
@@ -183,6 +185,22 @@ export function ProjectEvidenceManager({ project }: Props) {
                   <span className="flex flex-col items-center gap-2 text-xs"><Upload size={22} /> Seleccionar fotografía</span>
                 )}
               </button>
+              <div className="mt-3 grid grid-cols-2 gap-2">
+                <button
+                  type="button"
+                  onClick={() => cameraRef.current?.click()}
+                  className="inline-flex min-h-11 items-center justify-center gap-2 rounded-xl bg-[#5496CC] px-3 text-xs font-semibold text-white"
+                >
+                  <Camera size={15} /> Tomar foto
+                </button>
+                <button
+                  type="button"
+                  onClick={() => fileRef.current?.click()}
+                  className="inline-flex min-h-11 items-center justify-center gap-2 rounded-xl border border-white/[0.12] px-3 text-xs font-semibold text-white"
+                >
+                  <Upload size={15} /> Galería
+                </button>
+              </div>
             </div>
 
             <div className="grid gap-4 sm:grid-cols-2">
