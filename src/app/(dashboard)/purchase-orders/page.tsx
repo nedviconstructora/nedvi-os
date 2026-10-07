@@ -378,6 +378,11 @@ export default function PurchaseOrdersPage() {
       return
     }
 
+    if (deliveryDate && orderDate && deliveryDate < orderDate) {
+      alert('La fecha de entrega no puede ser anterior a la fecha de la orden.')
+      return
+    }
+
     const totals = calculateOrderTotals(draftItems, Number(taxRate || 0))
     const order: PurchaseOrder = {
       id: existingOrder?.id ?? crypto.randomUUID(),
@@ -525,8 +530,12 @@ export default function PurchaseOrdersPage() {
                 <Field label="Requisición aprobada *"><select required value={requisitionId} onChange={(e) => handleRequisitionChange(e.target.value)} className="po-input"><option value="">Seleccionar requisición</option>{availableRequisitions.map((item) => <option key={item.id} value={item.id}>{item.folio} — {item.projectName}</option>)}</select></Field>
                 <Field label="Proveedor *"><select required value={supplierId} onChange={(e) => setSupplierId(e.target.value)} className="po-input"><option value="">Seleccionar proveedor</option>{activeSuppliers.map((supplier) => <option key={supplier.id} value={supplier.id}>{supplier.folio} — {supplier.company}</option>)}</select></Field>
                 <Field label="Moneda"><select value={currency} onChange={(e) => setCurrency(e.target.value as PurchasingCurrency)} className="po-input"><option value="MXN">MXN</option><option value="USD">USD</option></select></Field>
-                <Field label="Fecha de orden"><input type="date" value={orderDate} onChange={(e) => setOrderDate(e.target.value)} className="po-input" /></Field>
-                <Field label="Fecha de entrega"><input type="date" value={deliveryDate} onChange={(e) => setDeliveryDate(e.target.value)} className="po-input" /></Field>
+                <Field label="Fecha de orden"><input type="date" max={today()} value={orderDate} onChange={(e) => {
+                  const nextOrderDate = e.target.value
+                  setOrderDate(nextOrderDate)
+                  if (deliveryDate && deliveryDate < nextOrderDate) setDeliveryDate('')
+                }} className="po-input" /></Field>
+                <Field label="Fecha de entrega"><input type="date" min={orderDate || today()} value={deliveryDate} onChange={(e) => setDeliveryDate(e.target.value)} className="po-input" /></Field>
                 <Field label="IVA (%)"><input type="number" min="0" step="0.01" value={taxRate} onChange={(e) => setTaxRate(e.target.value)} className="po-input" /></Field>
               </div>
 
