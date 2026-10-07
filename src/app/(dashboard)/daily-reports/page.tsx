@@ -6,6 +6,8 @@ import {
   FileImage,
   FileText,
   ImagePlus,
+  LoaderCircle,
+  MapPin,
   Plus,
   Printer,
   ReceiptText,
@@ -148,6 +150,10 @@ export default function DailyReportsPage() {
   const [author, setAuthor] = useState('Pedro Garcia')
   const [images, setImages] = useState<DailyReportImage[]>([])
   const [processingImages, setProcessingImages] = useState(false)
+  const [latitude, setLatitude] = useState<number | undefined>()
+  const [longitude, setLongitude] = useState<number | undefined>()
+  const [locationAccuracy, setLocationAccuracy] = useState<number | undefined>()
+  const [locating, setLocating] = useState(false)
 
   function loadData() {
     const currentProjects = readOperationProjects()
@@ -272,12 +278,44 @@ export default function DailyReportsPage() {
     setAuthor('Pedro Garcia')
     setImages([])
     setProcessingImages(false)
+    setLatitude(undefined)
+    setLongitude(undefined)
+    setLocationAccuracy(undefined)
+    setLocating(false)
   }
 
   function handleProjectChange(value: string) {
     setQuoteId(value)
     const project = projects.find((item) => item.id === value)
     setProjectName(project?.project ?? '')
+  }
+
+  function captureLocation() {
+    if (!('geolocation' in navigator)) {
+      window.alert('Este dispositivo no permite obtener la ubicación.')
+      return
+    }
+
+    setLocating(true)
+
+    navigator.geolocation.getCurrentPosition(
+      (position) => {
+        setLatitude(position.coords.latitude)
+        setLongitude(position.coords.longitude)
+        setLocationAccuracy(position.coords.accuracy)
+        setLocating(false)
+      },
+      (error) => {
+        console.error('No se pudo obtener la ubicación:', error)
+        setLocating(false)
+        window.alert('No pudimos obtener tu ubicación. Revisa el permiso de ubicación del navegador.')
+      },
+      {
+        enableHighAccuracy: true,
+        timeout: 12000,
+        maximumAge: 30000,
+      },
+    )
   }
 
   async function handleImages(event: ChangeEvent<HTMLInputElement>) {
@@ -332,6 +370,9 @@ export default function DailyReportsPage() {
       summary: summary.trim(),
       blockers: blockers.trim(),
       author: author.trim(),
+      latitude,
+      longitude,
+      locationAccuracy,
       images,
     }
 
@@ -743,6 +784,14 @@ export default function DailyReportsPage() {
                         <Info label="Avance de obra" value={progress ? `${progress.percent}%` : 'Sin registrar'} />
                         <Info label="Factura / referencia" value={report.clientInvoice || 'Sin registrar'} />
                         <Info label="Imágenes" value={report.images.length.toString()} />
+                        <Info
+                          label="Ubicación"
+                          value={
+                            typeof report.latitude === 'number' && typeof report.longitude === 'number'
+                              ? `${report.latitude.toFixed(5)}, ${report.longitude.toFixed(5)}`
+                              : 'Sin registrar'
+                          }
+                        />
                       </div>
 
                       <div className="mt-4 grid gap-4 lg:grid-cols-[1.3fr_1fr]">
@@ -809,6 +858,34 @@ export default function DailyReportsPage() {
                 <span className="text-sm font-semibold">Nombre del proyecto *</span>
                 <input required value={projectName} onChange={(event) => setProjectName(event.target.value)} placeholder="Nombre que aparecerá en el reporte y PDF" className="w-full rounded-xl border border-[var(--border)] bg-transparent px-4 py-3 outline-none focus:border-[#5496CC]" />
               </label>
+
+              <div className="rounded-2xl border border-[var(--border)] bg-[var(--surface-soft)] p-4">
+                <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                  <div>
+                    <p className="flex items-center gap-2 text-sm font-semibold text-[var(--foreground)]">
+                      <MapPin size={16} className="text-[#5496CC]" /> Ubicación del reporte
+                    </p>
+                    <p className="mt-1 text-xs text-[var(--muted)]">
+                      Guarda la ubicación actual como evidencia del registro en campo.
+                    </p>
+                    {typeof latitude === 'number' && typeof longitude === 'number' ? (
+                      <p className="mt-2 text-xs font-semibold text-[#5496CC]">
+                        {latitude.toFixed(5)}, {longitude.toFixed(5)}
+                        {typeof locationAccuracy === 'number' ? ` · precisión ±${Math.round(locationAccuracy)} m` : ''}
+                      </p>
+                    ) : null}
+                  </div>
+                  <button
+                    type="button"
+                    onClick={captureLocation}
+                    disabled={locating}
+                    className="inline-flex min-h-11 items-center justify-center gap-2 rounded-xl border border-[#5496CC]/40 px-4 py-2.5 text-sm font-semibold text-[#5496CC] transition hover:bg-[#5496CC]/10 disabled:opacity-60"
+                  >
+                    {locating ? <LoaderCircle size={16} className="animate-spin" /> : <MapPin size={16} />}
+                    {locating ? 'Obteniendo...' : latitude ? 'Actualizar ubicación' : 'Usar ubicación actual'}
+                  </button>
+                </div>
+              </div>
 
               <div className="grid gap-4 sm:grid-cols-2">
                 <label className="space-y-2"><span className="text-sm font-semibold">Fecha</span><input type="date" required value={date} onChange={(event) => setDate(event.target.value)} className="w-full rounded-xl border border-[var(--border)] bg-transparent px-4 py-3" /></label>
