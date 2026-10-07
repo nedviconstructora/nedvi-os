@@ -3,7 +3,7 @@ name: Build Check
 on:
   push:
     branches:
-      - feature/portal-documentos
+      - main
   workflow_dispatch:
 
 jobs:
