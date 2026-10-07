@@ -308,6 +308,44 @@ export function Sidebar({
             </button>
           </>
         ) : null}
+
+        <div className={`mt-4 rounded-xl border border-black/10 bg-white/20 p-3 backdrop-blur-sm ${collapsed ? 'lg:hidden' : ''}`}>
+          <p className="px-1 text-[9px] font-bold uppercase tracking-[0.14em] text-black/60">
+            Síguenos
+          </p>
+          <div className="mt-2 grid grid-cols-3 gap-2">
+            <a
+              href="https://www.instagram.com/nedviconstructora?stkn=cjY1NWcya3Z0ZTVq"
+              target="_blank"
+              rel="noreferrer"
+              title="Instagram · @nedviconstructora"
+              aria-label="Abrir Instagram de NEDVI Constructora"
+              className="flex h-10 items-center justify-center rounded-lg bg-[#E9F8FA] text-black shadow-sm transition hover:-translate-y-0.5 hover:bg-white"
+            >
+              <Instagram size={17} strokeWidth={1.9} />
+            </a>
+            <a
+              href="https://www.facebook.com/share/18CMd2VqoK/"
+              target="_blank"
+              rel="noreferrer"
+              title="Facebook · NEDVI Constructora"
+              aria-label="Abrir Facebook de NEDVI Constructora"
+              className="flex h-10 items-center justify-center rounded-lg bg-[#E9F8FA] text-black shadow-sm transition hover:-translate-y-0.5 hover:bg-white"
+            >
+              <Facebook size={17} strokeWidth={1.9} />
+            </a>
+            <a
+              href="https://www.nedviconstructora.com"
+              target="_blank"
+              rel="noreferrer"
+              title="Sitio web · nedviconstructora.com"
+              aria-label="Abrir sitio web de NEDVI Constructora"
+              className="flex h-10 items-center justify-center rounded-lg bg-[#E9F8FA] text-black shadow-sm transition hover:-translate-y-0.5 hover:bg-white"
+            >
+              <Globe2 size={17} strokeWidth={1.9} />
+            </a>
+          </div>
+        </div>
       </nav>
 
       <div className="border-t border-black/15 p-3">
@@ -318,44 +356,6 @@ export function Sidebar({
             <p className="truncate text-[11px] text-black/70">{user.role}</p>
           </div>
         </div>
-        <div className={`mt-2 rounded-xl border border-black/10 bg-white/20 p-2.5 backdrop-blur-sm ${collapsed ? 'lg:hidden' : ''}`}>
-          <p className="px-1 text-[9px] font-bold uppercase tracking-[0.14em] text-black/60">
-            NEDVI en línea
-          </p>
-          <div className="mt-2 grid grid-cols-3 gap-2">
-            <a
-              href="https://www.instagram.com/nedviconstructora?stkn=cjY1NWcya3Z0ZTVq"
-              target="_blank"
-              rel="noreferrer"
-              title="Instagram · @nedviconstructora"
-              aria-label="Abrir Instagram de NEDVI Constructora"
-              className="flex h-9 items-center justify-center rounded-lg bg-[#E9F8FA] text-black transition hover:-translate-y-0.5 hover:bg-white hover:shadow-sm"
-            >
-              <Instagram size={16} strokeWidth={1.8} />
-            </a>
-            <a
-              href="https://www.facebook.com/share/18CMd2VqoK/"
-              target="_blank"
-              rel="noreferrer"
-              title="Facebook · NEDVI Constructora"
-              aria-label="Abrir Facebook de NEDVI Constructora"
-              className="flex h-9 items-center justify-center rounded-lg bg-[#E9F8FA] text-black transition hover:-translate-y-0.5 hover:bg-white hover:shadow-sm"
-            >
-              <Facebook size={16} strokeWidth={1.8} />
-            </a>
-            <a
-              href="https://www.nedviconstructora.com"
-              target="_blank"
-              rel="noreferrer"
-              title="Sitio web · nedviconstructora.com"
-              aria-label="Abrir sitio web de NEDVI Constructora"
-              className="flex h-9 items-center justify-center rounded-lg bg-[#E9F8FA] text-black transition hover:-translate-y-0.5 hover:bg-white hover:shadow-sm"
-            >
-              <Globe2 size={16} strokeWidth={1.8} />
-            </a>
-          </div>
-        </div>
-
         <button
           type="button"
           onClick={handleLogout}
