@@ -1,4 +1,4 @@
-const CACHE_NAME = 'nedvi-os-static-v1'
+const CACHE_NAME = 'nedvi-os-static-v3'
 const STATIC_ASSETS = ['/icon.png', '/logo-blanco.svg']
 
 self.addEventListener('install', (event) => {
