@@ -7,7 +7,7 @@ on:
       - main
     paths:
       - capacitor.config.json
-      - public/icon.png
+      - src/app/icon.png
       - .github/workflows/android-apk.yml
 
 jobs:
@@ -87,7 +87,7 @@ jobs:
           from pathlib import Path
           from PIL import Image
 
-          source = Path("public/icon.png")
+          source = Path("src/app/icon.png")
           image = Image.open(source).convert("RGBA")
           res = Path("android/app/src/main/res")
 
