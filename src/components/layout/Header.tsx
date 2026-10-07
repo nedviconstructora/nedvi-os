@@ -252,7 +252,7 @@ export function Header({ onOpenMenu, isDark, onToggleTheme, showCompanyLogo = fa
         <button
           type="button"
           onClick={onOpenMenu}
-          className="rounded-lg p-2 text-[var(--muted)] transition hover:bg-[#5496CC]/10 hover:text-white lg:hidden"
+          className="rounded-lg p-2 text-white/75 transition hover:bg-white/10 hover:text-white lg:hidden"
           aria-label="Abrir navegación"
         >
           <Menu size={20} strokeWidth={1.8} />
@@ -260,13 +260,13 @@ export function Header({ onOpenMenu, isDark, onToggleTheme, showCompanyLogo = fa
 
         <div className="flex items-center gap-2.5 lg:hidden">
           <BrandMark />
-          <span className="text-[15px] font-semibold tracking-[-0.04em] text-[var(--foreground)]">
-            NEDVI <span className="font-normal text-[var(--muted)]">OS</span>
+          <span className="text-[15px] font-semibold tracking-[-0.04em] text-white">
+            NEDVI <span className="font-normal text-[#9ED2F8]">OS</span>
           </span>
         </div>
 
         <div className="relative hidden w-[min(360px,32vw)] md:block">
-          <Search className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 text-[var(--muted)]" size={16} strokeWidth={1.8} />
+          <Search className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 text-white/55" size={16} strokeWidth={1.8} />
           <input
             type="search"
             placeholder="Buscar en NEDVI OS..."
@@ -476,7 +476,7 @@ export function Header({ onOpenMenu, isDark, onToggleTheme, showCompanyLogo = fa
             <p className="max-w-44 truncate text-sm font-semibold text-white">
               {user.name}
             </p>
-            <p className="mt-0.5 max-w-44 truncate text-xs font-medium text-[#5496CC]">
+            <p className="mt-0.5 max-w-44 truncate text-xs font-medium text-[#9ED2F8]">
               {user.role}
             </p>
             <button
