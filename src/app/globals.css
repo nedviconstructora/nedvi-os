@@ -567,3 +567,58 @@ textarea {
 .theme-dark .nedvi-dashboard-hero {
   background: linear-gradient(135deg, rgba(47,128,237,.12), rgba(84,150,204,.05) 50%, rgba(18,28,46,.55));
 }
+
+
+/* Login theme support */
+.theme-light .login-page {
+  background:
+    radial-gradient(circle at 76% 38%, rgba(31,111,235,.08), transparent 30%),
+    linear-gradient(135deg, #f7faff 0%, #edf4fb 52%, #e8f0f8 100%) !important;
+  color: #10233a !important;
+}
+
+.theme-light .login-page .login-card {
+  background: rgba(255,255,255,.86) !important;
+  border-color: rgba(31,111,235,.12) !important;
+  box-shadow: 0 28px 90px rgba(25,55,95,.14) !important;
+}
+
+.theme-light .login-page h1,
+.theme-light .login-page h2 {
+  color: #10233a !important;
+}
+
+.theme-light .login-page p {
+  color: #64748b;
+}
+
+.theme-light .login-page [class~="text-white"] {
+  color: #10233a !important;
+}
+
+.theme-light .login-page [class~="text-[#A8B0BC]"],
+.theme-light .login-page [class~="text-[#9CA3AF]"],
+.theme-light .login-page [class~="text-[#69717D]"] {
+  color: #64748b !important;
+}
+
+.theme-light .login-page input {
+  background-color: #ffffff !important;
+  color: #10233a !important;
+  border-color: #dbe5ef !important;
+}
+
+.theme-light .login-page input::placeholder {
+  color: #94a3b8 !important;
+}
+
+.theme-light .login-page .login-theme-toggle {
+  background: rgba(255,255,255,.82) !important;
+  color: #1f6feb !important;
+  border-color: rgba(31,111,235,.15) !important;
+  box-shadow: 0 10px 28px rgba(31,111,235,.12) !important;
+}
+
+.theme-light .login-page .login-theme-toggle:hover {
+  background: #ffffff !important;
+}
