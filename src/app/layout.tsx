@@ -12,7 +12,26 @@ export default function RootLayout({
   children: React.ReactNode
 }>) {
   return (
-    <html lang="en">
+    <html lang="es" suppressHydrationWarning>
+      <head>
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `
+              (function () {
+                try {
+                  var saved = localStorage.getItem('nedvi-theme');
+                  var theme = saved === 'dark' ? 'dark' : 'light';
+                  var root = document.documentElement;
+                  root.classList.toggle('dark', theme === 'dark');
+                  root.classList.toggle('theme-dark', theme === 'dark');
+                  root.classList.toggle('theme-light', theme !== 'dark');
+                  root.style.colorScheme = theme;
+                } catch (e) {}
+              })();
+            `,
+          }}
+        />
+      </head>
       <body>
         <div className="nedvi-splash">
           <div className="nedvi-splash-content">
