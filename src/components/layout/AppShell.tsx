@@ -209,8 +209,8 @@ export function AppShell({ children }: AppShellProps) {
     pathname === '/personnel' || pathname === '/hr-attendance' || pathname === '/payroll'
 
   return (
-    <div className="min-h-screen bg-[var(--background)] text-[var(--foreground)] transition-colors duration-300 print:min-h-0 print:bg-white print:text-black">
-      <div className="flex min-h-screen print:min-h-0 print:block">
+    <div className="min-h-[100dvh] bg-[var(--background)] text-[var(--foreground)] transition-colors duration-300 print:min-h-0 print:bg-white print:text-black">
+      <div className="flex min-h-[100dvh] print:min-h-0 print:block">
         <div className="print:hidden">
           <Sidebar
             collapsed={sidebarCollapsed}
