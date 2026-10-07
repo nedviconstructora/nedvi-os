@@ -209,7 +209,7 @@ export function AppShell({ children }: AppShellProps) {
     pathname === '/personnel' || pathname === '/hr-attendance' || pathname === '/payroll'
 
   return (
-    <div className={`${isDark ? 'theme-dark' : 'theme-light'} min-h-screen bg-[var(--background)] text-[var(--foreground)] transition-colors duration-300 print:min-h-0 print:bg-white print:text-black`}>
+    <div className="min-h-screen bg-[var(--background)] text-[var(--foreground)] transition-colors duration-300 print:min-h-0 print:bg-white print:text-black">
       <div className="flex min-h-screen print:min-h-0 print:block">
         <div className="print:hidden">
           <Sidebar
