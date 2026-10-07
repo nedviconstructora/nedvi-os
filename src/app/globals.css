@@ -674,3 +674,11 @@ textarea {
 .theme-light .login-brand-panel [class~="bg-black/20"] {
   background-color: rgba(255,255,255,.54) !important;
 }
+
+
+.theme-light .login-system-status {
+  background: rgba(255,255,255,.72) !important;
+  border-color: rgba(15,39,64,.10) !important;
+  color: #64748b !important;
+  box-shadow: 0 10px 30px rgba(25,55,95,.10) !important;
+}
