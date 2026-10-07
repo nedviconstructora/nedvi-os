@@ -92,6 +92,14 @@ const unitOptions: UnitMeasure[] = [
   'Otros',
 ]
 
+const QUOTE_RESPONSIBLES = [
+  'Nestor Ortiz',
+  'Cristian Medina',
+  'Victor Muciño',
+  'Edgardo Fierro',
+  'Pedro Garcia',
+] as const
+
 const emptyItem = (): QuoteItem => ({
   id: crypto.randomUUID(),
   description: '',
@@ -489,8 +497,13 @@ export default function QuotesPage() {
     }
 
     setSelectedCustomerInfo(customerSnapshot(matchedCustomer))
-    if (matchedCustomer.assignedSalesperson) {
+    if (
+      matchedCustomer.assignedSalesperson &&
+      QUOTE_RESPONSIBLES.includes(matchedCustomer.assignedSalesperson as (typeof QUOTE_RESPONSIBLES)[number])
+    ) {
       setOwner(matchedCustomer.assignedSalesperson)
+    } else {
+      setOwner('')
     }
   }
 
@@ -920,7 +933,19 @@ export default function QuotesPage() {
                     </div>
                   </div>
 
-                  <label className="space-y-2"><span className="text-sm font-semibold">Responsable</span><input value={owner} onChange={(e) => setOwner(e.target.value)} placeholder="Responsable comercial" className="w-full rounded-xl border border-slate-200 bg-transparent px-4 py-3 dark:border-slate-700" /></label>
+                  <label className="space-y-2">
+                    <span className="text-sm font-semibold">Responsable</span>
+                    <select
+                      value={owner}
+                      onChange={(e) => setOwner(e.target.value)}
+                      className="w-full rounded-xl border border-slate-200 bg-transparent px-4 py-3 dark:border-slate-700"
+                    >
+                      <option value="">Seleccionar responsable</option>
+                      {QUOTE_RESPONSIBLES.map((name) => (
+                        <option key={name} value={name}>{name}</option>
+                      ))}
+                    </select>
+                  </label>
                   <label className="space-y-2"><span className="text-sm font-semibold">Estado</span><select value={status} onChange={(e) => setStatus(e.target.value as QuoteStatus)} className="w-full rounded-xl border border-slate-200 bg-transparent px-4 py-3 dark:border-slate-700"><option>Borrador</option><option>Enviada</option><option>Aprobada</option><option>Rechazada</option><option>Vencida</option></select></label>
                   <label className="space-y-2"><span className="text-sm font-semibold">IVA (%)</span><input type="number" min="0" step="0.01" value={taxRate} onChange={(e) => setTaxRate(e.target.value)} className="w-full rounded-xl border border-slate-200 bg-transparent px-4 py-3 dark:border-slate-700" /></label>
                   <label className="space-y-2"><span className="text-sm font-semibold">Moneda</span><select value={quoteCurrency} onChange={(e) => setQuoteCurrency(e.target.value as QuoteCurrency)} className="w-full rounded-xl border border-slate-200 bg-transparent px-4 py-3 dark:border-slate-700"><option value="MXN">Pesos mexicanos (MXN)</option><option value="USD">Dólares estadounidenses (USD)</option></select></label>
