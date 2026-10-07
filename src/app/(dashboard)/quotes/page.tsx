@@ -643,7 +643,7 @@ export default function QuotesPage() {
     )
   }
 
-  function saveQuote(event: FormEvent<HTMLFormElement>) {
+  async function saveQuote(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
 
     const cleanClientName = clientName.trim()
@@ -674,56 +674,68 @@ export default function QuotesPage() {
     const savedCustomerInfo = customerSnapshot(matchedCustomer)
     const calculated = quoteTotals(normalizedConcepts, Number(taxRate || 0))
 
-    if (editingId) {
-      setQuotes((current) =>
-        current.map((quote) =>
-          quote.id === editingId
-            ? {
-                ...quote,
-                customerId: matchedCustomer.id,
-                client: matchedCustomer.company,
-                customerInfo: savedCustomerInfo,
-                project: project.trim(),
-                validUntil,
-                items: [],
-                concepts: normalizedConcepts,
-                currency: quoteCurrency,
-                taxRate: Number(taxRate || 0),
-                ...calculated,
-                status,
-                owner: owner.trim(),
-                notes: notes.trim(),
-              }
-            : quote,
-        ),
-      )
-    } else {
-      const quote: Quote = {
-        id: crypto.randomUUID(),
-        folio: nextFolio(),
-        customerId: matchedCustomer.id,
-        client: matchedCustomer.company,
-        customerInfo: savedCustomerInfo,
-        project: project.trim(),
-        createdAt: new Date().toISOString().slice(0, 10),
-        validUntil,
-        items: [],
-        concepts: normalizedConcepts,
-        currency: quoteCurrency,
-        taxRate: Number(taxRate || 0),
-        ...calculated,
-        status,
-        owner: owner.trim(),
-        notes: notes.trim(),
+    try {
+      if (editingId) {
+        const currentQuote = quotes.find((quote) => quote.id === editingId)
+        if (!currentQuote) throw new Error('No encontramos la cotización a editar.')
+
+        const nextQuote: Quote = {
+          ...currentQuote,
+          customerId: matchedCustomer.id,
+          client: matchedCustomer.company,
+          customerInfo: savedCustomerInfo,
+          project: project.trim(),
+          validUntil,
+          items: [],
+          concepts: normalizedConcepts,
+          currency: quoteCurrency,
+          taxRate: Number(taxRate || 0),
+          ...calculated,
+          status,
+          owner: owner.trim(),
+          notes: notes.trim(),
+        }
+
+        const savedQuote = await upsertQuoteToSupabase(nextQuote)
+        setQuotes((current) =>
+          current.map((quote) => (quote.id === editingId ? savedQuote : quote)),
+        )
+      } else {
+        const quote: Quote = {
+          id: crypto.randomUUID(),
+          folio: nextFolio(),
+          customerId: matchedCustomer.id,
+          client: matchedCustomer.company,
+          customerInfo: savedCustomerInfo,
+          project: project.trim(),
+          createdAt: new Date().toISOString().slice(0, 10),
+          validUntil,
+          items: [],
+          concepts: normalizedConcepts,
+          currency: quoteCurrency,
+          taxRate: Number(taxRate || 0),
+          ...calculated,
+          status,
+          owner: owner.trim(),
+          notes: notes.trim(),
+        }
+
+        const savedQuote = await upsertQuoteToSupabase(quote)
+        setQuotes((current) => [savedQuote, ...current.filter((item) => item.id !== savedQuote.id)])
       }
 
-      setQuotes((current) => [quote, ...current])
+      closeForm()
+    } catch (error) {
+      console.error('Error guardando cotización en Supabase:', error)
+      alert(
+        error instanceof Error
+          ? `No se pudo guardar la cotización: ${error.message}`
+          : 'No se pudo guardar la cotización en la base de datos compartida.',
+      )
     }
-
-    closeForm()
   }
 
-  function duplicateQuote(quote: Quote) {
+  async function duplicateQuote(quote: Quote) {
     const duplicated: Quote = {
       ...quote,
       id: crypto.randomUUID(),
@@ -734,20 +746,43 @@ export default function QuotesPage() {
       items: [],
       concepts: (quote.concepts ?? []).map((item) => ({ ...item, id: crypto.randomUUID() })),
     }
-    setQuotes((current) => [duplicated, ...current])
+
+    try {
+      const savedQuote = await upsertQuoteToSupabase(duplicated)
+      setQuotes((current) => [savedQuote, ...current])
+    } catch (error) {
+      console.error('Error duplicando cotización:', error)
+      alert('No se pudo duplicar la cotización en Supabase.')
+    }
   }
 
-  function deleteQuote(quote: Quote) {
+  async function deleteQuote(quote: Quote) {
     if (!window.confirm(`¿Eliminar la cotización ${quote.folio}?`)) return
-    setQuotes((current) => current.filter((item) => item.id !== quote.id))
+
+    try {
+      await deleteQuoteFromSupabase(quote.id)
+      setQuotes((current) => current.filter((item) => item.id !== quote.id))
+    } catch (error) {
+      console.error('Error eliminando cotización:', error)
+      alert('No se pudo eliminar la cotización de Supabase.')
+    }
   }
 
-  function changeStatus(id: string, nextStatus: QuoteStatus) {
-    setQuotes((current) =>
-      current.map((quote) =>
-        quote.id === id ? { ...quote, status: nextStatus } : quote,
-      ),
-    )
+  async function changeStatus(id: string, nextStatus: QuoteStatus) {
+    const quote = quotes.find((item) => item.id === id)
+    if (!quote) return
+
+    const updatedQuote = { ...quote, status: nextStatus }
+
+    try {
+      const savedQuote = await upsertQuoteToSupabase(updatedQuote)
+      setQuotes((current) =>
+        current.map((item) => (item.id === id ? savedQuote : item)),
+      )
+    } catch (error) {
+      console.error('Error actualizando estado de cotización:', error)
+      alert('No se pudo actualizar el estado de la cotización.')
+    }
   }
 
   async function convertToProject(quote: Quote) {
@@ -774,10 +809,11 @@ export default function QuotesPage() {
         description: `Proyecto creado desde la cotización ${quote.folio}.`,
       })
 
+      const updatedQuote: Quote = { ...quote, convertedToProject: true }
+      const savedQuote = await upsertQuoteToSupabase(updatedQuote)
+
       setQuotes((current) =>
-        current.map((item) =>
-          item.id === quote.id ? { ...item, convertedToProject: true } : item,
-        ),
+        current.map((item) => (item.id === quote.id ? savedQuote : item)),
       )
 
       alert(`Proyecto ${project.folio ?? project.name} creado en Supabase desde ${quote.folio}.`)
