@@ -3,10 +3,14 @@
 import { FormEvent, useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import {
   Download,
+  ExternalLink,
+  Facebook,
   FileArchive,
   FileText,
   FileUp,
   FolderOpen,
+  Globe2,
+  Instagram,
   Search,
   Trash2,
   X,
@@ -512,6 +516,75 @@ export default function DocumentsPage() {
             </div>
           )}
         </div>
+
+        <section className="overflow-hidden rounded-2xl border border-[var(--border)] bg-[var(--surface)] shadow-sm">
+          <div className="flex flex-col gap-5 p-5 sm:p-6 lg:flex-row lg:items-center lg:justify-between">
+            <div className="max-w-xl">
+              <p className="text-xs font-semibold uppercase tracking-[0.16em] text-[#5496CC]">
+                NEDVI Constructora
+              </p>
+              <h2 className="mt-2 text-lg font-bold text-[var(--foreground)]">
+                Conecta con nosotros
+              </h2>
+              <p className="mt-1 text-sm leading-6 text-[var(--muted)]">
+                Visita nuestras redes sociales y sitio web para conocer proyectos, avances y novedades.
+              </p>
+            </div>
+
+            <div className="grid w-full gap-3 sm:grid-cols-3 lg:max-w-3xl">
+              <a
+                href="https://www.instagram.com/nedviconstructora?stkn=cjY1NWcya3Z0ZTVq"
+                target="_blank"
+                rel="noreferrer"
+                className="group flex items-center gap-3 rounded-xl border border-[var(--border)] bg-[var(--surface-soft)] p-4 transition hover:-translate-y-0.5 hover:border-[#5496CC]/60 hover:shadow-sm"
+                aria-label="Abrir Instagram de NEDVI Constructora"
+              >
+                <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-[#5496CC]/10 text-[#5496CC]">
+                  <Instagram size={19} />
+                </span>
+                <span className="min-w-0 flex-1">
+                  <span className="block text-xs font-semibold text-[var(--muted)]">Instagram</span>
+                  <span className="mt-0.5 block truncate text-sm font-bold text-[var(--foreground)]">@nedviconstructora</span>
+                </span>
+                <ExternalLink size={15} className="shrink-0 text-[var(--muted)] transition group-hover:text-[#5496CC]" />
+              </a>
+
+              <a
+                href="https://www.facebook.com/share/18CMd2VqoK/"
+                target="_blank"
+                rel="noreferrer"
+                className="group flex items-center gap-3 rounded-xl border border-[var(--border)] bg-[var(--surface-soft)] p-4 transition hover:-translate-y-0.5 hover:border-[#5496CC]/60 hover:shadow-sm"
+                aria-label="Abrir Facebook de NEDVI Constructora"
+              >
+                <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-[#5496CC]/10 text-[#5496CC]">
+                  <Facebook size={19} />
+                </span>
+                <span className="min-w-0 flex-1">
+                  <span className="block text-xs font-semibold text-[var(--muted)]">Facebook</span>
+                  <span className="mt-0.5 block truncate text-sm font-bold text-[var(--foreground)]">NEDVI Constructora</span>
+                </span>
+                <ExternalLink size={15} className="shrink-0 text-[var(--muted)] transition group-hover:text-[#5496CC]" />
+              </a>
+
+              <a
+                href="https://www.nedviconstructora.com"
+                target="_blank"
+                rel="noreferrer"
+                className="group flex items-center gap-3 rounded-xl border border-[var(--border)] bg-[var(--surface-soft)] p-4 transition hover:-translate-y-0.5 hover:border-[#5496CC]/60 hover:shadow-sm"
+                aria-label="Abrir sitio web de NEDVI Constructora"
+              >
+                <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-[#5496CC]/10 text-[#5496CC]">
+                  <Globe2 size={19} />
+                </span>
+                <span className="min-w-0 flex-1">
+                  <span className="block text-xs font-semibold text-[var(--muted)]">Sitio web</span>
+                  <span className="mt-0.5 block truncate text-sm font-bold text-[var(--foreground)]">nedviconstructora.com</span>
+                </span>
+                <ExternalLink size={15} className="shrink-0 text-[var(--muted)] transition group-hover:text-[#5496CC]" />
+              </a>
+            </div>
+          </div>
+        </section>
       </div>
 
       {open ? (
