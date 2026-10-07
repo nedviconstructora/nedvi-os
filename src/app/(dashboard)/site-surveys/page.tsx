@@ -58,7 +58,7 @@ type SurveyForm = Omit<SiteSurvey, 'id' | 'createdAt' | 'updatedAt'>
 const STORAGE_KEY = 'nedvi_site_surveys'
 const EXECUTION_OPTIONS: ExecutionTime[] = ['Jornada normal', 'Fin de semana', 'Extraordinaria']
 const ESTIMATED_TIME_UNITS: EstimatedTimeUnit[] = ['Horas', 'Días', 'Semanas', 'Meses']
-const MAX_FILES = 8
+const MAX_FILES = 30
 const MAX_FILE_BYTES = 1_250_000
 const MAX_TOTAL_BYTES = 4_000_000
 
