@@ -54,6 +54,8 @@ function unitFromValue(value: unknown) {
   if (['lote', 'lotes'].includes(normalized)) return 'Lotes'
   if (['salida', 'salidas'].includes(normalized)) return 'Salidas'
   if (['conjunto', 'conjuntos'].includes(normalized)) return 'Conjuntos'
+  if (['galon', 'galones', 'gal', 'gals'].includes(normalized)) return 'Galones'
+  if (['circuito', 'circuitos', 'cto', 'ctos'].includes(normalized)) return 'Circuitos'
   if (['pza', 'pzas', 'pz', 'pieza', 'piezas', 'unidad', 'unidades', 'und'].includes(normalized)) return 'Piezas'
 
   return value ? 'Otros' : 'Piezas'
