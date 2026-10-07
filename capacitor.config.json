@@ -1,0 +1,15 @@
+{
+  "appId": "com.nedviconstructora.nedvios",
+  "appName": "NEDVI OS",
+  "webDir": "public",
+  "server": {
+    "url": "https://nedvi-os.vercel.app",
+    "cleartext": false,
+    "androidScheme": "https"
+  },
+  "android": {
+    "allowMixedContent": false,
+    "captureInput": true,
+    "webContentsDebuggingEnabled": false
+  }
+}
