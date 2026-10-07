@@ -365,8 +365,14 @@ export function Sidebar({
         </button>
       </div>
 
-      <button type="button" onClick={onToggleCollapse} className="absolute -right-3 top-[86px] hidden h-6 w-6 items-center justify-center rounded-full border border-white/20 bg-[#173a5d] text-white shadow-lg transition hover:bg-[#22517c] lg:flex" aria-label={collapsed ? 'Expandir menú lateral' : 'Contraer menú lateral'}>
-        {collapsed ? <ChevronRight size={13} /> : <ChevronLeft size={13} />}
+      <button
+        type="button"
+        onClick={onToggleCollapse}
+        className="absolute right-2 top-[88px] z-30 hidden h-8 w-8 items-center justify-center rounded-xl border border-white/15 bg-[#173a5d]/95 text-white shadow-[0_8px_22px_rgba(0,0,0,0.28)] backdrop-blur-md transition hover:bg-[#22517c] hover:scale-105 lg:flex"
+        aria-label={collapsed ? 'Expandir menú lateral' : 'Contraer menú lateral'}
+        title={collapsed ? 'Expandir menú' : 'Ocultar menú'}
+      >
+        {collapsed ? <ChevronRight size={15} /> : <ChevronLeft size={15} />}
       </button>
     </aside>
   )
