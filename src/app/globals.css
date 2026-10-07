@@ -1,35 +1,35 @@
 @import 'tailwindcss';
 :root,
 .theme-light {
-  --nedvi-blue: #5496cc;
-  --nedvi-blue-strong: #3f82ba;
-  --background: #f3f7fb;
-  --foreground: #172033;
+  --nedvi-blue: #1f6feb;
+  --nedvi-blue-strong: #1759c7;
+  --background: #f4f7fb;
+  --foreground: #10233a;
   --muted: #64748b;
-  --subtle: #7a8799;
+  --subtle: #8290a3;
   --surface: #ffffff;
-  --surface-soft: #f8fafc;
-  --border: #dce6f0;
-  --sidebar: #5496cc;
+  --surface-soft: #f7faff;
+  --border: #dbe5ef;
+  --sidebar: #112f4a;
   --sidebar-foreground: #ffffff;
   --card: #ffffff;
-  --primary: #5496cc;
+  --primary: #1f6feb;
   --nedvi-logo-dark: url('https://drive.google.com/thumbnail?id=1mYaFCSdeEc75o5qI3uR15U6GzfInsxvH&sz=w1200');
   --nedvi-logo-light: url('/logo-blanco.svg');
 }
 
 .theme-dark {
-  --background: #121820;
-  --foreground: #f7f9fc;
-  --muted: #a8b3c2;
-  --subtle: #7f8b9d;
-  --surface: #1c2530;
-  --surface-soft: #18212b;
-  --border: #2b3948;
-  --sidebar: #5496cc;
+  --background: #0b1220;
+  --foreground: #eef5ff;
+  --muted: #a9b7c8;
+  --subtle: #8290a2;
+  --surface: #121c2e;
+  --surface-soft: #162236;
+  --border: #263750;
+  --sidebar: #0f2740;
   --sidebar-foreground: #ffffff;
-  --card: #1c2530;
-  --primary: #5496cc;
+  --card: #121c2e;
+  --primary: #2f80ed;
 }
 
 * {
@@ -171,11 +171,16 @@ body {
   border-color: #e3ebf3 !important;
 }
 
-/* Sidebar stays NEDVI blue in light and dark themes. */
-.theme-light aside[aria-label="Navegación principal"],
+/* Sidebar premium navy gradient inspired by NEDVI's reference design. */
+.theme-light aside[aria-label="Navegación principal"] {
+  background: linear-gradient(180deg, rgba(15,39,64,.98) 0%, rgba(22,58,99,.97) 52%, rgba(12,34,57,.99) 100%) !important;
+  border-right-color: rgba(255,255,255,.10) !important;
+  color: #ffffff !important;
+}
+
 .theme-dark aside[aria-label="Navegación principal"] {
-  background: #5496cc !important;
-  border-right-color: rgba(255, 255, 255, 0.18) !important;
+  background: linear-gradient(180deg, rgba(8,24,41,.99) 0%, rgba(15,39,64,.98) 54%, rgba(7,21,36,.99) 100%) !important;
+  border-right-color: rgba(125,183,232,.14) !important;
   color: #ffffff !important;
 }
 
@@ -516,4 +521,49 @@ textarea {
   body {
     padding-top: env(safe-area-inset-top);
   }
+}
+
+
+/* NEDVI 2026 visual system */
+.nedvi-app-header {
+  background: linear-gradient(90deg, rgba(21,55,88,.98), rgba(23,63,100,.96), rgba(17,48,78,.98));
+  border-color: rgba(125,183,232,.14);
+  box-shadow: 0 12px 30px rgba(15,39,64,.08);
+}
+
+.theme-dark .nedvi-app-header {
+  background: linear-gradient(90deg, rgba(8,25,43,.99), rgba(15,39,64,.98), rgba(9,28,48,.99));
+  border-color: rgba(125,183,232,.12);
+  box-shadow: 0 16px 38px rgba(0,0,0,.24);
+}
+
+.theme-light main {
+  background:
+    radial-gradient(circle at 15% 0%, rgba(31,111,235,.05), transparent 28%),
+    linear-gradient(180deg, #f7faff 0%, #f3f7fb 100%) !important;
+}
+
+.theme-dark main {
+  background:
+    radial-gradient(circle at 18% 0%, rgba(47,128,237,.08), transparent 30%),
+    linear-gradient(180deg, #0d1624 0%, #0b1220 100%) !important;
+}
+
+.nedvi-card {
+  background: var(--card);
+  border-color: var(--border);
+  box-shadow: 0 14px 38px rgba(18,35,58,.07);
+}
+
+.theme-dark .nedvi-card {
+  box-shadow: 0 18px 48px rgba(0,0,0,.20);
+}
+
+.nedvi-dashboard-hero {
+  background: linear-gradient(135deg, rgba(31,111,235,.07), rgba(84,150,204,.03) 50%, transparent);
+  border: 1px solid var(--border);
+}
+
+.theme-dark .nedvi-dashboard-hero {
+  background: linear-gradient(135deg, rgba(47,128,237,.12), rgba(84,150,204,.05) 50%, rgba(18,28,46,.55));
 }
