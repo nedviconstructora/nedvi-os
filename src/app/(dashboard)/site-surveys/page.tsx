@@ -58,6 +58,13 @@ type SurveyForm = Omit<SiteSurvey, 'id' | 'createdAt' | 'updatedAt'>
 const STORAGE_KEY = 'nedvi_site_surveys'
 const EXECUTION_OPTIONS: ExecutionTime[] = ['Jornada normal', 'Fin de semana', 'Extraordinaria']
 const ESTIMATED_TIME_UNITS: EstimatedTimeUnit[] = ['Horas', 'Días', 'Semanas', 'Meses']
+const PERFORMED_BY_OPTIONS = [
+  'Nestor Ortiz',
+  'Cristian Medina',
+  'Victor Muciño',
+  'Edgardo Fierro',
+  'Pedro Garcia',
+] as const
 const MAX_FILES = 30
 const MAX_FILE_BYTES = 1_250_000
 const MAX_TOTAL_BYTES = 4_000_000
@@ -588,7 +595,18 @@ export default function SiteSurveysPage() {
                   <Field label="Fecha"><input type="date" value={form.date} onChange={(e) => setForm({ ...form, date: e.target.value })} className="survey-input" /></Field>
                   <Field label="Ciudad / Zona"><input value={form.location} onChange={(e) => setForm({ ...form, location: e.target.value })} placeholder="Ej. Tijuana, Ensenada, Tecate..." className="survey-input" /></Field>
                   <Field label="Solicita"><input value={form.requestedBy} onChange={(e) => setForm({ ...form, requestedBy: e.target.value })} placeholder="Quién solicita el levantamiento" className="survey-input" /></Field>
-                  <Field label="Realiza"><input value={form.performedBy} onChange={(e) => setForm({ ...form, performedBy: e.target.value })} placeholder="Quién realiza la visita" className="survey-input" /></Field>
+                  <Field label="Realiza">
+                    <select
+                      value={form.performedBy}
+                      onChange={(e) => setForm({ ...form, performedBy: e.target.value })}
+                      className="survey-input"
+                    >
+                      <option value="">Seleccionar responsable</option>
+                      {PERFORMED_BY_OPTIONS.map((person) => (
+                        <option key={person} value={person}>{person}</option>
+                      ))}
+                    </select>
+                  </Field>
                   <Field label="Tiempo estimado *">
                     <div className="grid grid-cols-[minmax(0,1fr)_145px] gap-2">
                       <input required type="number" min="1" step="1" value={form.estimatedTime} onChange={(e) => setForm({ ...form, estimatedTime: e.target.value })} placeholder="Ej. 5" className="survey-input" />
