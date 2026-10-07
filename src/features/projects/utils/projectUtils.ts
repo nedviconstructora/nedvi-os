@@ -1,4 +1,4 @@
-import type { Project, ProjectStatus } from '@/features/projects/types/project'
+import type { Project, ProjectStatus, ProjectType } from '@/features/projects/types/project'
 
 export function formatProjectDate(value: string): string {
   if (!value) return 'Pendiente'
@@ -33,14 +33,26 @@ export function getProjectInitials(project: Pick<Project, 'name'>): string {
 
 export function getProjectStatusLabel(status: ProjectStatus): string {
   const labels: Record<ProjectStatus, string> = {
-    Planning: 'Planning',
-    Active: 'Active',
-    'At Risk': 'At risk',
-    Completed: 'Completed',
-    'On Hold': 'On hold',
+    Planning: 'Planeación',
+    Active: 'Activo',
+    'At Risk': 'En riesgo',
+    Completed: 'Completado',
+    'On Hold': 'En pausa',
   }
 
   return labels[status]
+}
+
+export function getProjectTypeLabel(type: ProjectType): string {
+  const labels: Record<ProjectType, string> = {
+    Residential: 'Residencial',
+    Commercial: 'Comercial',
+    Industrial: 'Industrial',
+    Infrastructure: 'Infraestructura',
+    Renovation: 'Remodelación',
+  }
+
+  return labels[type]
 }
 
 export function getBudgetUsage(project: Pick<Project, 'budget' | 'spent'>): number {
