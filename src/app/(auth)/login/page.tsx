@@ -57,7 +57,9 @@ export default function LoginPage() {
       </div>
 
       <div className="relative z-10 grid min-h-screen lg:grid-cols-[minmax(0,1.08fr)_minmax(460px,0.92fr)]">
-        <aside className="relative hidden min-h-screen overflow-hidden lg:flex lg:flex-col lg:justify-between lg:p-12 xl:p-16">
+        <aside className="login-brand-panel relative hidden min-h-screen overflow-hidden lg:flex lg:flex-col lg:justify-between lg:p-12 xl:p-16">
+          <div className="login-construction-pattern pointer-events-none absolute inset-0" aria-hidden="true" />
+          <div className="pointer-events-none absolute inset-0 bg-[linear-gradient(90deg,rgba(255,255,255,0.22),transparent_36%,rgba(255,255,255,0.08))] theme-dark:bg-none" aria-hidden="true" />
           <div className="relative z-10 animate-fade-up">
             <Logo />
           </div>
