@@ -633,11 +633,11 @@ textarea {
 }
 
 .login-construction-pattern {
-  background-image: url('/login-pattern-dark.svg');
+  background-image: url('/login-pattern-dark.svg?v=2');
   background-repeat: repeat;
   background-size: 360px 360px;
   background-position: 10px 8px;
-  opacity: .40;
+  opacity: .44;
   filter: blur(.15px);
   mix-blend-mode: multiply;
   mask-image: linear-gradient(to bottom, rgba(0,0,0,.72), rgba(0,0,0,.42) 48%, rgba(0,0,0,.66));
@@ -652,8 +652,8 @@ textarea {
 }
 
 .theme-dark .login-construction-pattern {
-  background-image: url('/login-pattern-light.svg');
-  opacity: .34;
+  background-image: url('/login-pattern-light.svg?v=2');
+  opacity: .38;
   mix-blend-mode: screen;
 }
 
