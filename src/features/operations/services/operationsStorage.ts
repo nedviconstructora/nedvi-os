@@ -55,6 +55,9 @@ export type DailyReport = {
   summary: string
   blockers: string
   author: string
+  latitude?: number
+  longitude?: number
+  locationAccuracy?: number
   images: DailyReportImage[]
 }
 
@@ -241,6 +244,9 @@ export function readDailyReports(): DailyReport[] {
       summary: typeof item.summary === 'string' ? item.summary : '',
       blockers: typeof item.blockers === 'string' ? item.blockers : '',
       author: typeof item.author === 'string' ? item.author : '',
+      latitude: typeof item.latitude === 'number' ? item.latitude : undefined,
+      longitude: typeof item.longitude === 'number' ? item.longitude : undefined,
+      locationAccuracy: typeof item.locationAccuracy === 'number' ? item.locationAccuracy : undefined,
       images: Array.isArray(item.images)
         ? item.images
             .filter(isRecord)
