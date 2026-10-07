@@ -294,7 +294,7 @@ export function ProjectForm({
             </select>
           </label>
 
-          <div className="space-y-3 md:col-span-2">
+          <div className="space-y-5 md:col-span-2">
             <label className={labelClassName}>
               Dirección de la obra
               <input
