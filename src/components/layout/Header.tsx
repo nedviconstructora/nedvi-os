@@ -18,6 +18,7 @@ import { createClient } from '@/lib/supabase/client'
 import { alerts } from '@/data/dashboardData'
 import {
   AGENDA_STORAGE_KEY,
+  AGENDA_UPDATED_EVENT,
   readAgendaActivities,
   sortAgendaActivities,
   type AgendaItem,
@@ -98,10 +99,12 @@ export function Header({ onOpenMenu, isDark, onToggleTheme, showCompanyLogo = fa
     const handleFocus = () => loadAgenda()
     window.addEventListener('storage', handleStorage)
     window.addEventListener('focus', handleFocus)
+    window.addEventListener(AGENDA_UPDATED_EVENT, loadAgenda)
 
     return () => {
       window.removeEventListener('storage', handleStorage)
       window.removeEventListener('focus', handleFocus)
+      window.removeEventListener(AGENDA_UPDATED_EVENT, loadAgenda)
     }
   }, [])
 
