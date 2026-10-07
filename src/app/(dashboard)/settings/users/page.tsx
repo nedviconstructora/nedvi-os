@@ -13,6 +13,7 @@ import {
   ShieldCheck,
   Trash2,
   UserCheck,
+  UserPlus,
   UserRoundCog,
   X,
 } from 'lucide-react'
@@ -97,6 +98,16 @@ export default function UsersAndPermissionsPage() {
   const [deleteUser, setDeleteUser] = useState<AccessUser | null>(null)
   const [approvingId, setApprovingId] = useState<string | null>(null)
   const [approvalError, setApprovalError] = useState('')
+  const [createUserOpen, setCreateUserOpen] = useState(false)
+  const [createName, setCreateName] = useState('')
+  const [createEmail, setCreateEmail] = useState('')
+  const [createPhone, setCreatePhone] = useState('')
+  const [createPosition, setCreatePosition] = useState('')
+  const [createPassword, setCreatePassword] = useState('')
+  const [createConfirmPassword, setCreateConfirmPassword] = useState('')
+  const [createShowPassword, setCreateShowPassword] = useState(false)
+  const [createError, setCreateError] = useState('')
+  const [creatingUser, setCreatingUser] = useState(false)
 
   const isAdmin = currentUser.role === 'Administración'
 
@@ -158,7 +169,86 @@ export default function UsersAndPermissionsPage() {
     )
   }, [search, users])
 
-  function startReview(request: RegistrationRequest) {
+  function resetCreateUserForm() {
+    setCreateName('')
+    setCreateEmail('')
+    setCreatePhone('')
+    setCreatePosition('')
+    setCreatePassword('')
+    setCreateConfirmPassword('')
+    setCreateError('')
+    setCreateShowPassword(false)
+  }
+
+  function closeCreateUserModal() {
+    if (creatingUser) return
+    setCreateUserOpen(false)
+    resetCreateUserForm()
+  }
+
+  async function createInternalUser() {
+    if (!isAdmin || creatingUser) return
+
+    setCreateError('')
+
+    const name = createName.trim()
+    const email = createEmail.trim().toLowerCase()
+    const password = createPassword.trim()
+
+    if (!name || !email || !email.includes('@')) {
+      setCreateError('Escribe el nombre y un correo válido.')
+      return
+    }
+
+    if (password.length < 8) {
+      setCreateError('La contraseña debe tener al menos 8 caracteres.')
+      return
+    }
+
+    if (password !== createConfirmPassword) {
+      setCreateError('Las contraseñas no coinciden.')
+      return
+    }
+
+    setCreatingUser(true)
+
+    try {
+      const permissions = defaultPermissionsForRole('Supervisor')
+      const response = await fetch('/api/access/users', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        cache: 'no-store',
+        body: JSON.stringify({
+          name,
+          email,
+          phone: createPhone.trim(),
+          position: createPosition.trim() || 'Equipo NEDVI',
+          role: 'Supervisor',
+          permissions,
+          password,
+        }),
+      })
+
+      const data = (await response.json()) as { user?: AccessUser; error?: string }
+
+      if (!response.ok || !data.user) {
+        throw new Error(data.error || 'No se pudo crear el usuario interno.')
+      }
+
+      setCreateUserOpen(false)
+      resetCreateUserForm()
+      await refresh()
+    } catch (error) {
+      console.error('Error creando usuario interno:', error)
+      setCreateError(
+        error instanceof Error ? error.message : 'No se pudo crear el usuario interno.',
+      )
+    } finally {
+      setCreatingUser(false)
+    }
+  }
+
+    function startReview(request: RegistrationRequest) {
     const role = request.role ?? 'Supervisor'
     setReviewingId(request.id)
     setDraftRole(role)
@@ -453,21 +543,33 @@ export default function UsersAndPermissionsPage() {
 
       {tab === 'users' ? (
         <section className="overflow-hidden rounded-2xl border border-[var(--border)] bg-[var(--surface)] shadow-sm">
-          <div className="flex flex-col gap-3 border-b border-[var(--border)] p-5 sm:flex-row sm:items-center sm:justify-between">
+          <div className="flex flex-col gap-3 border-b border-[var(--border)] p-5 lg:flex-row lg:items-center lg:justify-between">
             <div>
               <h2 className="text-lg font-bold text-[var(--foreground)]">Usuarios autorizados</h2>
               <p className="mt-1 text-xs text-[var(--muted)]">
-                Solo Administración puede cambiar contraseñas, activar, desactivar o eliminar usuarios.
+                Crea cuentas internas del equipo NEDVI y administra sus accesos.
               </p>
             </div>
-            <div className="relative w-full sm:w-72">
-              <Search size={15} className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-[var(--muted)]" />
-              <input
-                value={search}
-                onChange={(event) => setSearch(event.target.value)}
-                placeholder="Buscar usuario..."
-                className="h-10 w-full rounded-xl border border-[var(--border)] bg-[var(--surface-soft)] pl-9 pr-3 text-sm text-[var(--foreground)] outline-none focus:border-[#5496CC] focus:ring-4 focus:ring-[#5496CC]/10"
-              />
+            <div className="flex w-full flex-col gap-2 sm:flex-row lg:w-auto">
+              {isAdmin ? (
+                <button
+                  type="button"
+                  onClick={() => setCreateUserOpen(true)}
+                  className="inline-flex h-10 items-center justify-center gap-2 rounded-xl bg-[#1F6FEB] px-4 text-sm font-semibold text-white shadow-sm transition hover:bg-[#1759C7]"
+                >
+                  <UserPlus size={16} />
+                  Nuevo usuario NEDVI
+                </button>
+              ) : null}
+              <div className="relative w-full sm:w-72">
+                <Search size={15} className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-[var(--muted)]" />
+                <input
+                  value={search}
+                  onChange={(event) => setSearch(event.target.value)}
+                  placeholder="Buscar usuario..."
+                  className="h-10 w-full rounded-xl border border-[var(--border)] bg-[var(--surface-soft)] pl-9 pr-3 text-sm text-[var(--foreground)] outline-none focus:border-[#5496CC] focus:ring-4 focus:ring-[#5496CC]/10"
+                />
+              </div>
             </div>
           </div>
 
@@ -646,6 +748,137 @@ export default function UsersAndPermissionsPage() {
       <div className="rounded-2xl border border-[#5496CC]/15 bg-[#5496CC]/5 p-4 text-xs leading-5 text-[var(--muted)]">
         <strong className="text-[var(--foreground)]">Etapa actual:</strong> la lista de usuarios se sincroniza con Supabase. Las solicitudes y algunos controles administrativos temporales todavía conservan respaldo local mientras terminamos la migración completa.
       </div>
+
+      {createUserOpen ? (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/55 p-4 backdrop-blur-sm">
+          <div className="w-full max-w-xl overflow-hidden rounded-2xl border border-[var(--border)] bg-[var(--surface)] shadow-2xl">
+            <div className="flex items-start justify-between gap-4 border-b border-[var(--border)] px-6 py-5">
+              <div>
+                <p className="text-xs font-semibold uppercase tracking-[0.14em] text-[#5496CC]">Equipo NEDVI</p>
+                <h2 className="mt-2 text-xl font-bold text-[var(--foreground)]">Crear usuario interno</h2>
+                <p className="mt-1 text-sm leading-6 text-[var(--muted)]">
+                  Esta cuenta será parte del equipo NEDVI con permisos de Supervisor y no aparecerá como Cliente.
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={closeCreateUserModal}
+                className="rounded-lg p-2 text-[var(--muted)] transition hover:bg-[var(--surface-soft)]"
+              >
+                <X size={18} />
+              </button>
+            </div>
+
+            <div className="grid gap-4 p-6 sm:grid-cols-2">
+              <label className="block sm:col-span-2">
+                <span className="text-xs font-semibold text-[var(--muted)]">Nombre completo *</span>
+                <input
+                  value={createName}
+                  onChange={(event) => setCreateName(event.target.value)}
+                  placeholder="Ej. Juan Pérez"
+                  className="mt-2 h-11 w-full rounded-xl border border-[var(--border)] bg-[var(--surface-soft)] px-3 text-sm text-[var(--foreground)] outline-none focus:border-[#5496CC]"
+                />
+              </label>
+
+              <label className="block sm:col-span-2">
+                <span className="text-xs font-semibold text-[var(--muted)]">Correo de acceso *</span>
+                <input
+                  type="email"
+                  value={createEmail}
+                  onChange={(event) => setCreateEmail(event.target.value)}
+                  placeholder="usuario@nedviconstructora.com"
+                  className="mt-2 h-11 w-full rounded-xl border border-[var(--border)] bg-[var(--surface-soft)] px-3 text-sm text-[var(--foreground)] outline-none focus:border-[#5496CC]"
+                />
+              </label>
+
+              <label className="block">
+                <span className="text-xs font-semibold text-[var(--muted)]">Puesto</span>
+                <input
+                  value={createPosition}
+                  onChange={(event) => setCreatePosition(event.target.value)}
+                  placeholder="Supervisor de obra"
+                  className="mt-2 h-11 w-full rounded-xl border border-[var(--border)] bg-[var(--surface-soft)] px-3 text-sm text-[var(--foreground)] outline-none focus:border-[#5496CC]"
+                />
+              </label>
+
+              <label className="block">
+                <span className="text-xs font-semibold text-[var(--muted)]">Teléfono</span>
+                <input
+                  value={createPhone}
+                  onChange={(event) => setCreatePhone(event.target.value)}
+                  placeholder="Opcional"
+                  className="mt-2 h-11 w-full rounded-xl border border-[var(--border)] bg-[var(--surface-soft)] px-3 text-sm text-[var(--foreground)] outline-none focus:border-[#5496CC]"
+                />
+              </label>
+
+              <label className="block">
+                <span className="text-xs font-semibold text-[var(--muted)]">Contraseña *</span>
+                <div className="relative mt-2">
+                  <input
+                    type={createShowPassword ? 'text' : 'password'}
+                    value={createPassword}
+                    onChange={(event) => setCreatePassword(event.target.value)}
+                    placeholder="Mínimo 8 caracteres"
+                    className="h-11 w-full rounded-xl border border-[var(--border)] bg-[var(--surface-soft)] px-3 pr-11 text-sm text-[var(--foreground)] outline-none focus:border-[#5496CC]"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setCreateShowPassword((value) => !value)}
+                    className="absolute inset-y-0 right-2 flex items-center px-2 text-[var(--muted)]"
+                  >
+                    {createShowPassword ? <EyeOff size={16} /> : <Eye size={16} />}
+                  </button>
+                </div>
+              </label>
+
+              <label className="block">
+                <span className="text-xs font-semibold text-[var(--muted)]">Confirmar contraseña *</span>
+                <input
+                  type={createShowPassword ? 'text' : 'password'}
+                  value={createConfirmPassword}
+                  onChange={(event) => setCreateConfirmPassword(event.target.value)}
+                  placeholder="Repite la contraseña"
+                  className="mt-2 h-11 w-full rounded-xl border border-[var(--border)] bg-[var(--surface-soft)] px-3 text-sm text-[var(--foreground)] outline-none focus:border-[#5496CC]"
+                />
+              </label>
+
+              <div className="sm:col-span-2 rounded-xl border border-[#5496CC]/20 bg-[#5496CC]/5 p-4">
+                <div className="flex items-center gap-2 text-sm font-semibold text-[var(--foreground)]">
+                  <ShieldCheck size={16} className="text-[#5496CC]" />
+                  Rol: Supervisor
+                </div>
+                <p className="mt-1 text-xs leading-5 text-[var(--muted)]">
+                  Tendrá acceso operativo a Dashboard, Comercial, Proyectos, Compras, Obra, Agenda, Indicadores y Coral AI. No tendrá Portal del Cliente, Finanzas, Recursos Humanos ni administración de usuarios.
+                </p>
+              </div>
+
+              {createError ? (
+                <p className="sm:col-span-2 text-sm text-red-500">{createError}</p>
+              ) : null}
+            </div>
+
+            <div className="flex justify-end gap-2 border-t border-[var(--border)] px-6 py-4">
+              <button
+                type="button"
+                onClick={closeCreateUserModal}
+                disabled={creatingUser}
+                className="h-10 rounded-xl border border-[var(--border)] px-4 text-sm font-semibold text-[var(--foreground)] disabled:opacity-60"
+              >
+                Cancelar
+              </button>
+              <button
+                type="button"
+                onClick={() => void createInternalUser()}
+                disabled={creatingUser}
+                className="inline-flex h-10 items-center gap-2 rounded-xl bg-[#1F6FEB] px-4 text-sm font-semibold text-white transition hover:bg-[#1759C7] disabled:cursor-wait disabled:opacity-60"
+              >
+                <UserPlus size={15} />
+                {creatingUser ? 'Creando...' : 'Crear usuario NEDVI'}
+              </button>
+            </div>
+          </div>
+        </div>
+      ) : null}
 
       {passwordUser ? (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/55 p-4 backdrop-blur-sm">
