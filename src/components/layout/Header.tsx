@@ -34,6 +34,7 @@ function BrandMark() {
 export function Header({ onOpenMenu, isDark, onToggleTheme, showCompanyLogo = false, user }: HeaderProps) {
   const [avatarUrl, setAvatarUrl] = useState<string | null>(null)
   const [uploadingAvatar, setUploadingAvatar] = useState(false)
+  const [notificationPermission, setNotificationPermission] = useState<NotificationPermission | 'unsupported'>('default')
   const avatarInputRef = useRef<HTMLInputElement | null>(null)
 
   useEffect(() => {
@@ -63,7 +64,48 @@ export function Header({ onOpenMenu, isDark, onToggleTheme, showCompanyLogo = fa
     }
   }, [])
 
-  async function handleAvatarUpload(file?: File) {
+  useEffect(() => {
+    if (!('Notification' in window)) {
+      setNotificationPermission('unsupported')
+      return
+    }
+
+    setNotificationPermission(Notification.permission)
+  }, [])
+
+  async function enableNotifications() {
+    if (!('Notification' in window)) {
+      window.alert('Este navegador no admite notificaciones.')
+      return
+    }
+
+    if (Notification.permission === 'denied') {
+      window.alert('Las notificaciones están bloqueadas. Actívalas desde la configuración del navegador.')
+      setNotificationPermission('denied')
+      return
+    }
+
+    const permission =
+      Notification.permission === 'granted'
+        ? 'granted'
+        : await Notification.requestPermission()
+
+    setNotificationPermission(permission)
+
+    if (permission !== 'granted') return
+
+    if ('serviceWorker' in navigator) {
+      const registration = await navigator.serviceWorker.ready
+      await registration.showNotification('NEDVI OS', {
+        body: 'Notificaciones activadas correctamente.',
+        icon: '/icon.png',
+        badge: '/icon.png',
+        tag: 'nedvi-notifications-enabled',
+      })
+    }
+  }
+
+    async function handleAvatarUpload(file?: File) {
     if (!file) return
 
     const allowedTypes = ['image/jpeg', 'image/png', 'image/webp']
@@ -186,11 +228,27 @@ export function Header({ onOpenMenu, isDark, onToggleTheme, showCompanyLogo = fa
 
         <button
           type="button"
+          onClick={() => void enableNotifications()}
           className="relative rounded-xl p-2.5 text-[var(--muted)] transition hover:bg-[#5496CC]/10 hover:text-[var(--foreground)]"
-          aria-label="Notificaciones"
+          aria-label="Configurar notificaciones"
+          title={
+            notificationPermission === 'granted'
+              ? 'Notificaciones activadas'
+              : notificationPermission === 'denied'
+                ? 'Notificaciones bloqueadas'
+                : 'Activar notificaciones'
+          }
         >
           <Bell size={18} strokeWidth={1.8} />
-          <span className="absolute right-2 top-2 h-1.5 w-1.5 rounded-full bg-[#5496CC] ring-2 ring-[var(--surface)]" />
+          <span
+            className={`absolute right-2 top-2 h-1.5 w-1.5 rounded-full ring-2 ring-[var(--surface)] ${
+              notificationPermission === 'granted'
+                ? 'bg-emerald-500'
+                : notificationPermission === 'denied'
+                  ? 'bg-red-500'
+                  : 'bg-[#5496CC]'
+            }`}
+          />
         </button>
 
         <div className="mx-2 hidden h-6 w-px bg-[var(--border)] sm:block" />
