@@ -3,7 +3,7 @@
 import Link from 'next/link'
 import { useEffect, useMemo, useState, type FormEvent } from 'react'
 import { useRouter } from 'next/navigation'
-import { ExternalLink, Save } from 'lucide-react'
+import { ExternalLink, MapPin, Save } from 'lucide-react'
 import { getCustomersFromSupabase } from '@/features/crm/services/customerSupabase'
 import type { Customer } from '@/features/crm/types/customer'
 import {
@@ -58,6 +58,13 @@ export function ProjectForm({
   )
   const [error, setError] = useState<string | null>(null)
   const [saving, setSaving] = useState(false)
+  const [address, setAddress] = useState(initialValues?.address ?? '')
+  const [latitude, setLatitude] = useState(
+    typeof initialValues?.latitude === 'number' ? String(initialValues.latitude) : '',
+  )
+  const [longitude, setLongitude] = useState(
+    typeof initialValues?.longitude === 'number' ? String(initialValues.longitude) : '',
+  )
 
   useEffect(() => {
     let active = true
@@ -102,6 +109,34 @@ export function ProjectForm({
     [customers, selectedClientId]
   )
 
+  function openGoogleMapsPicker() {
+    const query = address.trim()
+    const url = query
+      ? `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(query)}`
+      : 'https://www.google.com/maps'
+
+    window.open(url, '_blank', 'noopener,noreferrer')
+  }
+
+  function useCurrentLocation() {
+    if (!navigator.geolocation) {
+      setError('Este dispositivo no permite obtener la ubicación actual.')
+      return
+    }
+
+    navigator.geolocation.getCurrentPosition(
+      (position) => {
+        setLatitude(String(position.coords.latitude))
+        setLongitude(String(position.coords.longitude))
+        setError(null)
+      },
+      () => {
+        setError('No pudimos obtener tu ubicación. Revisa los permisos de ubicación del navegador.')
+      },
+      { enableHighAccuracy: true, timeout: 10000 },
+    )
+  }
+
   const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault()
     setError(null)
@@ -137,9 +172,9 @@ export function ProjectForm({
       client,
       clientContact,
       projectType,
-      address: String(formData.get('address') ?? '').trim(),
-      latitude: Number(formData.get('latitude') ?? 0),
-      longitude: Number(formData.get('longitude') ?? 0),
+      address: address.trim(),
+      latitude: Number(latitude || 0),
+      longitude: Number(longitude || 0),
       budget: Number(formData.get('budget') ?? 0),
       startDate: String(formData.get('startDate') ?? ''),
       estimatedCompletion: String(formData.get('estimatedCompletion') ?? ''),
@@ -259,15 +294,40 @@ export function ProjectForm({
             </select>
           </label>
 
-          <label className={`${labelClassName} md:col-span-2`}>
-            Dirección de la obra
-            <input
-              name="address"
-              defaultValue={initialValues?.address}
-              placeholder="Calle, ciudad y estado"
-              className={inputClassName}
-            />
-          </label>
+          <div className="space-y-3 md:col-span-2">
+            <label className={labelClassName}>
+              Dirección de la obra
+              <input
+                name="address"
+                value={address}
+                onChange={(event) => setAddress(event.target.value)}
+                placeholder="Calle, número, colonia, ciudad y estado"
+                className={inputClassName}
+              />
+            </label>
+
+            <div className="flex flex-wrap gap-2">
+              <button
+                type="button"
+                onClick={openGoogleMapsPicker}
+                className="inline-flex h-10 items-center gap-2 rounded-xl border border-[#5496CC]/35 bg-[#5496CC]/10 px-4 text-xs font-semibold text-[#7BC0F1] transition hover:bg-[#5496CC]/15"
+              >
+                <MapPin size={15} />
+                Buscar / seleccionar en Google Maps
+              </button>
+              <button
+                type="button"
+                onClick={useCurrentLocation}
+                className="inline-flex h-10 items-center gap-2 rounded-xl border border-white/[0.08] px-4 text-xs font-semibold text-[#9CA3AF] transition hover:bg-white/[0.05] hover:text-white"
+              >
+                Usar mi ubicación actual
+              </button>
+            </div>
+
+            <p className="text-[11px] leading-5 text-[#646873]">
+              Puedes buscar la dirección en Google Maps y después guardar las coordenadas del punto exacto.
+            </p>
+          </div>
 
           <label className={labelClassName}>
             Latitud
@@ -275,7 +335,8 @@ export function ProjectForm({
               name="latitude"
               type="number"
               step="any"
-              defaultValue={initialValues?.latitude}
+              value={latitude}
+              onChange={(event) => setLatitude(event.target.value)}
               placeholder="20.6742"
               className={inputClassName}
             />
@@ -287,7 +348,8 @@ export function ProjectForm({
               name="longitude"
               type="number"
               step="any"
-              defaultValue={initialValues?.longitude}
+              value={longitude}
+              onChange={(event) => setLongitude(event.target.value)}
               placeholder="-103.3848"
               className={inputClassName}
             />
