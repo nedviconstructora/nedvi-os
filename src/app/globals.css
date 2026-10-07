@@ -622,3 +622,55 @@ textarea {
 .theme-light .login-page .login-theme-toggle:hover {
   background: #ffffff !important;
 }
+
+
+/* Decorative construction pattern for login brand panel */
+.login-brand-panel {
+  background:
+    radial-gradient(circle at 20% 20%, rgba(31,111,235,.06), transparent 24%),
+    linear-gradient(135deg, #f7faff 0%, #edf4fb 52%, #e7eef7 100%);
+  border-right: 1px solid rgba(16,35,58,.06);
+}
+
+.login-construction-pattern {
+  background-image: url('/login-pattern-dark.svg');
+  background-repeat: repeat;
+  background-size: 360px 360px;
+  background-position: 10px 8px;
+  opacity: .40;
+  filter: blur(.15px);
+  mix-blend-mode: multiply;
+  mask-image: linear-gradient(to bottom, rgba(0,0,0,.72), rgba(0,0,0,.42) 48%, rgba(0,0,0,.66));
+  -webkit-mask-image: linear-gradient(to bottom, rgba(0,0,0,.72), rgba(0,0,0,.42) 48%, rgba(0,0,0,.66));
+}
+
+.theme-dark .login-brand-panel {
+  background:
+    radial-gradient(circle at 22% 18%, rgba(47,128,237,.10), transparent 26%),
+    linear-gradient(135deg, #0e1a2a 0%, #12223a 54%, #0b1524 100%);
+  border-right-color: rgba(255,255,255,.05);
+}
+
+.theme-dark .login-construction-pattern {
+  background-image: url('/login-pattern-light.svg');
+  opacity: .34;
+  mix-blend-mode: screen;
+}
+
+.theme-light .login-brand-panel [class~="text-white"] {
+  color: #10233a !important;
+}
+
+.theme-light .login-brand-panel [class~="text-[#AAB2BF]"],
+.theme-light .login-brand-panel [class~="text-[#A8B0BC]"],
+.theme-light .login-brand-panel [class~="text-[#69717D]"] {
+  color: #64748b !important;
+}
+
+.theme-light .login-brand-panel [class~="border-white/[0.06]"] {
+  border-color: rgba(15,39,64,.10) !important;
+}
+
+.theme-light .login-brand-panel [class~="bg-black/20"] {
+  background-color: rgba(255,255,255,.54) !important;
+}
