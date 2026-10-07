@@ -11,6 +11,7 @@ import {
   Menu,
   TriangleAlert,
   Moon,
+  RefreshCw,
   Search,
   Sun,
 } from 'lucide-react'
@@ -48,6 +49,7 @@ export function Header({ onOpenMenu, isDark, onToggleTheme, showCompanyLogo = fa
   const [notificationPermission, setNotificationPermission] = useState<NotificationPermission | 'unsupported'>('default')
   const [notificationsOpen, setNotificationsOpen] = useState(false)
   const [agendaItems, setAgendaItems] = useState<AgendaItem[]>([])
+  const [refreshing, setRefreshing] = useState(false)
   const avatarInputRef = useRef<HTMLInputElement | null>(null)
   const notificationsRef = useRef<HTMLDivElement | null>(null)
 
@@ -147,7 +149,43 @@ export function Header({ onOpenMenu, isDark, onToggleTheme, showCompanyLogo = fa
     }).format(value)
   }
 
-  async function enableNotifications() {
+  async function refreshApp() {
+    if (refreshing) return
+
+    setRefreshing(true)
+
+    try {
+      if ('serviceWorker' in navigator) {
+        const registrations = await navigator.serviceWorker.getRegistrations()
+
+        await Promise.all(
+          registrations.map(async (registration) => {
+            try {
+              await registration.update()
+            } catch (error) {
+              console.warn('No se pudo comprobar una actualización del Service Worker:', error)
+            }
+          }),
+        )
+
+        const waitingWorker = registrations
+          .map((registration) => registration.waiting)
+          .find(Boolean)
+
+        if (waitingWorker) {
+          waitingWorker.postMessage({ type: 'SKIP_WAITING' })
+          await new Promise((resolve) => setTimeout(resolve, 350))
+        }
+      }
+
+      window.location.reload()
+    } catch (error) {
+      console.error('Error actualizando NEDVI OS:', error)
+      window.location.reload()
+    }
+  }
+
+    async function enableNotifications() {
     if (typeof Notification === 'undefined') {
       window.alert('Este navegador no admite notificaciones.')
       return
@@ -299,6 +337,23 @@ export function Header({ onOpenMenu, isDark, onToggleTheme, showCompanyLogo = fa
         >
           {isDark ? <Sun size={18} strokeWidth={1.8} /> : <Moon size={18} strokeWidth={1.8} />}
         </button>
+
+        <button
+          type="button"
+          onClick={() => void refreshApp()}
+          disabled={refreshing}
+          className="rounded-xl p-2.5 text-white/70 transition hover:bg-white/10 hover:text-white disabled:cursor-wait disabled:opacity-60"
+          aria-label="Actualizar NEDVI OS"
+          title={refreshing ? 'Actualizando...' : 'Actualizar información'}
+        >
+          <RefreshCw
+            size={18}
+            strokeWidth={1.8}
+            className={refreshing ? 'animate-spin' : undefined}
+          />
+        </button>
+
+
 
         <div ref={notificationsRef} className="relative">
           <button
