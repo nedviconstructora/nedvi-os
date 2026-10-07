@@ -306,7 +306,7 @@ export function ProjectForm({
               />
             </label>
 
-            <div className="flex flex-wrap gap-2">
+            <div className="mt-3 flex flex-wrap gap-2">
               <button
                 type="button"
                 onClick={openGoogleMapsPicker}
