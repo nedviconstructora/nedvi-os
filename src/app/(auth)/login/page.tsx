@@ -1,4 +1,5 @@
 import { LoginForm } from '@/components/auth/LoginForm'
+import { LoginThemeToggle } from '@/components/auth/LoginThemeToggle'
 
 function Logo({ compact = false }: { compact?: boolean }) {
   return (
@@ -40,7 +41,7 @@ function GridMark() {
 
 export default function LoginPage() {
   return (
-    <main className="relative min-h-screen overflow-hidden bg-[#090B0F] text-white">
+    <main className="login-page relative min-h-screen overflow-hidden bg-[#090B0F] text-white transition-colors duration-300">
       <div
         className="pointer-events-none absolute inset-y-0 right-0 hidden w-[58%] bg-cover bg-center lg:block"
         style={{
@@ -50,6 +51,10 @@ export default function LoginPage() {
         aria-hidden="true"
       />
       <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_76%_40%,rgba(73,151,221,0.11),transparent_30%)]" />
+
+      <div className="absolute right-5 top-5 z-30 sm:right-7 sm:top-7">
+        <LoginThemeToggle />
+      </div>
 
       <div className="relative z-10 grid min-h-screen lg:grid-cols-[minmax(0,1.08fr)_minmax(460px,0.92fr)]">
         <aside className="relative hidden min-h-screen overflow-hidden lg:flex lg:flex-col lg:justify-between lg:p-12 xl:p-16">
@@ -102,7 +107,7 @@ export default function LoginPage() {
               <Logo compact />
             </div>
 
-            <div className="rounded-[22px] border border-white/[0.09] bg-[#181D24]/90 p-7 shadow-[0_28px_90px_rgba(0,0,0,0.5)] backdrop-blur-xl sm:p-10">
+            <div className="login-card rounded-[22px] border border-white/[0.09] bg-[#181D24]/90 p-7 shadow-[0_28px_90px_rgba(0,0,0,0.5)] backdrop-blur-xl transition-colors duration-300 sm:p-10">
               <div>
                 <p className="mb-4 text-[11px] font-semibold uppercase tracking-[0.22em] text-[#5DAAF2]">
                   Bienvenido de nuevo
