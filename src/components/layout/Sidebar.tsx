@@ -180,8 +180,10 @@ export function Sidebar({
   }
 
   const primaryItemClasses = (active: boolean) =>
-    `group relative flex h-11 w-full items-center gap-3 rounded-xl border border-white/10 bg-white/[0.10] px-3 text-left text-[13px] font-medium text-white shadow-sm backdrop-blur-md transition duration-200 hover:bg-white/20/[0.16] ${
-      active ? 'ring-1 ring-white/25 shadow-sm' : ''
+    `group relative flex h-11 w-full items-center gap-3 rounded-xl border px-3 text-left text-[13px] font-medium text-white backdrop-blur-md transition duration-200 ${
+      active
+        ? 'border-[#53A8FF]/70 bg-[linear-gradient(90deg,#1677e8,#2796ff)] shadow-[0_10px_24px_rgba(16,105,220,0.28)]'
+        : 'border-white/[0.08] bg-white/[0.06] hover:bg-white/[0.12]'
     } ${collapsed ? 'lg:justify-center lg:gap-0 lg:px-0' : ''}`
 
   return (
@@ -202,7 +204,7 @@ export function Sidebar({
             NEDVI <span className="font-medium text-[#9ED2F8]">OS</span>
           </span>
         </div>
-        <button type="button" onClick={onCloseMobile} className="rounded-lg p-2 text-white/70 transition hover:bg-white/20/10 hover:text-white lg:hidden" aria-label="Cerrar navegación">
+        <button type="button" onClick={onCloseMobile} className="rounded-lg p-2 text-white/70 transition hover:bg-white/10 hover:text-white lg:hidden" aria-label="Cerrar navegación">
           <X size={18} strokeWidth={1.8} />
         </button>
       </div>
@@ -230,8 +232,12 @@ export function Sidebar({
                   type="button"
                   onClick={() => setOpenGroups((current) => ({ ...current, [group.label]: !current[group.label] }))}
                   title={collapsed ? group.label : undefined}
-                  className={`group flex h-11 w-full items-center gap-3 rounded-xl border border-white/10 bg-white/[0.10] px-3 text-left text-[13px] font-medium text-white shadow-sm backdrop-blur-md transition duration-200 hover:bg-white/20/[0.16] ${
-                    groupActive ? 'ring-1 ring-white/25 shadow-sm' : isOpen ? 'ring-1 ring-white/10' : ''
+                  className={`group flex h-11 w-full items-center gap-3 rounded-xl border px-3 text-left text-[13px] font-medium text-white backdrop-blur-md transition duration-200 ${
+                    groupActive
+                      ? 'border-[#53A8FF]/65 bg-[linear-gradient(90deg,rgba(22,119,232,.95),rgba(39,150,255,.88))] shadow-[0_10px_22px_rgba(16,105,220,.22)]'
+                      : isOpen
+                        ? 'border-white/[0.14] bg-white/[0.10]'
+                        : 'border-white/[0.07] bg-white/[0.05] hover:bg-white/[0.11]'
                   } ${collapsed ? 'lg:justify-center lg:gap-0 lg:px-0' : ''}`}
                   aria-expanded={isOpen}
                 >
@@ -249,7 +255,7 @@ export function Sidebar({
 
                         if (item.href) {
                           return (
-                            <Link key={item.label} href={item.href} onClick={onCloseMobile} className={`group/sub relative flex min-h-9 items-center gap-2.5 rounded-lg bg-white/[0.12] px-3 py-2 text-[12px] font-medium text-white backdrop-blur-md transition hover:bg-white/20/[0.18] ${active ? 'ring-1 ring-white/25 shadow-sm' : ''}`}>
+                            <Link key={item.label} href={item.href} onClick={onCloseMobile} className={`group/sub relative flex min-h-9 items-center gap-2.5 rounded-lg bg-white/[0.12] px-3 py-2 text-[12px] font-medium text-white backdrop-blur-md transition hover:bg-white/[0.18] ${active ? 'ring-1 ring-white/25 shadow-sm' : ''}`}>
                               {active ? <span className="absolute -left-[13px] h-4 w-0.5 rounded-r-full bg-white" /> : null}
                               {ItemIcon ? <ItemIcon size={14} strokeWidth={1.8} className="text-white" /> : null}
                               <span className="truncate">{item.label}</span>
@@ -300,7 +306,7 @@ export function Sidebar({
         {canUse('coral') ? (
           <>
             <div className="my-5 border-t border-white/10" />
-            <button type="button" title={collapsed ? 'Coral' : undefined} className={`group relative flex h-11 w-full items-center gap-3 rounded-xl border border-white/10 bg-[#7DC6FF] px-3 text-left text-[13px] font-medium text-black transition hover:brightness-95 ${collapsed ? 'lg:justify-center lg:gap-0 lg:px-0' : ''}`}>
+            <button type="button" title={collapsed ? 'Coral' : undefined} className={`group relative flex h-11 w-full items-center gap-3 rounded-xl border border-white/[0.10] bg-white/[0.06] px-3 text-left text-[13px] font-medium text-white backdrop-blur-md transition hover:bg-white/[0.12] ${collapsed ? 'lg:justify-center lg:gap-0 lg:px-0' : ''}`}>
               <Bot size={18} strokeWidth={1.8} className="shrink-0 text-white" />
               <span className={`whitespace-nowrap transition-opacity duration-200 ${collapsed ? 'lg:hidden' : 'opacity-100'}`}>Coral</span>
               <span className={`ml-auto rounded-md bg-white/10 px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wider text-white/70 ${collapsed ? 'lg:hidden' : ''}`}>AI</span>
@@ -352,14 +358,14 @@ export function Sidebar({
           type="button"
           onClick={handleLogout}
           title={collapsed ? 'Cerrar sesión' : undefined}
-          className={`mt-1 flex h-10 w-full items-center gap-3 rounded-xl px-2 text-left text-xs font-semibold text-white/75 transition hover:bg-white/20/10 hover:text-white ${collapsed ? 'lg:justify-center lg:gap-0 lg:px-0' : ''}`}
+          className={`mt-1 flex h-10 w-full items-center gap-3 rounded-xl px-2 text-left text-xs font-semibold text-white/75 transition hover:bg-white/10 hover:text-white ${collapsed ? 'lg:justify-center lg:gap-0 lg:px-0' : ''}`}
         >
           <LogOut size={17} strokeWidth={1.8} className="shrink-0" />
           <span className={`${collapsed ? 'lg:hidden' : ''}`}>Cerrar sesión</span>
         </button>
       </div>
 
-      <button type="button" onClick={onToggleCollapse} className="absolute -right-3 top-[86px] hidden h-6 w-6 items-center justify-center rounded-full border border-white/10 bg-[#E9F8FA] text-black shadow-lg transition hover:brightness-95 lg:flex" aria-label={collapsed ? 'Expandir menú lateral' : 'Contraer menú lateral'}>
+      <button type="button" onClick={onToggleCollapse} className="absolute -right-3 top-[86px] hidden h-6 w-6 items-center justify-center rounded-full border border-white/20 bg-[#173a5d] text-white shadow-lg transition hover:bg-[#22517c] lg:flex" aria-label={collapsed ? 'Expandir menú lateral' : 'Contraer menú lateral'}>
         {collapsed ? <ChevronRight size={13} /> : <ChevronLeft size={13} />}
       </button>
     </aside>
