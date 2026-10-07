@@ -1,17 +1,27 @@
 'use client'
 
-import { useEffect, useRef, useState } from 'react'
+import Link from 'next/link'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import {
   Bell,
+  BellRing,
   Building2,
   Camera,
   LoaderCircle,
   Menu,
+  TriangleAlert,
   Moon,
   Search,
   Sun,
 } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
+import { alerts } from '@/data/dashboardData'
+import {
+  AGENDA_STORAGE_KEY,
+  readAgendaActivities,
+  sortAgendaActivities,
+  type AgendaItem,
+} from '@/features/agenda/services/agendaStorage'
 import type { AccessSession } from '@/features/access/services/accessStorage'
 
 type HeaderProps = {
@@ -35,7 +45,10 @@ export function Header({ onOpenMenu, isDark, onToggleTheme, showCompanyLogo = fa
   const [avatarUrl, setAvatarUrl] = useState<string | null>(null)
   const [uploadingAvatar, setUploadingAvatar] = useState(false)
   const [notificationPermission, setNotificationPermission] = useState<NotificationPermission | 'unsupported'>('default')
+  const [notificationsOpen, setNotificationsOpen] = useState(false)
+  const [agendaItems, setAgendaItems] = useState<AgendaItem[]>([])
   const avatarInputRef = useRef<HTMLInputElement | null>(null)
+  const notificationsRef = useRef<HTMLDivElement | null>(null)
 
   useEffect(() => {
     let active = true
@@ -73,6 +86,64 @@ export function Header({ onOpenMenu, isDark, onToggleTheme, showCompanyLogo = fa
     setNotificationPermission(Notification.permission)
   }, [])
 
+  useEffect(() => {
+    const loadAgenda = () => setAgendaItems(readAgendaActivities())
+
+    loadAgenda()
+
+    const handleStorage = (event: StorageEvent) => {
+      if (event.key === AGENDA_STORAGE_KEY) loadAgenda()
+    }
+
+    const handleFocus = () => loadAgenda()
+    window.addEventListener('storage', handleStorage)
+    window.addEventListener('focus', handleFocus)
+
+    return () => {
+      window.removeEventListener('storage', handleStorage)
+      window.removeEventListener('focus', handleFocus)
+    }
+  }, [])
+
+  useEffect(() => {
+    function handlePointerDown(event: MouseEvent | TouchEvent) {
+      if (!notificationsRef.current) return
+      if (!notificationsRef.current.contains(event.target as Node)) {
+        setNotificationsOpen(false)
+      }
+    }
+
+    document.addEventListener('mousedown', handlePointerDown)
+    document.addEventListener('touchstart', handlePointerDown)
+
+    return () => {
+      document.removeEventListener('mousedown', handlePointerDown)
+      document.removeEventListener('touchstart', handlePointerDown)
+    }
+  }, [])
+
+  const pendingAgenda = useMemo(
+    () =>
+      sortAgendaActivities(agendaItems)
+        .filter((item) => item.status !== 'Completada')
+        .slice(0, 5),
+    [agendaItems],
+  )
+
+  const notificationCount = pendingAgenda.length + alerts.length
+
+  function formatAgendaDate(item: AgendaItem) {
+    const value = new Date(`${item.date}T${item.time}:00`)
+    if (Number.isNaN(value.getTime())) return `${item.date} ${item.time}`
+
+    return new Intl.DateTimeFormat('es-MX', {
+      day: 'numeric',
+      month: 'short',
+      hour: '2-digit',
+      minute: '2-digit',
+    }).format(value)
+  }
+
   async function enableNotifications() {
     if (typeof Notification === 'undefined') {
       window.alert('Este navegador no admite notificaciones.')
@@ -105,7 +176,7 @@ export function Header({ onOpenMenu, isDark, onToggleTheme, showCompanyLogo = fa
     }
   }
 
-    async function handleAvatarUpload(file?: File) {
+  async function handleAvatarUpload(file?: File) {
     if (!file) return
 
     const allowedTypes = ['image/jpeg', 'image/png', 'image/webp']
@@ -226,30 +297,131 @@ export function Header({ onOpenMenu, isDark, onToggleTheme, showCompanyLogo = fa
           {isDark ? <Sun size={18} strokeWidth={1.8} /> : <Moon size={18} strokeWidth={1.8} />}
         </button>
 
-        <button
-          type="button"
-          onClick={() => void enableNotifications()}
-          className="relative rounded-xl p-2.5 text-[var(--muted)] transition hover:bg-[#5496CC]/10 hover:text-[var(--foreground)]"
-          aria-label="Configurar notificaciones"
-          title={
-            notificationPermission === 'granted'
-              ? 'Notificaciones activadas'
-              : notificationPermission === 'denied'
-                ? 'Notificaciones bloqueadas'
-                : 'Activar notificaciones'
-          }
-        >
-          <Bell size={18} strokeWidth={1.8} />
-          <span
-            className={`absolute right-2 top-2 h-1.5 w-1.5 rounded-full ring-2 ring-[var(--surface)] ${
-              notificationPermission === 'granted'
-                ? 'bg-emerald-500'
-                : notificationPermission === 'denied'
-                  ? 'bg-red-500'
-                  : 'bg-[#5496CC]'
+        <div ref={notificationsRef} className="relative">
+          <button
+            type="button"
+            onClick={() => setNotificationsOpen((current) => !current)}
+            className={`relative rounded-xl p-2.5 transition ${
+              notificationsOpen
+                ? 'bg-[#5496CC]/12 text-[#5496CC]'
+                : 'text-[var(--muted)] hover:bg-[#5496CC]/10 hover:text-[var(--foreground)]'
             }`}
-          />
-        </button>
+            aria-label="Abrir notificaciones"
+            aria-expanded={notificationsOpen}
+            title="Notificaciones"
+          >
+            <Bell size={18} strokeWidth={1.8} />
+            {notificationCount > 0 ? (
+              <span className="absolute -right-0.5 -top-0.5 flex min-h-4 min-w-4 items-center justify-center rounded-full bg-red-500 px-1 text-[9px] font-bold leading-none text-white ring-2 ring-[var(--surface)]">
+                {notificationCount > 9 ? '9+' : notificationCount}
+              </span>
+            ) : (
+              <span className="absolute right-2 top-2 h-1.5 w-1.5 rounded-full bg-emerald-500 ring-2 ring-[var(--surface)]" />
+            )}
+          </button>
+
+          {notificationsOpen ? (
+            <div className="fixed inset-x-3 top-[82px] z-[100] max-h-[calc(100dvh-100px)] overflow-hidden rounded-2xl border border-[var(--border)] bg-[var(--surface)] shadow-2xl sm:absolute sm:inset-x-auto sm:right-0 sm:top-[calc(100%+12px)] sm:w-[390px]">
+              <div className="flex items-center justify-between border-b border-[var(--border)] px-4 py-3">
+                <div>
+                  <p className="text-sm font-semibold text-[var(--foreground)]">Notificaciones</p>
+                  <p className="mt-0.5 text-[10px] text-[var(--muted)]">
+                    {notificationCount > 0
+                      ? `${notificationCount} pendiente${notificationCount === 1 ? '' : 's'}`
+                      : 'Todo al día'}
+                  </p>
+                </div>
+                <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-[#5496CC]/10 text-[#5496CC]">
+                  <BellRing size={16} />
+                </span>
+              </div>
+
+              <div className="max-h-[58dvh] overflow-y-auto">
+                {alerts.length > 0 ? (
+                  <div className="border-b border-[var(--border)] p-3">
+                    <p className="px-1 pb-2 text-[10px] font-semibold uppercase tracking-[0.12em] text-[var(--muted)]">
+                      Alertas del sistema
+                    </p>
+                    <div className="space-y-2">
+                      {alerts.map((alert) => (
+                        <div
+                          key={alert.title}
+                          className="flex gap-3 rounded-xl bg-[var(--surface-soft)] p-3"
+                        >
+                          <span className="mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-amber-500/10 text-amber-500">
+                            <TriangleAlert size={15} />
+                          </span>
+                          <div className="min-w-0">
+                            <p className="text-xs font-semibold text-[var(--foreground)]">{alert.title}</p>
+                            <p className="mt-1 text-[10px] leading-4 text-[var(--muted)]">{alert.description}</p>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                ) : null}
+
+                <div className="p-3">
+                  <p className="px-1 pb-2 text-[10px] font-semibold uppercase tracking-[0.12em] text-[var(--muted)]">
+                    Agenda
+                  </p>
+
+                  {pendingAgenda.length > 0 ? (
+                    <div className="space-y-1">
+                      {pendingAgenda.map((item) => (
+                        <Link
+                          key={item.id}
+                          href="/agenda"
+                          onClick={() => setNotificationsOpen(false)}
+                          className="flex items-start gap-3 rounded-xl px-3 py-2.5 transition hover:bg-[var(--surface-soft)]"
+                        >
+                          <span className="mt-1.5 h-2 w-2 shrink-0 rounded-full bg-[#5496CC]" />
+                          <span className="min-w-0 flex-1">
+                            <span className="block truncate text-xs font-medium text-[var(--foreground)]">
+                              {item.title}
+                            </span>
+                            <span className="mt-1 block text-[10px] text-[var(--muted)]">
+                              {item.type} · {formatAgendaDate(item)}
+                            </span>
+                          </span>
+                        </Link>
+                      ))}
+                    </div>
+                  ) : (
+                    <div className="rounded-xl bg-[var(--surface-soft)] px-4 py-5 text-center">
+                      <p className="text-xs font-medium text-[var(--foreground)]">No hay pendientes</p>
+                      <p className="mt-1 text-[10px] text-[var(--muted)]">Tu agenda está al día.</p>
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              <div className="flex items-center gap-2 border-t border-[var(--border)] p-3">
+                <Link
+                  href="/agenda"
+                  onClick={() => setNotificationsOpen(false)}
+                  className="flex min-h-10 flex-1 items-center justify-center rounded-xl border border-[var(--border)] px-3 text-xs font-semibold text-[var(--foreground)] transition hover:bg-[var(--surface-soft)]"
+                >
+                  Ver agenda
+                </Link>
+
+                {notificationPermission !== 'granted' ? (
+                  <button
+                    type="button"
+                    onClick={() => void enableNotifications()}
+                    className="flex min-h-10 flex-1 items-center justify-center rounded-xl bg-[#5496CC] px-3 text-xs font-semibold text-white transition hover:brightness-105"
+                  >
+                    {notificationPermission === 'denied' ? 'Revisar permiso' : 'Activar avisos'}
+                  </button>
+                ) : (
+                  <span className="flex min-h-10 flex-1 items-center justify-center rounded-xl bg-emerald-500/10 px-3 text-xs font-semibold text-emerald-500">
+                    Avisos activados
+                  </span>
+                )}
+              </div>
+            </div>
+          ) : null}
+        </div>
 
         <div className="mx-2 hidden h-6 w-px bg-[var(--border)] sm:block" />
 
