@@ -380,21 +380,88 @@ export async function PATCH(request: Request) {
     const body = (await request.json()) as {
       userId?: string
       active?: boolean
+      role?: string
+      permissions?: ModulePermission[]
     }
 
     const userId = body.userId?.trim()
-    if (!userId || typeof body.active !== 'boolean') {
-      return NextResponse.json({ error: 'Datos de usuario no válidos.' }, { status: 400 })
+    if (!userId) {
+      return NextResponse.json({ error: 'Usuario no válido.' }, { status: 400 })
     }
 
-    if (userId === currentUser.id) {
+    if (userId === currentUser.id && (typeof body.active === 'boolean' || body.role)) {
       return NextResponse.json(
-        { error: 'La cuenta principal no puede desactivarse desde esta pantalla.' },
+        { error: 'La cuenta principal no puede modificarse desde esta pantalla.' },
         { status: 400 },
       )
     }
 
     const admin = getAdminClient()
+
+    if (body.role) {
+      const role = databaseRole(body.role)
+      const permissions =
+        role === 'administracion'
+          ? DEFAULT_PERMISSIONS.administracion
+          : Array.isArray(body.permissions)
+            ? body.permissions
+            : DEFAULT_PERMISSIONS[role] ?? []
+
+      const { data: profile, error: profileError } = await admin
+        .from('profiles')
+        .update({
+          role,
+          permissions,
+          updated_at: new Date().toISOString(),
+        })
+        .eq('id', userId)
+        .select('id,role,permissions,active')
+        .single()
+
+      if (profileError || !profile) {
+        return NextResponse.json(
+          { error: profileError?.message || 'No pudimos actualizar el rol del usuario.' },
+          { status: 500 },
+        )
+      }
+
+      const { data: authUser, error: authReadError } = await admin.auth.admin.getUserById(userId)
+      if (authReadError || !authUser.user) {
+        return NextResponse.json(
+          { error: authReadError?.message || 'No pudimos cargar el usuario de autenticación.' },
+          { status: 500 },
+        )
+      }
+
+      const { error: authError } = await admin.auth.admin.updateUserById(userId, {
+        user_metadata: {
+          ...(authUser.user.user_metadata ?? {}),
+          role,
+          permissions,
+        },
+      })
+
+      if (authError) {
+        return NextResponse.json(
+          { error: authError.message || 'No pudimos sincronizar el rol en autenticación.' },
+          { status: 500 },
+        )
+      }
+
+      return NextResponse.json(
+        {
+          userId,
+          role: roleLabel(role),
+          permissions: profile.permissions ?? permissions,
+          active: profile.active,
+        },
+        { status: 200 },
+      )
+    }
+
+    if (typeof body.active !== 'boolean') {
+      return NextResponse.json({ error: 'Datos de usuario no válidos.' }, { status: 400 })
+    }
 
     const { error: profileError } = await admin
       .from('profiles')
@@ -422,9 +489,9 @@ export async function PATCH(request: Request) {
 
     return NextResponse.json({ userId, active: body.active }, { status: 200 })
   } catch (error) {
-    console.error('Error actualizando estado de usuario:', error)
+    console.error('Error actualizando usuario:', error)
     return NextResponse.json(
-      { error: 'No pudimos actualizar el estado del usuario.' },
+      { error: 'No pudimos actualizar el usuario.' },
       { status: 500 },
     )
   }
