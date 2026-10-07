@@ -847,11 +847,18 @@ export default function DailyReportsPage() {
                     <p className="flex items-center gap-2 text-sm font-semibold text-[var(--foreground)]"><ImagePlus size={17} className="text-[#5496CC]" /> Evidencia fotográfica</p>
                     <p className="mt-1 text-xs text-[var(--muted)]">Agrega hasta {MAX_REPORT_IMAGES} imágenes. Se optimizan antes de guardar.</p>
                   </div>
-                  <label className="inline-flex cursor-pointer items-center justify-center gap-2 rounded-xl bg-[#5496CC] px-4 py-2.5 text-sm font-semibold text-white">
-                    <ImagePlus size={16} />
-                    {processingImages ? 'Procesando...' : 'Agregar imágenes'}
-                    <input type="file" accept="image/*" multiple disabled={processingImages || images.length >= MAX_REPORT_IMAGES} onChange={handleImages} className="hidden" />
-                  </label>
+                  <div className="flex flex-col gap-2 sm:flex-row">
+                    <label className="inline-flex min-h-11 cursor-pointer items-center justify-center gap-2 rounded-xl bg-[#5496CC] px-4 py-2.5 text-sm font-semibold text-white">
+                      <ImagePlus size={16} />
+                      {processingImages ? 'Procesando...' : 'Galería'}
+                      <input type="file" accept="image/*" multiple disabled={processingImages || images.length >= MAX_REPORT_IMAGES} onChange={handleImages} className="hidden" />
+                    </label>
+                    <label className="inline-flex min-h-11 cursor-pointer items-center justify-center gap-2 rounded-xl border border-[#5496CC]/40 bg-[var(--surface)] px-4 py-2.5 text-sm font-semibold text-[#5496CC]">
+                      <ImagePlus size={16} />
+                      Tomar foto
+                      <input type="file" accept="image/*" capture="environment" disabled={processingImages || images.length >= MAX_REPORT_IMAGES} onChange={handleImages} className="hidden" />
+                    </label>
+                  </div>
                 </div>
 
                 {images.length ? (
