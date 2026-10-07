@@ -1,22 +1,5 @@
 import { NextResponse } from 'next/server'
-import { createClient as createAdminClient } from '@supabase/supabase-js'
 import { createClient as createServerClient } from '@/utils/supabase/server'
-
-function getAdminClient() {
-  const url = process.env.NEXT_PUBLIC_SUPABASE_URL
-  const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY
-
-  if (!url || !serviceRoleKey) {
-    throw new Error('Falta la configuración privada de Supabase.')
-  }
-
-  return createAdminClient(url, serviceRoleKey, {
-    auth: {
-      autoRefreshToken: false,
-      persistSession: false,
-    },
-  })
-}
 
 function normalizeRole(value: unknown) {
   return String(value ?? '')
@@ -33,14 +16,30 @@ async function requireAdmin() {
   } = await supabase.auth.getUser()
 
   if (!user) {
-    return { supabase, user: null, error: NextResponse.json({ error: 'Sesión no válida.' }, { status: 401 }) }
+    return {
+      supabase,
+      user: null,
+      error: NextResponse.json({ error: 'Sesión no válida.' }, { status: 401 }),
+    }
   }
 
-  const { data: profile } = await supabase
+  const { data: profile, error: profileError } = await supabase
     .from('profiles')
     .select('role, active')
     .eq('id', user.id)
     .maybeSingle()
+
+  if (profileError) {
+    console.error('Error consultando perfil administrador:', profileError)
+    return {
+      supabase,
+      user: null,
+      error: NextResponse.json(
+        { error: 'No pudimos validar el perfil de Administración.' },
+        { status: 500 },
+      ),
+    }
+  }
 
   if (!profile?.active || normalizeRole(profile.role) !== 'administracion') {
     return {
@@ -65,14 +64,17 @@ export async function GET(request: Request) {
     return NextResponse.json({ error: 'Usuario no válido.' }, { status: 400 })
   }
 
-  const admin = getAdminClient()
-  const { data, error } = await admin
+  const { data, error } = await auth.supabase
     .from('project_members')
     .select('project_id')
     .eq('user_id', userId)
 
   if (error) {
-    return NextResponse.json({ error: 'No pudimos cargar los proyectos asignados.' }, { status: 500 })
+    console.error('Error consultando project_members:', error)
+    return NextResponse.json(
+      { error: 'No pudimos cargar los proyectos asignados.' },
+      { status: 500 },
+    )
   }
 
   return NextResponse.json(
@@ -94,17 +96,44 @@ export async function POST(request: Request) {
   const userId = body.userId?.trim()
   const customerId = body.customerId?.trim()
   const requestedProjectIds = Array.isArray(body.projectIds)
-    ? Array.from(new Set(body.projectIds.filter((id): id is string => typeof id === 'string' && id.trim().length > 0)))
+    ? Array.from(
+        new Set(
+          body.projectIds
+            .filter((id): id is string => typeof id === 'string')
+            .map((id) => id.trim())
+            .filter(Boolean),
+        ),
+      )
     : []
 
   if (!userId || !customerId) {
     return NextResponse.json({ error: 'Usuario o cliente no válido.' }, { status: 400 })
   }
 
-  const admin = getAdminClient()
+  const { data: customerLink, error: customerLinkError } = await auth.supabase
+    .from('customer_users')
+    .select('customer_id')
+    .eq('user_id', userId)
+    .eq('customer_id', customerId)
+    .maybeSingle()
+
+  if (customerLinkError) {
+    console.error('Error validando customer_users:', customerLinkError)
+    return NextResponse.json(
+      { error: 'No pudimos validar el vínculo entre el usuario y el cliente.' },
+      { status: 500 },
+    )
+  }
+
+  if (!customerLink) {
+    return NextResponse.json(
+      { error: 'El usuario no está vinculado al cliente seleccionado.' },
+      { status: 409 },
+    )
+  }
 
   const { data: validProjects, error: validationError } = requestedProjectIds.length
-    ? await admin
+    ? await auth.supabase
         .from('projects')
         .select('id')
         .eq('customer_id', customerId)
@@ -112,18 +141,33 @@ export async function POST(request: Request) {
     : { data: [], error: null }
 
   if (validationError) {
-    return NextResponse.json({ error: 'No pudimos validar los proyectos del cliente.' }, { status: 500 })
+    console.error('Error validando proyectos del cliente:', validationError)
+    return NextResponse.json(
+      { error: 'No pudimos validar los proyectos del cliente.' },
+      { status: 500 },
+    )
   }
 
   const validProjectIds = (validProjects ?? []).map((project) => project.id)
 
-  const { data: existingMemberships, error: existingError } = await admin
+  if (validProjectIds.length !== requestedProjectIds.length) {
+    return NextResponse.json(
+      { error: 'Uno o más proyectos seleccionados no pertenecen a este cliente.' },
+      { status: 400 },
+    )
+  }
+
+  const { data: existingMemberships, error: existingError } = await auth.supabase
     .from('project_members')
     .select('project_id')
     .eq('user_id', userId)
 
   if (existingError) {
-    return NextResponse.json({ error: 'No pudimos consultar los proyectos asignados.' }, { status: 500 })
+    console.error('Error consultando project_members antes de sincronizar:', existingError)
+    return NextResponse.json(
+      { error: 'No pudimos consultar los proyectos asignados.' },
+      { status: 500 },
+    )
   }
 
   const existingIds = new Set((existingMemberships ?? []).map((row) => row.project_id))
@@ -132,7 +176,7 @@ export async function POST(request: Request) {
   const toDelete = Array.from(existingIds).filter((projectId) => !desiredIds.has(projectId))
 
   if (toInsert.length) {
-    const { error: insertError } = await admin
+    const { error: insertError } = await auth.supabase
       .from('project_members')
       .upsert(
         toInsert.map((projectId) => ({ project_id: projectId, user_id: userId })),
@@ -140,21 +184,47 @@ export async function POST(request: Request) {
       )
 
     if (insertError) {
-      return NextResponse.json({ error: 'No pudimos guardar los proyectos asignados.' }, { status: 500 })
+      console.error('Error guardando project_members:', insertError)
+      return NextResponse.json(
+        { error: 'No pudimos guardar los proyectos asignados.' },
+        { status: 500 },
+      )
     }
   }
 
   if (toDelete.length) {
-    const { error: deleteError } = await admin
+    const { error: deleteError } = await auth.supabase
       .from('project_members')
       .delete()
       .eq('user_id', userId)
       .in('project_id', toDelete)
 
     if (deleteError) {
-      return NextResponse.json({ error: 'No pudimos quitar proyectos desasignados.' }, { status: 500 })
+      console.error('Error eliminando project_members:', deleteError)
+      return NextResponse.json(
+        { error: 'No pudimos quitar proyectos desasignados.' },
+        { status: 500 },
+      )
     }
   }
 
-  return NextResponse.json({ userId, projectIds: validProjectIds }, { status: 200 })
+  const { data: persistedMemberships, error: persistedError } = await auth.supabase
+    .from('project_members')
+    .select('project_id')
+    .eq('user_id', userId)
+
+  if (persistedError) {
+    console.error('Error verificando persistencia de project_members:', persistedError)
+    return NextResponse.json(
+      { error: 'Los cambios se guardaron, pero no pudimos verificarlos.' },
+      { status: 500 },
+    )
+  }
+
+  const persistedProjectIds = (persistedMemberships ?? []).map((row) => row.project_id)
+
+  return NextResponse.json(
+    { userId, projectIds: persistedProjectIds },
+    { status: 200 },
+  )
 }
