@@ -81,12 +81,8 @@ export default function LoginPage() {
             </p>
           </div>
 
-          <div className="relative z-10 flex items-end justify-between text-xs text-[#69717D]">
+          <div className="relative z-10 text-xs text-[#69717D]">
             <span>© 2026 NEDVI Constructora</span>
-            <span className="flex items-center gap-2 rounded-full border border-white/[0.06] bg-black/20 px-3 py-2 backdrop-blur-sm">
-              <span className="h-1.5 w-1.5 rounded-full bg-emerald-400" />
-              Todos los sistemas operando con normalidad
-            </span>
           </div>
 
           <div className="pointer-events-none absolute -bottom-24 -right-14">
@@ -95,6 +91,10 @@ export default function LoginPage() {
         </aside>
 
         <section className="relative flex min-h-screen items-center justify-center px-6 py-12 sm:px-10 lg:px-14 xl:px-16">
+          <div className="login-system-status absolute bottom-6 left-1/2 z-20 hidden -translate-x-1/2 items-center gap-2 whitespace-nowrap rounded-full border border-white/[0.08] bg-black/30 px-3.5 py-2 text-[11px] text-[#A8B0BC] shadow-[0_10px_30px_rgba(0,0,0,0.18)] backdrop-blur-md sm:flex lg:bottom-8">
+            <span className="h-1.5 w-1.5 rounded-full bg-emerald-400 shadow-[0_0_10px_rgba(52,211,153,0.65)]" />
+            Todos los sistemas operando con normalidad
+          </div>
           <div
             className="pointer-events-none absolute inset-0 bg-cover bg-center opacity-20 lg:hidden"
             style={{
