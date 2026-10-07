@@ -1,10 +1,16 @@
 'use client'
 import { createProjectInSupabase } from '@/features/projects/services/projectSupabaseService'
 
-import { FormEvent, useEffect, useMemo, useState } from 'react'
+import { ChangeEvent, FormEvent, useEffect, useMemo, useRef, useState } from 'react'
 import { AppShell } from '@/components/layout/AppShell'
 import { getCustomersFromSupabase } from '@/features/crm/services/customerSupabase'
 import type { Customer } from '@/features/crm/types/customer'
+import { Download, FileSpreadsheet, Upload, X } from 'lucide-react'
+import {
+  downloadQuoteTemplate,
+  readQuoteSpreadsheet,
+  type ImportedQuoteRow,
+} from '@/features/quotes/services/excelQuoteImport'
 
 type QuoteStatus = 'Borrador' | 'Enviada' | 'Aprobada' | 'Rechazada' | 'Vencida'
 type QuoteCurrency = 'MXN' | 'USD'
@@ -198,6 +204,13 @@ export default function QuotesPage() {
   const [status, setStatus] = useState<QuoteStatus>('Borrador')
   const [concepts, setConcepts] = useState<QuoteItem[]>([emptyItem()])
   const [printQuote, setPrintQuote] = useState<Quote | null>(null)
+  const [excelRows, setExcelRows] = useState<ImportedQuoteRow[]>([])
+  const [excelFileName, setExcelFileName] = useState('')
+  const [excelImportOpen, setExcelImportOpen] = useState(false)
+  const [excelImportMode, setExcelImportMode] = useState<'replace' | 'append'>('replace')
+  const [excelImportError, setExcelImportError] = useState('')
+  const [readingExcel, setReadingExcel] = useState(false)
+  const excelInputRef = useRef<HTMLInputElement | null>(null)
 
   useEffect(() => {
     let active = true
@@ -391,6 +404,88 @@ export default function QuotesPage() {
 
   function addConcept() {
     setConcepts((current) => [...current, emptyItem()])
+  }
+
+  async function handleExcelFile(event: ChangeEvent<HTMLInputElement>) {
+    const file = event.target.files?.[0]
+    event.target.value = ''
+    if (!file) return
+
+    setReadingExcel(true)
+    setExcelImportError('')
+
+    try {
+      const rows = await readQuoteSpreadsheet(file)
+      setExcelRows(rows)
+      setExcelFileName(file.name)
+      setExcelImportMode(
+        concepts.some((item) => item.description.trim() || item.quantity !== '' || item.unitPrice !== '')
+          ? 'append'
+          : 'replace',
+      )
+      setExcelImportOpen(true)
+    } catch (error) {
+      console.error('Error importando cotización desde Excel:', error)
+      setExcelImportError(
+        error instanceof Error ? error.message : 'No pudimos leer el archivo.',
+      )
+      setExcelRows([])
+      setExcelFileName(file.name)
+      setExcelImportOpen(true)
+    } finally {
+      setReadingExcel(false)
+    }
+  }
+
+  function updateExcelRow(id: string, field: 'description' | 'unit' | 'quantity' | 'unitPrice', value: string) {
+    setExcelRows((current) =>
+      current.map((row) => {
+        if (row.id !== id) return row
+        if (field === 'description') return { ...row, description: value }
+        if (field === 'unit') return { ...row, unit: value }
+        const numeric = Number(value)
+        return { ...row, [field]: Number.isFinite(numeric) ? numeric : 0 }
+      }),
+    )
+  }
+
+  function removeExcelRow(id: string) {
+    setExcelRows((current) => current.filter((row) => row.id !== id))
+  }
+
+  function closeExcelImport() {
+    setExcelImportOpen(false)
+    setExcelRows([])
+    setExcelFileName('')
+    setExcelImportError('')
+  }
+
+  function applyExcelImport() {
+    const importedConcepts: QuoteItem[] = excelRows
+      .filter((row) => row.description.trim() && row.quantity > 0 && row.unitPrice >= 0)
+      .map((row) => ({
+        id: crypto.randomUUID(),
+        description: row.description.trim(),
+        unit: unitOptions.includes(row.unit as UnitMeasure) ? row.unit as UnitMeasure : 'Otros',
+        quantity: row.quantity,
+        unitPrice: row.unitPrice,
+      }))
+
+    if (!importedConcepts.length) {
+      setExcelImportError('No hay conceptos válidos para agregar.')
+      return
+    }
+
+    if (excelImportMode === 'replace') {
+      setConcepts(importedConcepts)
+    } else {
+      const currentValid = concepts.filter(
+        (item) => item.description.trim() || item.quantity !== '' || item.unitPrice !== '',
+      )
+      setConcepts([...currentValid, ...importedConcepts])
+    }
+
+    closeExcelImport()
   }
 
   function removeConcept(id: string) {
@@ -663,9 +758,43 @@ export default function QuotesPage() {
                 ) : null}
 
                 <section>
-                  <div className="mb-3 flex items-center justify-between">
-                    <div><h3 className="font-semibold">Conceptos</h3><p className="text-xs text-slate-500">El subtotal se calcula automáticamente.</p></div>
-                    <button type="button" onClick={addConcept} className="rounded-lg border border-slate-200 px-3 py-2 text-xs font-semibold dark:border-slate-700">+ Agregar conceptos</button>
+                  <div className="mb-4 flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+                    <div>
+                      <h3 className="font-semibold">Conceptos</h3>
+                      <p className="text-xs text-slate-500">
+                        Agrega conceptos manualmente o impórtalos desde Excel. El subtotal se calcula automáticamente.
+                      </p>
+                    </div>
+
+                    <div className="flex flex-wrap gap-2">
+                      <input
+                        ref={excelInputRef}
+                        type="file"
+                        accept=".xlsx,.csv,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,text/csv"
+                        onChange={(event) => void handleExcelFile(event)}
+                        className="hidden"
+                      />
+                      <button
+                        type="button"
+                        onClick={downloadQuoteTemplate}
+                        className="inline-flex items-center gap-2 rounded-lg border border-slate-200 px-3 py-2 text-xs font-semibold transition hover:bg-slate-50 dark:border-slate-700 dark:hover:bg-slate-800"
+                      >
+                        <Download size={14} />
+                        Plantilla NEDVI
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => excelInputRef.current?.click()}
+                        disabled={readingExcel}
+                        className="inline-flex items-center gap-2 rounded-lg border border-[#5496CC]/35 bg-[#5496CC]/5 px-3 py-2 text-xs font-semibold text-[#5496CC] transition hover:bg-[#5496CC]/10 disabled:cursor-wait disabled:opacity-60"
+                      >
+                        <FileSpreadsheet size={14} />
+                        {readingExcel ? 'Leyendo Excel...' : 'Importar Excel'}
+                      </button>
+                      <button type="button" onClick={addConcept} className="rounded-lg border border-slate-200 px-3 py-2 text-xs font-semibold dark:border-slate-700">
+                        + Agregar concepto
+                      </button>
+                    </div>
                   </div>
                   <div className="space-y-3">
                     <div className="hidden gap-2 px-3 text-xs font-semibold text-slate-500 md:grid md:grid-cols-[minmax(220px,1fr)_150px_100px_160px_auto] dark:text-slate-400">
@@ -700,6 +829,181 @@ export default function QuotesPage() {
           </div>
         )}
       </div>
+
+      {excelImportOpen ? (
+        <div className="fixed inset-0 z-[70] flex items-center justify-center bg-black/60 p-4 backdrop-blur-sm print:hidden">
+          <div className="max-h-[92vh] w-full max-w-6xl overflow-hidden rounded-2xl border border-[var(--border)] bg-[var(--surface)] shadow-2xl">
+            <div className="flex items-start justify-between gap-4 border-b border-[var(--border)] px-5 py-4 sm:px-6">
+              <div>
+                <p className="text-xs font-semibold uppercase tracking-[0.14em] text-[#5496CC]">
+                  Importación inteligente
+                </p>
+                <h2 className="mt-1 text-xl font-bold text-[var(--foreground)]">
+                  Importar conceptos desde Excel
+                </h2>
+                <p className="mt-1 text-xs text-[var(--muted)]">
+                  {excelFileName || 'Archivo de cotización'} · revisa la información antes de agregarla.
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={closeExcelImport}
+                className="rounded-lg p-2 text-[var(--muted)] transition hover:bg-[var(--surface-soft)]"
+                aria-label="Cerrar importación"
+              >
+                <X size={18} />
+              </button>
+            </div>
+
+            <div className="max-h-[68vh] overflow-y-auto p-5 sm:p-6">
+              {excelImportError ? (
+                <div className="rounded-xl border border-red-400/20 bg-red-500/10 px-4 py-3 text-sm text-red-500">
+                  {excelImportError}
+                </div>
+              ) : (
+                <>
+                  <div className="mb-5 grid gap-3 md:grid-cols-[1fr_auto] md:items-center">
+                    <div className="rounded-xl border border-[#5496CC]/20 bg-[#5496CC]/5 p-4">
+                      <div className="flex items-center gap-2 text-sm font-semibold text-[var(--foreground)]">
+                        <Upload size={16} className="text-[#5496CC]" />
+                        {excelRows.length} conceptos detectados
+                      </div>
+                      <p className="mt-1 text-xs leading-5 text-[var(--muted)]">
+                        NEDVI OS reconoce encabezados como Concepto, Descripción, Partida, Unidad, Cantidad, Precio Unitario e Importe.
+                      </p>
+                    </div>
+
+                    <div className="flex rounded-xl border border-[var(--border)] bg-[var(--surface-soft)] p-1">
+                      <button
+                        type="button"
+                        onClick={() => setExcelImportMode('replace')}
+                        className={`rounded-lg px-3 py-2 text-xs font-semibold transition ${
+                          excelImportMode === 'replace'
+                            ? 'bg-[#5496CC] text-white'
+                            : 'text-[var(--muted)] hover:text-[var(--foreground)]'
+                        }`}
+                      >
+                        Reemplazar actuales
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setExcelImportMode('append')}
+                        className={`rounded-lg px-3 py-2 text-xs font-semibold transition ${
+                          excelImportMode === 'append'
+                            ? 'bg-[#5496CC] text-white'
+                            : 'text-[var(--muted)] hover:text-[var(--foreground)]'
+                        }`}
+                      >
+                        Agregar a actuales
+                      </button>
+                    </div>
+                  </div>
+
+                  <div className="overflow-x-auto rounded-xl border border-[var(--border)]">
+                    <table className="min-w-[900px] w-full text-sm">
+                      <thead className="bg-[var(--surface-soft)] text-left text-xs uppercase tracking-wide text-[var(--muted)]">
+                        <tr>
+                          <th className="px-3 py-3">Fila</th>
+                          <th className="px-3 py-3">Concepto</th>
+                          <th className="px-3 py-3">UM</th>
+                          <th className="px-3 py-3">Cantidad</th>
+                          <th className="px-3 py-3">Precio unitario</th>
+                          <th className="px-3 py-3 text-right">Importe</th>
+                          <th className="px-3 py-3" />
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-[var(--border)]">
+                        {excelRows.map((row) => (
+                          <tr key={row.id}>
+                            <td className="px-3 py-2 text-xs text-[var(--muted)]">{row.sourceRow}</td>
+                            <td className="px-3 py-2">
+                              <input
+                                value={row.description}
+                                onChange={(event) => updateExcelRow(row.id, 'description', event.target.value)}
+                                className="w-full rounded-lg border border-[var(--border)] bg-transparent px-3 py-2 text-[var(--foreground)] outline-none focus:border-[#5496CC]"
+                              />
+                            </td>
+                            <td className="px-3 py-2">
+                              <select
+                                value={unitOptions.includes(row.unit as UnitMeasure) ? row.unit : 'Otros'}
+                                onChange={(event) => updateExcelRow(row.id, 'unit', event.target.value)}
+                                className="w-full rounded-lg border border-[var(--border)] bg-transparent px-2 py-2 text-[var(--foreground)] outline-none focus:border-[#5496CC]"
+                              >
+                                {unitOptions.map((unit) => <option key={unit} value={unit}>{unit}</option>)}
+                              </select>
+                            </td>
+                            <td className="px-3 py-2">
+                              <input
+                                type="number"
+                                min="0"
+                                step="0.01"
+                                value={row.quantity}
+                                onChange={(event) => updateExcelRow(row.id, 'quantity', event.target.value)}
+                                className="w-28 rounded-lg border border-[var(--border)] bg-transparent px-3 py-2 text-[var(--foreground)] outline-none focus:border-[#5496CC]"
+                              />
+                            </td>
+                            <td className="px-3 py-2">
+                              <input
+                                type="number"
+                                min="0"
+                                step="0.01"
+                                value={row.unitPrice}
+                                onChange={(event) => updateExcelRow(row.id, 'unitPrice', event.target.value)}
+                                className="w-36 rounded-lg border border-[var(--border)] bg-transparent px-3 py-2 text-[var(--foreground)] outline-none focus:border-[#5496CC]"
+                              />
+                            </td>
+                            <td className="px-3 py-2 text-right font-semibold text-[var(--foreground)]">
+                              {money(row.quantity * row.unitPrice, quoteCurrency)}
+                            </td>
+                            <td className="px-3 py-2 text-right">
+                              <button
+                                type="button"
+                                onClick={() => removeExcelRow(row.id)}
+                                className="rounded-lg px-2 py-1.5 text-xs font-semibold text-red-500 hover:bg-red-500/10"
+                              >
+                                Quitar
+                              </button>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                </>
+              )}
+            </div>
+
+            <div className="flex flex-col-reverse gap-2 border-t border-[var(--border)] px-5 py-4 sm:flex-row sm:justify-end sm:px-6">
+              <button
+                type="button"
+                onClick={closeExcelImport}
+                className="h-10 rounded-xl border border-[var(--border)] px-4 text-sm font-semibold text-[var(--foreground)]"
+              >
+                Cancelar
+              </button>
+              {!excelImportError ? (
+                <button
+                  type="button"
+                  onClick={applyExcelImport}
+                  className="h-10 rounded-xl bg-[#5496CC] px-4 text-sm font-semibold text-white"
+                >
+                  {excelImportMode === 'replace'
+                    ? `Reemplazar con ${excelRows.length} conceptos`
+                    : `Agregar ${excelRows.length} conceptos`}
+                </button>
+              ) : (
+                <button
+                  type="button"
+                  onClick={() => excelInputRef.current?.click()}
+                  className="h-10 rounded-xl bg-[#5496CC] px-4 text-sm font-semibold text-white"
+                >
+                  Elegir otro archivo
+                </button>
+              )}
+            </div>
+          </div>
+        </div>
+      ) : null}
 
       {printQuote && (
         <>
