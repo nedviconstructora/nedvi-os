@@ -78,44 +78,10 @@ jobs:
 
           manifest.write_text(text)
 
-      - name: Apply NEDVI launcher icon
-        shell: python
-        run: |
-          from pathlib import Path
-          from PIL import Image
-
-          source = Path("public/icon.png")
-          if not source.exists():
-              raise SystemExit("No existe public/icon.png")
-
-          image = Image.open(source).convert("RGBA")
-          res = Path("android/app/src/main/res")
-
-          sizes = {
-              "mipmap-mdpi": 48,
-              "mipmap-hdpi": 72,
-              "mipmap-xhdpi": 96,
-              "mipmap-xxhdpi": 144,
-              "mipmap-xxxhdpi": 192,
-          }
-
-          for folder, size in sizes.items():
-              target = res / folder
-              target.mkdir(parents=True, exist_ok=True)
-              resized = image.resize((size, size), Image.Resampling.LANCZOS)
-              resized.save(target / "ic_launcher.png")
-              resized.save(target / "ic_launcher_round.png")
-
-          adaptive = res / "mipmap-anydpi-v26"
-          if adaptive.exists():
-              for child in adaptive.iterdir():
-                  child.unlink()
-              adaptive.rmdir()
-
       - name: Install image tooling
         run: python -m pip install --disable-pip-version-check pillow
 
-      - name: Apply NEDVI launcher icon after Pillow install
+      - name: Apply NEDVI launcher icon
         shell: python
         run: |
           from pathlib import Path
