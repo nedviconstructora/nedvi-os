@@ -128,25 +128,41 @@ export function LoginForm() {
       let projectIds: string[] | undefined
 
       if (profile.role === 'cliente') {
-        const { data: customerLink } = await supabase
+        const { data: customerLink, error: customerLinkError } = await supabase
           .from('customer_users')
-          .select('customer_id, customers(folio)')
+          .select('customer_id')
           .eq('user_id', data.user.id)
           .limit(1)
           .maybeSingle()
 
-        customerId = customerLink?.customer_id
+        if (customerLinkError) {
+          console.error('Error cargando vínculo del cliente:', customerLinkError)
+        }
 
-        const customer = Array.isArray(customerLink?.customers)
-          ? customerLink?.customers[0]
-          : customerLink?.customers
+        customerId = customerLink?.customer_id ?? undefined
 
-        customerFolio = customer?.folio ?? undefined
+        if (customerId) {
+          const { data: customerRecord, error: customerError } = await supabase
+            .from('customers')
+            .select('folio')
+            .eq('id', customerId)
+            .maybeSingle()
 
-        const { data: memberships } = await supabase
+          if (customerError) {
+            console.error('Error cargando folio del cliente:', customerError)
+          }
+
+          customerFolio = customerRecord?.folio ?? undefined
+        }
+
+        const { data: memberships, error: membershipsError } = await supabase
           .from('project_members')
           .select('project_id')
           .eq('user_id', data.user.id)
+
+        if (membershipsError) {
+          console.error('Error cargando proyectos asignados al cliente:', membershipsError)
+        }
 
         projectIds = memberships?.map((membership) => membership.project_id) ?? []
       }
