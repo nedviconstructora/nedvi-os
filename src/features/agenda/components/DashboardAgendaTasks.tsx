@@ -11,6 +11,7 @@ import { Card, CardHeader } from '@/components/ui/Card'
 import {
   type AgendaItem,
   AGENDA_STORAGE_KEY,
+  AGENDA_UPDATED_EVENT,
   readAgendaActivities,
   sortAgendaActivities,
   writeAgendaActivities,
@@ -51,10 +52,12 @@ export function DashboardAgendaTasks() {
 
     window.addEventListener('storage', handleStorage)
     window.addEventListener('focus', loadActivities)
+    window.addEventListener(AGENDA_UPDATED_EVENT, loadActivities)
 
     return () => {
       window.removeEventListener('storage', handleStorage)
       window.removeEventListener('focus', loadActivities)
+      window.removeEventListener(AGENDA_UPDATED_EVENT, loadActivities)
     }
   }, [])
 
