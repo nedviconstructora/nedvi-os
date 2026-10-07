@@ -5,6 +5,7 @@ import { ChangeEvent, FormEvent, useEffect, useMemo, useRef, useState } from 're
 import { AppShell } from '@/components/layout/AppShell'
 import { getCustomersFromSupabase } from '@/features/crm/services/customerSupabase'
 import type { Customer } from '@/features/crm/types/customer'
+import { createClient } from '@/lib/supabase/client'
 import { Download, FileSpreadsheet, Upload, X } from 'lucide-react'
 import {
   downloadQuoteTemplate,
@@ -195,6 +196,102 @@ function normalizeSavedItems(items: QuoteItem[]) {
   }))
 }
 
+function quoteFromRow(row: Record<string, unknown>): Quote {
+  const concepts = Array.isArray(row.concepts)
+    ? (row.concepts as QuoteItem[]).map(normalizeItem)
+    : []
+
+  return {
+    id: String(row.id),
+    folio: String(row.folio ?? ''),
+    customerId: String(row.customer_id ?? ''),
+    client: String(row.client ?? ''),
+    customerInfo:
+      row.customer_info && typeof row.customer_info === 'object'
+        ? (row.customer_info as QuoteCustomerInfo)
+        : undefined,
+    project: String(row.project ?? ''),
+    createdAt: String(row.created_at ?? ''),
+    validUntil: String(row.valid_until ?? ''),
+    items: [],
+    concepts,
+    currency: row.currency === 'USD' ? 'USD' : 'MXN',
+    taxRate: Number(row.tax_rate ?? 16),
+    subtotal: Number(row.subtotal ?? 0),
+    tax: Number(row.tax ?? 0),
+    total: Number(row.total ?? 0),
+    status: (row.status ?? 'Borrador') as QuoteStatus,
+    owner: String(row.owner ?? ''),
+    notes: String(row.notes ?? ''),
+    convertedToProject: Boolean(row.converted_to_project),
+  }
+}
+
+function quoteToRow(quote: Quote) {
+  return {
+    id: quote.id,
+    folio: quote.folio,
+    customer_id: quote.customerId || null,
+    client: quote.client,
+    customer_info: quote.customerInfo ?? null,
+    project: quote.project,
+    created_at: quote.createdAt,
+    valid_until: quote.validUntil || null,
+    concepts: quote.concepts,
+    currency: quote.currency,
+    tax_rate: quote.taxRate,
+    subtotal: quote.subtotal,
+    tax: quote.tax,
+    total: quote.total,
+    status: quote.status,
+    owner: quote.owner,
+    notes: quote.notes,
+    converted_to_project: quote.convertedToProject === true,
+    updated_at: new Date().toISOString(),
+  }
+}
+
+async function readQuotesFromSupabase(): Promise<Quote[]> {
+  const supabase = createClient()
+  const { data, error } = await supabase
+    .from('quotes')
+    .select('*')
+    .order('created_at', { ascending: false })
+    .order('inserted_at', { ascending: false })
+
+  if (error) throw error
+  return (data ?? []).map((row) => quoteFromRow(row as Record<string, unknown>))
+}
+
+async function upsertQuoteToSupabase(quote: Quote) {
+  const supabase = createClient()
+  const {
+    data: { user },
+  } = await supabase.auth.getUser()
+
+  const { data, error } = await supabase
+    .from('quotes')
+    .upsert(
+      {
+        ...quoteToRow(quote),
+        created_by: user?.id ?? null,
+      },
+      { onConflict: 'id' },
+    )
+    .select('*')
+    .single()
+
+  if (error) throw error
+  return quoteFromRow(data as Record<string, unknown>)
+}
+
+async function deleteQuoteFromSupabase(id: string) {
+  const supabase = createClient()
+  const { error } = await supabase.from('quotes').delete().eq('id', id)
+  if (error) throw error
+}
+
+
 export default function QuotesPage() {
   const [customers, setCustomers] = useState<Customer[]>([])
   const [quotes, setQuotes] = useState<Quote[]>([])
@@ -246,47 +343,89 @@ export default function QuotesPage() {
   }, [])
 
   useEffect(() => {
-    const raw = localStorage.getItem(STORAGE_KEY)
+    let active = true
 
-    if (!raw) {
-      setQuotesLoaded(true)
-      return
+    async function loadQuotes() {
+      let localQuotes: Quote[] = []
+
+      try {
+        const raw = localStorage.getItem(STORAGE_KEY)
+        if (raw) {
+          const parsed = JSON.parse(raw) as Quote[]
+          if (Array.isArray(parsed)) {
+            localQuotes = parsed.map((quote): Quote => {
+              const legacyItems = Array.isArray(quote.items) ? quote.items.map(normalizeItem) : []
+              const savedConcepts = Array.isArray(quote.concepts) ? quote.concepts.map(normalizeItem) : []
+              const mergedConcepts = [...legacyItems, ...savedConcepts]
+              const safeTaxRate =
+                typeof quote.taxRate === 'number'
+                  ? quote.taxRate
+                  : quote.subtotal > 0
+                    ? Number(((quote.tax / quote.subtotal) * 100).toFixed(2))
+                    : 16
+              const recalculated = quoteTotals(mergedConcepts, safeTaxRate)
+
+              return {
+                ...quote,
+                customerId: quote.customerId ?? '',
+                customerInfo: quote.customerInfo,
+                currency: (quote.currency === 'USD' ? 'USD' : 'MXN') as QuoteCurrency,
+                items: [],
+                concepts: mergedConcepts,
+                taxRate: safeTaxRate,
+                ...recalculated,
+                notes: quote.notes ?? '',
+                owner: quote.owner ?? '',
+              }
+            })
+          }
+        }
+      } catch {
+        console.warn('No se pudieron leer las cotizaciones locales.')
+      }
+
+      try {
+        let remoteQuotes = await readQuotesFromSupabase()
+        const remoteIds = new Set(remoteQuotes.map((quote) => quote.id))
+        const missingLocalQuotes = localQuotes.filter((quote) => !remoteIds.has(quote.id))
+
+        for (const quote of missingLocalQuotes) {
+          try {
+            await upsertQuoteToSupabase(quote)
+          } catch (migrationError) {
+            console.warn('No se pudo migrar una cotización local a Supabase:', migrationError)
+          }
+        }
+
+        if (missingLocalQuotes.length) {
+          remoteQuotes = await readQuotesFromSupabase()
+        }
+
+        if (active) setQuotes(remoteQuotes)
+      } catch (loadError) {
+        console.error('Error cargando cotizaciones desde Supabase:', loadError)
+        if (active) setQuotes(localQuotes)
+      } finally {
+        if (active) setQuotesLoaded(true)
+      }
     }
 
-    try {
-      const parsed = JSON.parse(raw) as Quote[]
-      if (Array.isArray(parsed)) {
-        const normalized: Quote[] = parsed.map((quote): Quote => {
-          const legacyItems = Array.isArray(quote.items) ? quote.items.map(normalizeItem) : []
-          const savedConcepts = Array.isArray(quote.concepts) ? quote.concepts.map(normalizeItem) : []
-          const mergedConcepts = [...legacyItems, ...savedConcepts]
-          const safeTaxRate =
-            typeof quote.taxRate === 'number'
-              ? quote.taxRate
-              : quote.subtotal > 0
-                ? Number(((quote.tax / quote.subtotal) * 100).toFixed(2))
-                : 16
-          const recalculated = quoteTotals(mergedConcepts, safeTaxRate)
+    void loadQuotes()
 
-          return {
-            ...quote,
-            customerId: quote.customerId ?? '',
-            customerInfo: quote.customerInfo,
-            currency: (quote.currency === 'USD' ? 'USD' : 'MXN') as QuoteCurrency,
-            items: [],
-            concepts: mergedConcepts,
-            taxRate: safeTaxRate,
-            ...recalculated,
-            notes: quote.notes ?? '',
-            owner: quote.owner ?? '',
-          }
-        })
-        setQuotes(normalized)
+    const handleFocus = async () => {
+      try {
+        const remoteQuotes = await readQuotesFromSupabase()
+        if (active) setQuotes(remoteQuotes)
+      } catch (error) {
+        console.error('Error actualizando cotizaciones al volver a la app:', error)
       }
-    } catch {
-      console.warn('No se pudieron leer las cotizaciones guardadas.')
-    } finally {
-      setQuotesLoaded(true)
+    }
+
+    window.addEventListener('focus', handleFocus)
+
+    return () => {
+      active = false
+      window.removeEventListener('focus', handleFocus)
     }
   }, [])
 
