@@ -1,9 +1,32 @@
-import type { Metadata } from 'next'
+import type { Metadata, Viewport } from 'next'
+import { PwaManager } from '@/components/pwa/PwaManager'
 import './globals.css'
 
 export const metadata: Metadata = {
-  title: 'NEDVI OS',
-  description: 'NEDVI OS enterprise platform',
+  title: {
+    default: 'NEDVI OS',
+    template: '%s · NEDVI OS',
+  },
+  description: 'Plataforma de gestión de NEDVI Constructora',
+  applicationName: 'NEDVI OS',
+  manifest: '/manifest.webmanifest',
+  appleWebApp: {
+    capable: true,
+    title: 'NEDVI OS',
+    statusBarStyle: 'black-translucent',
+  },
+  icons: {
+    icon: '/icon.png',
+    apple: '/icon.png',
+  },
+}
+
+export const viewport: Viewport = {
+  width: 'device-width',
+  initialScale: 1,
+  maximumScale: 1,
+  viewportFit: 'cover',
+  themeColor: '#5496CC',
 }
 
 export default function RootLayout({
@@ -56,6 +79,7 @@ export default function RootLayout({
           </div>
         </div>
         {children}
+        <PwaManager />
       </body>
     </html>
   )
