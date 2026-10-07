@@ -1,13 +1,17 @@
 'use client'
 
+import { useEffect, useRef, useState } from 'react'
 import {
   Bell,
   Building2,
+  Camera,
+  LoaderCircle,
   Menu,
   Moon,
   Search,
   Sun,
 } from 'lucide-react'
+import { createClient } from '@/lib/supabase/client'
 import type { AccessSession } from '@/features/access/services/accessStorage'
 
 type HeaderProps = {
@@ -28,6 +32,104 @@ function BrandMark() {
 }
 
 export function Header({ onOpenMenu, isDark, onToggleTheme, showCompanyLogo = false, user }: HeaderProps) {
+  const [avatarUrl, setAvatarUrl] = useState<string | null>(null)
+  const [uploadingAvatar, setUploadingAvatar] = useState(false)
+  const avatarInputRef = useRef<HTMLInputElement | null>(null)
+
+  useEffect(() => {
+    let active = true
+
+    async function loadAvatar() {
+      const supabase = createClient()
+      const {
+        data: { user: authUser },
+      } = await supabase.auth.getUser()
+
+      if (!authUser) return
+
+      const { data } = await supabase
+        .from('profiles')
+        .select('avatar_url')
+        .eq('id', authUser.id)
+        .maybeSingle()
+
+      if (active) setAvatarUrl(data?.avatar_url ?? null)
+    }
+
+    void loadAvatar()
+
+    return () => {
+      active = false
+    }
+  }, [])
+
+  async function handleAvatarUpload(file?: File) {
+    if (!file) return
+
+    const allowedTypes = ['image/jpeg', 'image/png', 'image/webp']
+    if (!allowedTypes.includes(file.type)) {
+      window.alert('Usa una imagen JPG, PNG o WEBP.')
+      return
+    }
+
+    if (file.size > 5 * 1024 * 1024) {
+      window.alert('La imagen debe pesar menos de 5 MB.')
+      return
+    }
+
+    setUploadingAvatar(true)
+
+    try {
+      const supabase = createClient()
+      const {
+        data: { user: authUser },
+        error: authError,
+      } = await supabase.auth.getUser()
+
+      if (authError || !authUser) throw new Error('No encontramos tu sesión.')
+
+      const extension =
+        file.type === 'image/png' ? 'png' : file.type === 'image/webp' ? 'webp' : 'jpg'
+      const path = `${authUser.id}/avatar.${extension}`
+
+      const { error: uploadError } = await supabase.storage
+        .from('profile-avatars')
+        .upload(path, file, {
+          cacheControl: '3600',
+          upsert: true,
+          contentType: file.type,
+        })
+
+      if (uploadError) throw uploadError
+
+      const { data: publicData } = supabase.storage
+        .from('profile-avatars')
+        .getPublicUrl(path)
+
+      const avatarUrlWithVersion = `${publicData.publicUrl}?v=${Date.now()}`
+
+      const response = await fetch('/api/access/avatar', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        cache: 'no-store',
+        body: JSON.stringify({ avatarUrl: avatarUrlWithVersion }),
+      })
+
+      const result = (await response.json()) as { avatarUrl?: string; error?: string }
+      if (!response.ok || !result.avatarUrl) {
+        throw new Error(result.error || 'No pudimos guardar tu foto.')
+      }
+
+      setAvatarUrl(result.avatarUrl)
+    } catch (error) {
+      console.error('Error subiendo foto de perfil:', error)
+      window.alert(error instanceof Error ? error.message : 'No pudimos subir la foto de perfil.')
+    } finally {
+      setUploadingAvatar(false)
+      if (avatarInputRef.current) avatarInputRef.current.value = ''
+    }
+  }
+
   return (
     <header className="flex h-[88px] shrink-0 items-center justify-between border-b border-[var(--border)] bg-[var(--surface)]/95 px-5 text-[var(--foreground)] backdrop-blur-xl transition-colors duration-300 sm:px-8">
       <div className="flex min-w-0 items-center gap-4">
@@ -93,13 +195,65 @@ export function Header({ onOpenMenu, isDark, onToggleTheme, showCompanyLogo = fa
 
         <div className="mx-2 hidden h-6 w-px bg-[var(--border)] sm:block" />
 
-        <div className="flex items-center gap-2.5 pl-1">
-          <span className="flex h-9 w-9 items-center justify-center rounded-full bg-[#343A40] text-[10px] font-bold text-white ring-2 ring-[var(--surface)]">
-            {user.initials}
-          </span>
-          <div className="hidden min-w-0 lg:block">
-            <p className="max-w-36 truncate text-xs font-medium text-[var(--foreground)]">{user.name}</p>
-            <p className="max-w-36 truncate text-[10px] text-[var(--muted)]">{user.role}</p>
+        <div className="ml-1 flex items-center gap-3 rounded-2xl border border-[var(--border)] bg-[var(--surface-soft)] px-3 py-2 shadow-sm sm:px-4">
+          <input
+            ref={avatarInputRef}
+            type="file"
+            accept="image/jpeg,image/png,image/webp"
+            className="hidden"
+            onChange={(event) => void handleAvatarUpload(event.target.files?.[0])}
+          />
+
+          <button
+            type="button"
+            onClick={() => avatarInputRef.current?.click()}
+            disabled={uploadingAvatar}
+            className="group relative flex h-12 w-12 shrink-0 items-center justify-center overflow-hidden rounded-full border-2 border-[#5496CC]/35 bg-[#343A40] text-xs font-bold text-white shadow-sm transition hover:scale-[1.03] disabled:cursor-wait sm:h-14 sm:w-14"
+            aria-label="Cambiar foto de perfil"
+            title="Cambiar foto de perfil"
+          >
+            {avatarUrl ? (
+              <img
+                src={avatarUrl}
+                alt={`Foto de perfil de ${user.name}`}
+                className="h-full w-full object-cover"
+              />
+            ) : (
+              <span>{user.initials}</span>
+            )}
+
+            <span className="absolute inset-0 flex items-center justify-center bg-black/0 text-white opacity-0 transition group-hover:bg-black/35 group-hover:opacity-100">
+              {uploadingAvatar ? (
+                <LoaderCircle size={18} className="animate-spin" />
+              ) : (
+                <Camera size={18} />
+              )}
+            </span>
+
+            <span className="absolute -bottom-0.5 -right-0.5 flex h-5 w-5 items-center justify-center rounded-full border-2 border-[var(--surface)] bg-[#5496CC] text-white shadow-sm">
+              {uploadingAvatar ? (
+                <LoaderCircle size={10} className="animate-spin" />
+              ) : (
+                <Camera size={10} />
+              )}
+            </span>
+          </button>
+
+          <div className="hidden min-w-0 sm:block">
+            <p className="max-w-44 truncate text-sm font-semibold text-[var(--foreground)]">
+              {user.name}
+            </p>
+            <p className="mt-0.5 max-w-44 truncate text-xs font-medium text-[#5496CC]">
+              {user.role}
+            </p>
+            <button
+              type="button"
+              onClick={() => avatarInputRef.current?.click()}
+              disabled={uploadingAvatar}
+              className="mt-1 text-[10px] font-semibold text-[var(--muted)] transition hover:text-[#5496CC] disabled:opacity-60"
+            >
+              {uploadingAvatar ? 'Subiendo...' : avatarUrl ? 'Cambiar foto' : 'Agregar foto'}
+            </button>
           </div>
         </div>
 
