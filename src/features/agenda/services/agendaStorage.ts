@@ -173,13 +173,24 @@ export async function deleteAgendaActivity(id: number): Promise<void> {
 }
 
 export async function migrateLocalAgendaIfNeeded(): Promise<AgendaItem[]> {
-  const remote = await loadAgendaActivities()
-  if (remote.length > 0) return remote
-
   const local = readAgendaActivities()
-  if (local.length === 0) return remote
-
   const supabase = createClient()
+
+  const { data: remoteData, error: remoteError } = await supabase
+    .from('agenda_activities')
+    .select('id,title,activity_date,activity_time,type,status')
+    .order('activity_date', { ascending: true })
+    .order('activity_time', { ascending: true })
+
+  if (remoteError) throw remoteError
+
+  const remote = ((remoteData ?? []) as AgendaRow[]).map(mapRow)
+
+  if (remote.length > 0 || local.length === 0) {
+    writeAgendaActivities(remote)
+    return remote
+  }
+
   const { data, error } = await supabase
     .from('agenda_activities')
     .insert(
@@ -196,6 +207,7 @@ export async function migrateLocalAgendaIfNeeded(): Promise<AgendaItem[]> {
   if (error) throw error
 
   const migrated = ((data ?? []) as AgendaRow[]).map(mapRow)
-  writeAgendaActivities(migrated)
-  return sortAgendaActivities(migrated)
+  const sorted = sortAgendaActivities(migrated)
+  writeAgendaActivities(sorted)
+  return sorted
 }
