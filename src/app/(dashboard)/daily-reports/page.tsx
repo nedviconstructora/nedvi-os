@@ -32,6 +32,14 @@ import {
 
 const MAX_REPORT_IMAGES = 30
 
+const REPORT_AUTHORS = [
+  'Nestor Ortiz',
+  'Cristian Medina',
+  'Victor Muciño',
+  'Edgardo Fierro',
+  'Pedro Garcia',
+] as const
+
 function today() {
   return new Date().toISOString().slice(0, 10)
 }
@@ -894,7 +902,18 @@ export default function DailyReportsPage() {
 
               <div className="grid gap-4 sm:grid-cols-2">
                 <label className="space-y-2"><span className="text-sm font-semibold">Personal en obra</span><input type="number" min="0" value={workers} onChange={(event) => setWorkers(event.target.value)} className="w-full rounded-xl border border-[var(--border)] bg-transparent px-4 py-3" /></label>
-                <label className="space-y-2"><span className="text-sm font-semibold">Elaboró</span><input value={author} onChange={(event) => setAuthor(event.target.value)} className="w-full rounded-xl border border-[var(--border)] bg-transparent px-4 py-3" /></label>
+                <label className="space-y-2">
+                  <span className="text-sm font-semibold">Elaboró</span>
+                  <select
+                    value={author}
+                    onChange={(event) => setAuthor(event.target.value)}
+                    className="w-full rounded-xl border border-[var(--border)] bg-transparent px-4 py-3"
+                  >
+                    {REPORT_AUTHORS.map((name) => (
+                      <option key={name} value={name}>{name}</option>
+                    ))}
+                  </select>
+                </label>
               </div>
 
               <label className="block space-y-2">
