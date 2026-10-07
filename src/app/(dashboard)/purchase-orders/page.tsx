@@ -1,5 +1,6 @@
 'use client'
 
+import Link from 'next/link'
 import { ChangeEvent, FormEvent, useCallback, useEffect, useMemo, useState } from 'react'
 import {
   Download,
@@ -527,7 +528,38 @@ export default function PurchaseOrdersPage() {
             <div className="mb-5 flex items-start justify-between"><div><p className="text-xs font-semibold uppercase tracking-wide text-[#5496CC]">Compras y Suministros</p><h2 className="mt-1 text-xl font-bold text-[var(--foreground)]">{editingOrder ? `Editar ${editingOrder.folio}` : 'Nueva orden de compra'}</h2></div><button type="button" onClick={closeForm} className="rounded-lg p-2 text-[var(--muted)]"><X size={18} /></button></div>
             <form onSubmit={saveOrder} className="space-y-6">
               <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-                <Field label="Requisición aprobada *"><select required value={requisitionId} onChange={(e) => handleRequisitionChange(e.target.value)} className="po-input"><option value="">Seleccionar requisición</option>{availableRequisitions.map((item) => <option key={item.id} value={item.id}>{item.folio} — {item.projectName}</option>)}</select></Field>
+                <div className="space-y-2">
+                  <div className="flex items-center justify-between gap-3">
+                    <span className="text-sm font-semibold text-[var(--foreground)]">Requisición aprobada *</span>
+                    <Link
+                      href="/requisitions"
+                      className="inline-flex items-center gap-1.5 rounded-lg border border-[#5496CC]/35 px-2.5 py-1.5 text-[11px] font-semibold text-[#5496CC] transition hover:bg-[#5496CC]/10"
+                    >
+                      <Plus size={13} />
+                      Nueva requisición
+                    </Link>
+                  </div>
+                  <select
+                    required
+                    value={requisitionId}
+                    onChange={(e) => handleRequisitionChange(e.target.value)}
+                    className="po-input"
+                  >
+                    <option value="">
+                      {availableRequisitions.length ? 'Seleccionar requisición' : 'No hay requisiciones aprobadas'}
+                    </option>
+                    {availableRequisitions.map((item) => (
+                      <option key={item.id} value={item.id}>
+                        {item.folio} — {item.projectName}
+                      </option>
+                    ))}
+                  </select>
+                  {!availableRequisitions.length ? (
+                    <p className="text-[11px] leading-5 text-[var(--muted)]">
+                      Crea una requisición y cámbiala a estado Aprobada para poder usarla en una orden de compra.
+                    </p>
+                  ) : null}
+                </div>
                 <Field label="Proveedor *"><select required value={supplierId} onChange={(e) => setSupplierId(e.target.value)} className="po-input"><option value="">Seleccionar proveedor</option>{activeSuppliers.map((supplier) => <option key={supplier.id} value={supplier.id}>{supplier.folio} — {supplier.company}</option>)}</select></Field>
                 <Field label="Moneda"><select value={currency} onChange={(e) => setCurrency(e.target.value as PurchasingCurrency)} className="po-input"><option value="MXN">MXN</option><option value="USD">USD</option></select></Field>
                 <Field label="Fecha de orden"><input type="date" max={today()} value={orderDate} onChange={(e) => {
