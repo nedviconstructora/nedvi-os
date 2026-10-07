@@ -219,12 +219,14 @@ export async function POST(request: Request) {
       position?: string
       role?: string
       permissions?: ModulePermission[]
+      password?: string
     }
 
     const name = body.name?.trim()
     const email = body.email?.trim().toLowerCase()
     const phone = body.phone?.trim() ?? ''
     const position = body.position?.trim() ?? ''
+    const requestedPassword = body.password?.trim()
     const role = databaseRole(body.role)
     const permissions =
       role === 'administracion'
@@ -240,13 +242,20 @@ export async function POST(request: Request) {
       )
     }
 
+    if (requestedPassword && requestedPassword.length < 8) {
+      return NextResponse.json(
+        { error: 'La contraseña debe tener al menos 8 caracteres.' },
+        { status: 400 },
+      )
+    }
+
     const admin = getAdminClient()
     let authUserId: string | undefined
     let createdNewUser = false
 
     const { data: created, error: createError } = await admin.auth.admin.createUser({
       email,
-      password: temporaryPassword(),
+      password: requestedPassword || temporaryPassword(),
       email_confirm: true,
       user_metadata: {
         full_name: name,
