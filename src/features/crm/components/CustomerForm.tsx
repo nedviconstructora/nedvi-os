@@ -35,14 +35,6 @@ const inputClassName =
 const labelClassName =
   'text-[11px] font-semibold uppercase tracking-[0.12em] text-[#9CA3AF]'
 
-const responsiblePeople = [
-  'Nestor Ortiz',
-  'Edgardo Fierro',
-  'Cristian Medina',
-  'Victor Muciño',
-  'Pedro Garcia',
-] as const
-
 export function CustomerForm({
   initialValues,
   mode,
@@ -133,7 +125,7 @@ export function CustomerForm({
         <label className={labelClassName}>Teléfono<input name="phone" type="tel" required defaultValue={initialValues?.phone} placeholder="+52 55 0000 0000" className={inputClassName} /></label>
         <label className={labelClassName}>Correo electrónico<input name="email" type="email" required defaultValue={initialValues?.email} placeholder="contacto@empresa.com" className={inputClassName} /></label>
         <label className={labelClassName}>RFC<input name="rfc" defaultValue={initialValues?.rfc} placeholder="GAD180426KQ2" className={inputClassName} /></label>
-        <label className={labelClassName}>Responsable comercial<select name="assignedSalesperson" value={assignedSalesperson} onChange={(event) => setAssignedSalesperson(event.target.value)} className={inputClassName}><option value="">Seleccionar responsable</option>{Array.from(new Set([...responsiblePeople, ...(sessionName ? [sessionName] : []), ...(assignedSalesperson ? [assignedSalesperson] : [])])).map((person) => <option value={person} key={person}>{person}</option>)}</select>{mode === 'create' && sessionName ? <span className="mt-1 block text-xs normal-case tracking-normal text-[#9CA3AF]">Seleccionado automáticamente según la sesión activa; puedes cambiarlo.</span> : null}</label>
+        <label className={labelClassName}>Responsable comercial<select name="assignedSalesperson" value={assignedSalesperson} onChange={() => {}} className={inputClassName} aria-label="Responsable comercial de solo lectura"><option value={assignedSalesperson}>{assignedSalesperson || 'Usuario de sesión no disponible'}</option></select></label>
         <label className={`${labelClassName} md:col-span-2`}>Dirección<input name="address" defaultValue={initialValues?.address} placeholder="Calle, colonia, ciudad y estado" className={inputClassName} /></label>
         <label className={labelClassName}>Tipo de proyecto<select name="projectType" required defaultValue={initialValues?.projectType ?? ''} className={inputClassName}><option value="">Seleccionar tipo de proyecto</option>{projectTypes.map((type) => <option value={type} key={type}>{type}</option>)}</select></label>
         <label className={labelClassName}>Origen del prospecto<select name="leadSource" required defaultValue={initialValues?.leadSource ?? ''} className={inputClassName}><option value="">Seleccionar origen</option>{leadSources.map((source) => <option value={source} key={source}>{source}</option>)}</select></label>
