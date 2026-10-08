@@ -91,6 +91,12 @@ export default function UsersAndPermissionsPage() {
   const [passwordRequests, setPasswordRequests] = useState<PasswordResetRequest[]>([])
   const [users, setUsers] = useState<AccessUser[]>([])
   const [search, setSearch] = useState('')
+  const [editUser, setEditUser] = useState<AccessUser | null>(null)
+  const [editName, setEditName] = useState('')
+  const [editPhone, setEditPhone] = useState('')
+  const [editPosition, setEditPosition] = useState('')
+  const [editError, setEditError] = useState('')
+  const [editingUser, setEditingUser] = useState(false)
   const [reviewingId, setReviewingId] = useState<string | null>(null)
   const [draftRole, setDraftRole] = useState<AppRole>('Supervisor')
   const [draftPermissions, setDraftPermissions] = useState<ModulePermission[]>(
@@ -162,6 +168,9 @@ export default function UsersAndPermissionsPage() {
     () => passwordRequests.filter((request) => request.status === 'Pendiente'),
     [passwordRequests],
   )
+
+  const teamUsers = visibleUsers.filter(user => user.role !== 'Cliente')
+  const clientUsers = visibleUsers.filter(user => user.role === 'Cliente')
 
   const activeUsersCount = users.filter((user) => user.status === 'Activo').length + 1
 
@@ -389,6 +398,32 @@ export default function UsersAndPermissionsPage() {
     }
   }
 
+  function openEditUser(user: AccessUser) {
+    setEditUser(user)
+    setEditName(user.name)
+    setEditPhone(user.phone ?? '')
+    setEditPosition(user.position ?? '')
+    setEditError('')
+  }
+
+  async function saveEditedUser() {
+    if (!editUser || editingUser) return
+    setEditingUser(true)
+    setEditError('')
+    try {
+      const response = await fetch('/api/access/users', {
+        method:'PATCH',headers:{'Content-Type':'application/json'},
+        body:JSON.stringify({ userId:editUser.id, name:editName.trim(),phone:editPhone.trim(),position:editPosition.trim() }),
+      })
+      const result = await response.json() as {error?:string}
+      if (!response.ok) throw new Error(result.error || 'No se pudo actualizar el usuario.')
+      setEditUser(null)
+      await refresh()
+    } catch(error) {
+      setEditError(error instanceof Error ? error.message : 'Error al guardar usuario.')
+    } finally { setEditingUser(false) }
+  }
+
   function openPasswordModal(user: AccessUser) {
     if (!isAdmin) return
     setSearch('')
@@ -602,7 +637,8 @@ export default function UsersAndPermissionsPage() {
               </div>
             </div>
 
-            {visibleUsers.map((user) => (
+            <div className="border-t border-[var(--border)] bg-[#5496CC]/10 px-5 py-3 text-sm font-bold text-[var(--foreground)]">Equipo NEDVI · {teamUsers.length} integrantes</div>
+            {teamUsers.map((user) => (
               <div key={user.id} className="grid gap-4 p-5 md:grid-cols-[minmax(220px,1.2fr)_minmax(150px,0.7fr)_minmax(180px,1fr)_minmax(230px,auto)] md:items-center">
                 <div className="flex items-center gap-3">
                   <span className="flex h-10 w-10 items-center justify-center rounded-full bg-[var(--surface-soft)] text-xs font-bold text-[var(--foreground)]">{initials(user.name)}</span>
@@ -625,6 +661,7 @@ export default function UsersAndPermissionsPage() {
                   >
                     {user.status}
                   </button>
+                  <button type="button" onClick={() => openEditUser(user)} className="inline-flex items-center gap-1.5 rounded-lg border border-[#5496CC]/25 px-2.5 py-1.5 text-xs font-semibold text-[#5496CC]"><UserRoundCog size={13}/>Editar</button>
                   <button
                     type="button"
                     onClick={() => openPasswordModal(user)}
