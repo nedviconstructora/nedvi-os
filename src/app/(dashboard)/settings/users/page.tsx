@@ -682,6 +682,11 @@ export default function UsersAndPermissionsPage() {
               </div>
             ))}
 
+            <div className="border-t border-[var(--border)] bg-[#5496CC]/10 px-5 py-3 text-sm font-bold text-[var(--foreground)]">Clientes · {clientUsers.length} cuentas</div>
+            {clientUsers.map(user => <div key={user.id} className="flex flex-wrap items-center justify-between gap-3 border-b border-[var(--border)] p-5">
+              <div><p className="text-sm font-semibold text-[var(--foreground)]">{user.name}</p><p className="text-xs text-[var(--muted)]">{user.email} · {user.customerFolio || 'Sin folio'}</p></div>
+              <span className="rounded-lg bg-[#5496CC]/10 px-3 py-1 text-xs font-semibold text-[#5496CC]">Cliente · {user.status}</span>
+            </div>)}
             {!visibleUsers.length && search ? <div className="p-8 text-center text-sm text-[var(--muted)]">No se encontraron usuarios.</div> : null}
           </div>
         </section>
@@ -855,6 +860,9 @@ export default function UsersAndPermissionsPage() {
                 <input
                   required
                   type="tel"
+                  name="nedvi-staff-contact-phone"
+                  autoComplete="off"
+                  inputMode="tel"
                   value={createPhone}
                   onChange={(event) => setCreatePhone(event.target.value)}
                   placeholder="Ej. 664 558 1946"
@@ -936,6 +944,7 @@ export default function UsersAndPermissionsPage() {
         </div>
       ) : null}
 
+      {editUser ? <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/60 p-4"><div className="w-full max-w-md space-y-4 rounded-2xl border border-[var(--border)] bg-[var(--surface)] p-6 shadow-2xl"><div className="flex items-center justify-between"><h2 className="text-lg font-bold text-[var(--foreground)]">Editar integrante NEDVI</h2><button onClick={() => setEditUser(null)} type="button" aria-label="Cerrar"><X size={19}/></button></div><label className="block text-xs text-[var(--muted)]">Nombre completo<input value={editName} onChange={e=>setEditName(e.target.value)} autoComplete="off" className="mt-2 h-11 w-full rounded-lg border border-[var(--border)] bg-[var(--surface-soft)] px-3 text-[var(--foreground)]"/></label><label className="block text-xs text-[var(--muted)]">Puesto<input value={editPosition} onChange={e=>setEditPosition(e.target.value)} autoComplete="off" className="mt-2 h-11 w-full rounded-lg border border-[var(--border)] bg-[var(--surface-soft)] px-3 text-[var(--foreground)]"/></label><label className="block text-xs text-[var(--muted)]">Teléfono de contacto<input type="tel" inputMode="tel" name="edit-staff-phone" autoComplete="off" value={editPhone} onChange={e=>setEditPhone(e.target.value)} placeholder="Ej. 664 558 1946" className="mt-2 h-11 w-full rounded-lg border border-[var(--border)] bg-[var(--surface-soft)] px-3 text-[var(--foreground)]"/></label>{editError?<p className="text-sm text-red-500">{editError}</p>:null}<button type="button" onClick={() => void saveEditedUser()} disabled={editingUser} className="w-full rounded-xl bg-[#5496CC] px-4 py-3 font-semibold text-white disabled:opacity-50">{editingUser?'Guardando...':'Guardar cambios'}</button></div></div> : null}
       {passwordUser ? (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/55 p-4 backdrop-blur-sm">
           <div className="w-full max-w-md rounded-2xl border border-[var(--border)] bg-[var(--surface)] p-6 shadow-2xl">
