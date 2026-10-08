@@ -9,7 +9,11 @@ function normalizeRole(value: unknown) {
     .replace(/[\u0300-\u036f]/g, '')
 }
 
-async function requireAdmin() {
+function canManageClientPortal(role: unknown) {
+  return ['administracion', 'administrador', 'admin', 'obra', 'supervisor'].includes(normalizeRole(role))
+}
+
+async function requirePortalManager() {
   const supabase = await createServerClient()
   const {
     data: { user },
@@ -30,23 +34,23 @@ async function requireAdmin() {
     .maybeSingle()
 
   if (profileError) {
-    console.error('Error consultando perfil administrador:', profileError)
+    console.error('Error consultando perfil para acceso al portal:', profileError)
     return {
       supabase,
       user: null,
       error: NextResponse.json(
-        { error: 'No pudimos validar el perfil de Administración.' },
+        { error: 'No pudimos validar el perfil del usuario.' },
         { status: 500 },
       ),
     }
   }
 
-  if (!profile?.active || normalizeRole(profile.role) !== 'administracion') {
+  if (!profile?.active || !canManageClientPortal(profile.role)) {
     return {
       supabase,
       user: null,
       error: NextResponse.json(
-        { error: 'Solo Administración puede asignar proyectos al portal.' },
+        { error: 'Solo Administración o Supervisor de Obra puede asignar proyectos al portal.' },
         { status: 403 },
       ),
     }
@@ -56,7 +60,7 @@ async function requireAdmin() {
 }
 
 export async function GET(request: Request) {
-  const auth = await requireAdmin()
+  const auth = await requirePortalManager()
   if (auth.error) return auth.error
 
   const userId = new URL(request.url).searchParams.get('userId')?.trim()
@@ -84,7 +88,7 @@ export async function GET(request: Request) {
 }
 
 export async function POST(request: Request) {
-  const auth = await requireAdmin()
+  const auth = await requirePortalManager()
   if (auth.error) return auth.error
 
   const body = (await request.json()) as {
