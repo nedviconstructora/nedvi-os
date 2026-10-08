@@ -1,7 +1,7 @@
 'use client'
 
 import Link from 'next/link'
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { Bot, ArrowRight, Search, Sparkles } from 'lucide-react'
 import { AppShell } from '@/components/layout/AppShell'
 import { readAccessSession } from '@/features/access/services/accessStorage'
@@ -22,10 +22,10 @@ const modules: Array<{label:string,href:string,permission:ModulePermission,keywo
 
 export default function NedviHelpPage() {
   const [query,setQuery] = useState('')
-  const [permissions] = useState<ModulePermission[]>(() => {
-    if (typeof window === 'undefined') return []
-    return readAccessSession()?.permissions ?? []
-  })
+  const [permissions,setPermissions] = useState<ModulePermission[]>([])
+  useEffect(() => {
+    setPermissions(readAccessSession()?.permissions ?? [])
+  }, [])
   const visible = useMemo(() => modules.filter(item => permissions.includes(item.permission) && (item.label+' '+item.keywords+' '+item.description).toLowerCase().includes(query.trim().toLowerCase())),[permissions,query])
   return <AppShell>
     <div className="mx-auto w-full max-w-5xl space-y-7">
