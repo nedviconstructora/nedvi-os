@@ -391,6 +391,7 @@ export default function UsersAndPermissionsPage() {
 
   function openPasswordModal(user: AccessUser) {
     if (!isAdmin) return
+    setSearch('')
     setPasswordUser(user)
     setNewPassword('')
     setConfirmPassword('')
@@ -574,6 +575,10 @@ export default function UsersAndPermissionsPage() {
                   value={search}
                   onChange={(event) => setSearch(event.target.value)}
                   placeholder="Buscar usuario..."
+                  type="search"
+                  name="nedvi-user-list-search"
+                  autoComplete="off"
+                  aria-label="Filtrar lista de usuarios"
                   className="h-10 w-full rounded-xl border border-[var(--border)] bg-[var(--surface-soft)] pl-9 pr-3 text-sm text-[var(--foreground)] outline-none focus:border-[#5496CC] focus:ring-4 focus:ring-[#5496CC]/10"
                 />
               </div>
@@ -901,7 +906,7 @@ export default function UsersAndPermissionsPage() {
                 <h2 className="mt-2 text-xl font-bold text-[var(--foreground)]">Cambiar contraseña</h2>
                 <p className="mt-1 text-sm text-[var(--muted)]">{passwordUser.name} · {passwordUser.email}</p>
               </div>
-              <button type="button" onClick={() => setPasswordUser(null)} className="rounded-lg p-2 text-[var(--muted)] hover:bg-[var(--surface-soft)]"><X size={18} /></button>
+              <button type="button" onClick={() => { setPasswordUser(null); setSearch('') }} className="rounded-lg p-2 text-[var(--muted)] hover:bg-[var(--surface-soft)]"><X size={18} /></button>
             </div>
 
             <div className="mt-6 space-y-4">
@@ -921,7 +926,7 @@ export default function UsersAndPermissionsPage() {
               {passwordSaved ? <p className="text-sm text-emerald-600">Contraseña actualizada correctamente.</p> : null}
             </div>
             <div className="mt-6 flex justify-end gap-2">
-              <button type="button" onClick={() => setPasswordUser(null)} className="h-10 rounded-xl border border-[var(--border)] px-4 text-sm font-semibold text-[var(--foreground)]">Cerrar</button>
+              <button type="button" onClick={() => { setPasswordUser(null); setSearch('') }} className="h-10 rounded-xl border border-[var(--border)] px-4 text-sm font-semibold text-[var(--foreground)]">Cerrar</button>
               <button type="button" onClick={savePassword} className="h-10 rounded-xl bg-[#7DC6FF] px-4 text-sm font-semibold text-black">Guardar contraseña</button>
             </div>
           </div>
