@@ -392,13 +392,7 @@ export function ProjectForm({
 
           <label className={labelClassName}>
             Responsable del proyecto
-            <input
-              name="manager"
-              value={mode === 'create' ? sessionManager : (initialValues?.manager ?? '')}
-              readOnly
-              placeholder="Usuario de sesión activa"
-              className={inputClassName}
-            />
+            <select name="manager" value={mode === 'create' ? sessionManager : (initialValues?.manager ?? '')} onChange={() => {}} className={inputClassName} aria-label="Responsable del proyecto de solo lectura"><option value={mode === 'create' ? sessionManager : (initialValues?.manager ?? '')}>{(mode === 'create' ? sessionManager : initialValues?.manager) || 'Usuario de sesión no disponible'}</option></select>
           </label>
 
           <label className={labelClassName}>
