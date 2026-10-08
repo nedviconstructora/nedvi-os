@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server'
 import { createClient } from '@/utils/supabase/server'
+import { createClient as createAdminClient } from '@supabase/supabase-js'
 
 export async function GET(request: Request) {
   const supabase = await createClient()
@@ -14,7 +15,11 @@ export async function GET(request: Request) {
   const name = new URL(request.url).searchParams.get('name')?.trim() ?? ''
   if (!name || name.length > 120) return NextResponse.json({ phone: null }, { status: 200 })
 
-  const { data, error } = await supabase.from('profiles').select('full_name,phone,role,active').eq('full_name',name).eq('active',true).limit(2)
+  const url = process.env.NEXT_PUBLIC_SUPABASE_URL
+  const key = process.env.SUPABASE_SERVICE_ROLE_KEY
+  if (!url || !key) return NextResponse.json({ error: 'Configuración no disponible.' }, { status: 500 })
+  const admin = createAdminClient(url,key,{auth:{autoRefreshToken:false,persistSession:false}})
+  const { data, error } = await admin.from('profiles').select('full_name,phone,role,active').eq('full_name',name).eq('active',true).limit(2)
   if (error) return NextResponse.json({ error: 'No pudimos consultar el contacto.' }, { status: 500 })
   const staff = (data ?? []).filter(person => ['administracion','obra','supervisor'].includes(String(person.role ?? '').toLowerCase()))
   return NextResponse.json({ phone: staff.length === 1 ? staff[0].phone || null : null })
