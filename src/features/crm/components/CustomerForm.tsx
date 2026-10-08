@@ -5,6 +5,7 @@ import { useEffect, useState, type FormEvent } from 'react'
 import { useRouter } from 'next/navigation'
 import { Save } from 'lucide-react'
 import { readAccessSession } from '@/features/access/services/accessStorage'
+import { ResponsibleContact } from '@/features/access/components/ResponsibleContact'
 import {
   createCustomerInSupabase,
   updateCustomerInSupabase,
@@ -125,7 +126,7 @@ export function CustomerForm({
         <label className={labelClassName}>Teléfono<input name="phone" type="tel" required defaultValue={initialValues?.phone} placeholder="+52 55 0000 0000" className={inputClassName} /></label>
         <label className={labelClassName}>Correo electrónico<input name="email" type="email" required defaultValue={initialValues?.email} placeholder="contacto@empresa.com" className={inputClassName} /></label>
         <label className={labelClassName}>RFC<input name="rfc" defaultValue={initialValues?.rfc} placeholder="GAD180426KQ2" className={inputClassName} /></label>
-        <label className={labelClassName}>Responsable comercial<select name="assignedSalesperson" value={assignedSalesperson} onChange={() => {}} className={inputClassName} aria-label="Responsable comercial de solo lectura"><option value={assignedSalesperson}>{assignedSalesperson || 'Usuario de sesión no disponible'}</option></select></label>
+        <label className={labelClassName}>Responsable comercial<select name="assignedSalesperson" value={assignedSalesperson} onChange={() => {}} className={inputClassName} aria-label="Responsable comercial de solo lectura"><option value={assignedSalesperson}>{assignedSalesperson || 'Usuario de sesión no disponible'}</option></select><ResponsibleContact name={assignedSalesperson} /></label>
         <label className={`${labelClassName} md:col-span-2`}>Dirección<input name="address" defaultValue={initialValues?.address} placeholder="Calle, colonia, ciudad y estado" className={inputClassName} /></label>
         <label className={labelClassName}>Tipo de proyecto<select name="projectType" required defaultValue={initialValues?.projectType ?? ''} className={inputClassName}><option value="">Seleccionar tipo de proyecto</option>{projectTypes.map((type) => <option value={type} key={type}>{type}</option>)}</select></label>
         <label className={labelClassName}>Origen del prospecto<select name="leadSource" required defaultValue={initialValues?.leadSource ?? ''} className={inputClassName}><option value="">Seleccionar origen</option>{leadSources.map((source) => <option value={source} key={source}>{source}</option>)}</select></label>
