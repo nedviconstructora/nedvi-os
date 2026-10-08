@@ -78,6 +78,13 @@ function initials(name: string) {
     .join('')
 }
 
+function generateSecurePassword() {
+  const alphabet = 'ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz23456789!@#$%*'
+  const bytes = new Uint32Array(18)
+  crypto.getRandomValues(bytes)
+  return Array.from(bytes, value => alphabet[value % alphabet.length]).join('')
+}
+
 export default function UsersAndPermissionsPage() {
   const [tab, setTab] = useState<Tab>('users')
   const [requests, setRequests] = useState<RegistrationRequest[]>([])
@@ -831,6 +838,11 @@ export default function UsersAndPermissionsPage() {
                 </div>
               </label>
 
+              <div className="sm:col-span-2 flex flex-wrap items-center gap-3">
+                <button type="button" onClick={() => { const password = generateSecurePassword(); setCreatePassword(password); setCreateConfirmPassword(password); setCreateShowPassword(true) }} className="rounded-xl border border-[#5496CC]/40 px-4 py-2 text-xs font-semibold text-[#5496CC] hover:bg-[#5496CC]/10"><KeyRound size={14} className="mr-2 inline" />Generar contraseña aleatoria</button>
+                <span className="text-xs text-[var(--muted)]">Se completarán contraseña y confirmación automáticamente.</span>
+              </div>
+
               <label className="block">
                 <span className="text-xs font-semibold text-[var(--muted)]">Confirmar contraseña *</span>
                 <input
@@ -900,6 +912,7 @@ export default function UsersAndPermissionsPage() {
                   <button type="button" onClick={() => setShowNewPassword((value) => !value)} className="absolute inset-y-0 right-2 flex items-center px-2 text-[var(--muted)]">{showNewPassword ? <EyeOff size={16} /> : <Eye size={16} />}</button>
                 </div>
               </label>
+              <button type="button" onClick={() => { const password = generateSecurePassword(); setNewPassword(password); setConfirmPassword(password); setShowNewPassword(true); setPasswordError(''); setPasswordSaved(false) }} className="rounded-xl border border-[#5496CC]/40 px-4 py-2 text-xs font-semibold text-[#5496CC] hover:bg-[#5496CC]/10"><KeyRound size={14} className="mr-2 inline" />Generar contraseña aleatoria</button>
               <label className="block">
                 <span className="text-xs font-semibold text-[var(--muted)]">Confirmar contraseña</span>
                 <input type={showNewPassword ? 'text' : 'password'} value={confirmPassword} onChange={(event) => setConfirmPassword(event.target.value)} className="mt-2 h-11 w-full rounded-xl border border-[var(--border)] bg-[var(--surface-soft)] px-3 text-sm text-[var(--foreground)] outline-none focus:border-[#5496CC]" />
