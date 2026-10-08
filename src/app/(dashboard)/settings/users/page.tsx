@@ -169,9 +169,6 @@ export default function UsersAndPermissionsPage() {
     [passwordRequests],
   )
 
-  const teamUsers = visibleUsers.filter(user => user.role !== 'Cliente')
-  const clientUsers = visibleUsers.filter(user => user.role === 'Cliente')
-
   const activeUsersCount = users.filter((user) => user.status === 'Activo').length + 1
 
   const visibleUsers = useMemo(() => {
@@ -184,6 +181,9 @@ export default function UsersAndPermissionsPage() {
         .includes(normalizedSearch),
     )
   }, [search, users])
+
+  const teamUsers = visibleUsers.filter(user => user.role !== 'Cliente')
+  const clientUsers = visibleUsers.filter(user => user.role === 'Cliente')
 
   function resetCreateUserForm() {
     setCreateName('')
