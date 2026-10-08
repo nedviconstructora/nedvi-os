@@ -73,11 +73,6 @@ const STORAGE_KEY = 'nedvi_quotes'
 const SEQUENCE_KEY = 'nedvi_quotes_sequence'
 const PROJECT_INTAKE_KEY = 'nedvi_projects_from_quotes'
 
-const monthOptions = [
-  'Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio',
-  'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre',
-]
-
 const unitOptions: UnitMeasure[] = [
   'Kilómetros',
   'Metros Cuadrados',
@@ -92,14 +87,6 @@ const unitOptions: UnitMeasure[] = [
   'Circuitos',
   'Otros',
 ]
-
-const QUOTE_RESPONSIBLES = [
-  'Nestor Ortiz',
-  'Cristian Medina',
-  'Victor Muciño',
-  'Edgardo Fierro',
-  'Pedro Garcia',
-] as const
 
 const emptyItem = (): QuoteItem => ({
   id: crypto.randomUUID(),
@@ -175,16 +162,6 @@ function statusClass(status: QuoteStatus) {
     Vencida: 'bg-amber-100 text-amber-700 dark:bg-amber-950/50 dark:text-amber-300',
   }
   return classes[status]
-}
-
-function splitDate(value: string) {
-  if (!value) return { year: '', month: '', day: '' }
-  const [year = '', month = '', day = ''] = value.split('-')
-  return { year, month, day }
-}
-
-function daysInMonth(year: number, month: number) {
-  return new Date(year, month, 0).getDate()
 }
 
 function isValidQuoteItem(item: QuoteItem) {
