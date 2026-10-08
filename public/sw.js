@@ -1,4 +1,6 @@
-const CACHE_NAME = 'nedvi-os-static-v4'
+// NEDVI OS: Do not cache build-fingerprinted Next.js assets.
+// HTML from a different deployment must fetch matching CSS/JS from the network.
+const CACHE_NAME = 'nedvi-os-static-v5'
 const STATIC_ASSETS = ['/icon.png', '/logo-blanco.svg']
 
 self.addEventListener('install', (event) => {
@@ -18,27 +20,19 @@ self.addEventListener('activate', (event) => {
 self.addEventListener('fetch', (event) => {
   const request = event.request
   if (request.method !== 'GET') return
-
   const url = new URL(request.url)
   if (url.origin !== self.location.origin) return
 
-  if (url.pathname.startsWith('/_next/static/') || STATIC_ASSETS.includes(url.pathname)) {
+  // Never serve deployment-specific Next.js assets from an old Service Worker cache.
+  if (url.pathname.startsWith('/_next/')) return
+
+  if (STATIC_ASSETS.includes(url.pathname)) {
     event.respondWith(
-      caches.match(request).then((cached) => {
-        if (cached) return cached
-        return fetch(request).then((response) => {
-          const copy = response.clone()
-          caches.open(CACHE_NAME).then((cache) => cache.put(request, copy))
-          return response
-        })
-      })
+      fetch(request).catch(() => caches.match(request))
     )
   }
 })
 
-
 self.addEventListener('message', (event) => {
-  if (event.data?.type === 'SKIP_WAITING') {
-    self.skipWaiting()
-  }
+  if (event.data?.type === 'SKIP_WAITING') self.skipWaiting()
 })
