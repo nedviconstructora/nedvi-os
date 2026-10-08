@@ -860,11 +860,20 @@ export default function UsersAndPermissionsPage() {
                 <input
                   required
                   type="tel"
-                  name="nedvi-staff-contact-phone"
-                  autoComplete="off"
-                  inputMode="tel"
+                  name="nedvi-contact-mobile-number-only"
+                  autoComplete="new-password"
+                  inputMode="numeric"
+                  pattern="[0-9+() .-]{10,20}"
+                  maxLength={20}
                   value={createPhone}
-                  onChange={(event) => setCreatePhone(event.target.value)}
+                  onChange={(event) => setCreatePhone(event.target.value.replace(/[^0-9+() .-]/g, ''))}
+                  onFocus={(event) => {
+                    // Some password managers insert login emails without firing an input event.
+                    if (/[@a-z]/i.test(event.currentTarget.value)) {
+                      event.currentTarget.value = ''
+                      setCreatePhone('')
+                    }
+                  }}
                   placeholder="Ej. 664 558 1946"
                   className="mt-2 h-11 w-full rounded-xl border border-[var(--border)] bg-[var(--surface-soft)] px-3 text-sm text-[var(--foreground)] outline-none focus:border-[#5496CC]"
                 />
