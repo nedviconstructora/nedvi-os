@@ -23,6 +23,7 @@ import {
   X,
 } from 'lucide-react'
 import { AppShell } from '@/components/layout/AppShell'
+import { readAccessSession } from '@/features/access/services/accessStorage'
 import { getCustomersFromSupabase } from '@/features/crm/services/customerSupabase'
 import type { Customer } from '@/features/crm/types/customer'
 
@@ -199,8 +200,10 @@ export default function SiteSurveysPage() {
   const [viewing, setViewing] = useState<SiteSurvey | null>(null)
   const [form, setForm] = useState<SurveyForm>(emptyForm())
   const [estimatedTimeUnit, setEstimatedTimeUnit] = useState<EstimatedTimeUnit>('Días')
+  const [sessionName, setSessionName] = useState('')
 
   useEffect(() => {
+    setSessionName(readAccessSession()?.name?.trim() ?? '')
     setSurveys(readSurveys())
   }, [])
 
@@ -227,6 +230,8 @@ export default function SiteSurveysPage() {
       window.removeEventListener('focus', handleFocus)
     }
   }, [])
+
+  const performerOptions = useMemo(() => Array.from(new Set([...PERFORMED_BY_OPTIONS, ...(sessionName ? [sessionName] : []), ...(form.performedBy ? [form.performedBy] : [])])), [sessionName, form.performedBy])
 
   const customerOptions = useMemo(
     () => [...customers].sort((a, b) => a.company.localeCompare(b.company, 'es')),
@@ -256,7 +261,7 @@ export default function SiteSurveysPage() {
   function openNew() {
     setEditingId(null)
     setEstimatedTimeUnit('Días')
-    setForm(emptyForm())
+    setForm({ ...emptyForm(), performedBy: readAccessSession()?.name?.trim() ?? sessionName })
     setOpen(true)
   }
 
@@ -602,7 +607,7 @@ export default function SiteSurveysPage() {
                       className="survey-input"
                     >
                       <option value="">Seleccionar responsable</option>
-                      {PERFORMED_BY_OPTIONS.map((person) => (
+                      {performerOptions.map((person) => (
                         <option key={person} value={person}>{person}</option>
                       ))}
                     </select>
