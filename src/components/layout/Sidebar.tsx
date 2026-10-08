@@ -306,10 +306,10 @@ export function Sidebar({
         {canUse('coral') ? (
           <>
             <div className="my-5 border-t border-white/10" />
-            <button type="button" title={collapsed ? 'Coral' : undefined} className={`group relative flex h-11 w-full items-center gap-3 rounded-xl border border-white/[0.10] bg-white/[0.06] px-3 text-left text-[13px] font-medium text-white backdrop-blur-md transition hover:bg-white/[0.12] ${collapsed ? 'lg:justify-center lg:gap-0 lg:px-0' : ''}`}>
+            <button type="button" title={collapsed ? 'NEDVI' : undefined} onClick={() => { router.push('/nedvi'); onCloseMobile() }} className={`group relative flex h-11 w-full items-center gap-3 rounded-xl border border-white/[0.10] bg-white/[0.06] px-3 text-left text-[13px] font-medium text-white backdrop-blur-md transition hover:bg-white/[0.12] ${collapsed ? 'lg:justify-center lg:gap-0 lg:px-0' : ''}`}>
               <Bot size={18} strokeWidth={1.8} className="shrink-0 text-white" />
-              <span className={`whitespace-nowrap transition-opacity duration-200 ${collapsed ? 'lg:hidden' : 'opacity-100'}`}>Coral</span>
-              <span className={`ml-auto rounded-md bg-white/10 px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wider text-white/70 ${collapsed ? 'lg:hidden' : ''}`}>AI</span>
+              <span className={`whitespace-nowrap transition-opacity duration-200 ${collapsed ? 'lg:hidden' : 'opacity-100'}`}>NEDVI</span>
+              <span className={`ml-auto rounded-md bg-white/10 px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wider text-white/70 ${collapsed ? 'lg:hidden' : ''}`}>AYUDA</span>
             </button>
           </>
         ) : null}
