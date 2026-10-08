@@ -3,6 +3,7 @@ import { createProjectInSupabase } from '@/features/projects/services/projectSup
 
 import { ChangeEvent, FormEvent, useEffect, useMemo, useRef, useState } from 'react'
 import { AppShell } from '@/components/layout/AppShell'
+import { readAccessSession } from '@/features/access/services/accessStorage'
 import { getCustomersFromSupabase } from '@/features/crm/services/customerSupabase'
 import type { Customer } from '@/features/crm/types/customer'
 import { createClient } from '@/lib/supabase/client'
@@ -315,6 +316,7 @@ export default function QuotesPage() {
   const [taxRate, setTaxRate] = useState('16')
   const [quoteCurrency, setQuoteCurrency] = useState<QuoteCurrency>('MXN')
   const [owner, setOwner] = useState('')
+  const [sessionName, setSessionName] = useState('')
   const [notes, setNotes] = useState('')
   const [status, setStatus] = useState<QuoteStatus>('Borrador')
   const [concepts, setConcepts] = useState<QuoteItem[]>([emptyItem()])
@@ -459,33 +461,9 @@ export default function QuotesPage() {
     })
   }, [quotes, search, statusFilter])
 
-  const selectedDate = splitDate(validUntil)
-  const currentYear = new Date().getFullYear()
-  const yearOptions = Array.from({ length: 16 }, (_, index) => currentYear + index)
-  const maxDays =
-    selectedDate.month && selectedDate.year
-      ? daysInMonth(Number(selectedDate.year), Number(selectedDate.month))
-      : 31
-  const dayOptions = Array.from({ length: maxDays }, (_, index) => index + 1)
-
-  function updateValidUntil(part: 'day' | 'month' | 'year', value: string) {
-    const current = splitDate(validUntil)
-    const next = { ...current, [part]: value }
-
-    if (part === 'month' || part === 'year') {
-      const targetYear = Number(next.year || currentYear)
-      const targetMonth = Number(next.month || 1)
-      const maximum = daysInMonth(targetYear, targetMonth)
-      if (Number(next.day) > maximum) next.day = String(maximum).padStart(2, '0')
-    }
-
-    if (next.year && next.month && next.day) {
-      setValidUntil(`${next.year}-${next.month.padStart(2, '0')}-${next.day.padStart(2, '0')}`)
-      return
-    }
-
-    setValidUntil([next.year, next.month, next.day].join('-'))
-  }
+  const formatLocal = (d: Date) => d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0')
+  const minValidity = formatLocal(new Date())
+  const maxValidity = (() => { const d = new Date(); d.setDate(d.getDate() + 30); return formatLocal(d) })()
 
   function handleClientChange(value: string) {
     setClientName(value)
@@ -497,14 +475,7 @@ export default function QuotesPage() {
     }
 
     setSelectedCustomerInfo(customerSnapshot(matchedCustomer))
-    if (
-      matchedCustomer.assignedSalesperson &&
-      QUOTE_RESPONSIBLES.includes(matchedCustomer.assignedSalesperson as (typeof QUOTE_RESPONSIBLES)[number])
-    ) {
-      setOwner(matchedCustomer.assignedSalesperson)
-    } else {
-      setOwner('')
-    }
+
   }
 
   function resetForm() {
@@ -514,7 +485,7 @@ export default function QuotesPage() {
     setValidUntil('')
     setTaxRate('16')
     setQuoteCurrency('MXN')
-    setOwner('')
+    setOwner(readAccessSession()?.name?.trim() ?? '')
     setNotes('')
     setStatus('Borrador')
     setConcepts([emptyItem()])
@@ -527,11 +498,13 @@ export default function QuotesPage() {
   }
 
   function openNew() {
+    setSessionName(readAccessSession()?.name?.trim() ?? '')
     resetForm()
     setOpen(true)
   }
 
   function openEdit(quote: Quote) {
+    setSessionName(readAccessSession()?.name?.trim() ?? '')
     const matchedCustomer = customers.find(
       (customer) => customer.id === quote.customerId || customer.company === quote.client,
     )
@@ -672,8 +645,12 @@ export default function QuotesPage() {
       return
     }
 
-    if (validUntil && validUntil.split('-').some((part) => !part)) {
-      alert('Selecciona día, mes y año para la vigencia.')
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(validUntil) || validUntil < minValidity || validUntil > maxValidity) {
+      alert('La vigencia debe estar entre hoy y los próximos 30 días.')
+      return
+    }
+    if (!readAccessSession()?.name?.trim()) {
+      alert('Inicia sesión nuevamente para identificar al responsable.')
       return
     }
 
@@ -705,7 +682,7 @@ export default function QuotesPage() {
           taxRate: Number(taxRate || 0),
           ...calculated,
           status,
-          owner: owner.trim(),
+          owner: editingId ? owner.trim() : (readAccessSession()?.name?.trim() ?? ''),
           notes: notes.trim(),
         }
 
@@ -729,7 +706,7 @@ export default function QuotesPage() {
           taxRate: Number(taxRate || 0),
           ...calculated,
           status,
-          owner: owner.trim(),
+          owner: editingId ? owner.trim() : (readAccessSession()?.name?.trim() ?? ''),
           notes: notes.trim(),
         }
 
@@ -924,28 +901,8 @@ export default function QuotesPage() {
 
                   <label className="space-y-2"><span className="text-sm font-semibold">Proyecto / servicio *</span><input value={project} onChange={(e) => setProject(e.target.value)} placeholder="Ej. Remodelación de oficinas" className="w-full rounded-xl border border-slate-200 bg-transparent px-4 py-3 dark:border-slate-700" /></label>
 
-                  <div className="space-y-2">
-                    <span className="text-sm font-semibold">Vigencia</span>
-                    <div className="grid grid-cols-[0.8fr_1.45fr_1fr] gap-2">
-                      <select aria-label="Día de vigencia" value={selectedDate.day ? String(Number(selectedDate.day)) : ''} onChange={(event) => updateValidUntil('day', event.target.value)} className="w-full rounded-xl border border-slate-200 bg-transparent px-3 py-3 dark:border-slate-700"><option value="">Día</option>{dayOptions.map((day) => <option key={day} value={day}>{day}</option>)}</select>
-                      <select aria-label="Mes de vigencia" value={selectedDate.month ? String(Number(selectedDate.month)) : ''} onChange={(event) => updateValidUntil('month', event.target.value)} className="w-full rounded-xl border border-slate-200 bg-transparent px-3 py-3 dark:border-slate-700"><option value="">Mes</option>{monthOptions.map((month, index) => <option key={month} value={index + 1}>{month}</option>)}</select>
-                      <select aria-label="Año de vigencia" value={selectedDate.year} onChange={(event) => updateValidUntil('year', event.target.value)} className="w-full rounded-xl border border-slate-200 bg-transparent px-3 py-3 dark:border-slate-700"><option value="">Año</option>{yearOptions.map((year) => <option key={year} value={year}>{year}</option>)}</select>
-                    </div>
-                  </div>
-
-                  <label className="space-y-2">
-                    <span className="text-sm font-semibold">Responsable</span>
-                    <select
-                      value={owner}
-                      onChange={(e) => setOwner(e.target.value)}
-                      className="w-full rounded-xl border border-slate-200 bg-transparent px-4 py-3 dark:border-slate-700"
-                    >
-                      <option value="">Seleccionar responsable</option>
-                      {QUOTE_RESPONSIBLES.map((name) => (
-                        <option key={name} value={name}>{name}</option>
-                      ))}
-                    </select>
-                  </label>
+                  <label className="space-y-2"><span className="text-sm font-semibold">Vigencia (máximo 30 días) *</span><input type="date" required value={validUntil} min={minValidity} max={maxValidity} onChange={(event) => setValidUntil(event.target.value)} className="w-full rounded-xl border border-slate-200 bg-transparent px-4 py-3 dark:border-slate-700" /><span className="block text-xs text-slate-500">Desde hoy hasta los próximos 30 días.</span></label>
+                  <label className="space-y-2"><span className="text-sm font-semibold">Responsable (usuario activo)</span><input value={editingId ? owner : sessionName} readOnly className="w-full rounded-xl border border-slate-200 bg-slate-100 px-4 py-3 text-slate-800 dark:border-slate-700 dark:bg-slate-800 dark:text-white" /></label>
                   <label className="space-y-2"><span className="text-sm font-semibold">Estado</span><select value={status} onChange={(e) => setStatus(e.target.value as QuoteStatus)} className="w-full rounded-xl border border-slate-200 bg-transparent px-4 py-3 dark:border-slate-700"><option>Borrador</option><option>Enviada</option><option>Aprobada</option><option>Rechazada</option><option>Vencida</option></select></label>
                   <label className="space-y-2"><span className="text-sm font-semibold">IVA (%)</span><input type="number" min="0" step="0.01" value={taxRate} onChange={(e) => setTaxRate(e.target.value)} className="w-full rounded-xl border border-slate-200 bg-transparent px-4 py-3 dark:border-slate-700" /></label>
                   <label className="space-y-2"><span className="text-sm font-semibold">Moneda</span><select value={quoteCurrency} onChange={(e) => setQuoteCurrency(e.target.value as QuoteCurrency)} className="w-full rounded-xl border border-slate-200 bg-transparent px-4 py-3 dark:border-slate-700"><option value="MXN">Pesos mexicanos (MXN)</option><option value="USD">Dólares estadounidenses (USD)</option></select></label>
