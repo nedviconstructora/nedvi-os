@@ -1,4 +1,5 @@
 'use client'
+import { PurchasingCloudMigration } from '@/features/purchasing/PurchasingCloudMigration'
 
 import { FormEvent, useCallback, useEffect, useMemo, useState } from 'react'
 import { ClipboardList, Eye, Plus, Search, Trash2, X } from 'lucide-react'
@@ -213,6 +214,7 @@ export default function RequisitionsPage() {
   return (
     <AppShell>
       <div className="mx-auto w-full max-w-[1600px] space-y-6">
+        <PurchasingCloudMigration />
         <header className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
           <div>
             <p className="text-xs font-semibold uppercase tracking-[0.16em] text-[#5496CC]">Compras y Suministros</p>
