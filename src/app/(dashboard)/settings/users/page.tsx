@@ -814,11 +814,13 @@ export default function UsersAndPermissionsPage() {
               </label>
 
               <label className="block">
-                <span className="text-xs font-semibold text-[var(--muted)]">Teléfono</span>
+                <span className="text-xs font-semibold text-[var(--muted)]">Teléfono de contacto *</span>
                 <input
+                  required
+                  type="tel"
                   value={createPhone}
                   onChange={(event) => setCreatePhone(event.target.value)}
-                  placeholder="Opcional"
+                  placeholder="Ej. 664 558 1946"
                   className="mt-2 h-11 w-full rounded-xl border border-[var(--border)] bg-[var(--surface-soft)] px-3 text-sm text-[var(--foreground)] outline-none focus:border-[#5496CC]"
                 />
               </label>

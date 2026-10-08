@@ -5,6 +5,7 @@ import { useEffect, useMemo, useState, type FormEvent } from 'react'
 import { useRouter } from 'next/navigation'
 import { ExternalLink, MapPin, Save } from 'lucide-react'
 import { readAccessSession } from '@/features/access/services/accessStorage'
+import { ResponsibleContact } from '@/features/access/components/ResponsibleContact'
 import { getCustomersFromSupabase } from '@/features/crm/services/customerSupabase'
 import type { Customer } from '@/features/crm/types/customer'
 import {
@@ -393,6 +394,7 @@ export function ProjectForm({
           <label className={labelClassName}>
             Responsable del proyecto
             <select name="manager" value={mode === 'create' ? sessionManager : (initialValues?.manager ?? '')} onChange={() => {}} className={inputClassName} aria-label="Responsable del proyecto de solo lectura"><option value={mode === 'create' ? sessionManager : (initialValues?.manager ?? '')}>{(mode === 'create' ? sessionManager : initialValues?.manager) || 'Usuario de sesión no disponible'}</option></select>
+            <ResponsibleContact name={mode === 'create' ? sessionManager : (initialValues?.manager ?? '')} />
           </label>
 
           <label className={labelClassName}>

@@ -225,6 +225,9 @@ export async function POST(request: Request) {
     const name = body.name?.trim()
     const email = body.email?.trim().toLowerCase()
     const phone = body.phone?.trim() ?? ''
+    if (!/^\+?[\d\s().-]{10,20}$/.test(phone) || phone.replace(/\D/g, '').length < 10) {
+      return NextResponse.json({ error: 'El número de contacto del usuario es obligatorio (mínimo 10 dígitos).' }, { status: 400 })
+    }
     const position = body.position?.trim() ?? ''
     const requestedPassword = body.password?.trim()
     const role = databaseRole(body.role)
