@@ -59,13 +59,6 @@ type SurveyForm = Omit<SiteSurvey, 'id' | 'createdAt' | 'updatedAt'>
 const STORAGE_KEY = 'nedvi_site_surveys'
 const EXECUTION_OPTIONS: ExecutionTime[] = ['Jornada normal', 'Fin de semana', 'Extraordinaria']
 const ESTIMATED_TIME_UNITS: EstimatedTimeUnit[] = ['Horas', 'Días', 'Semanas', 'Meses']
-const PERFORMED_BY_OPTIONS = [
-  'Nestor Ortiz',
-  'Cristian Medina',
-  'Victor Muciño',
-  'Edgardo Fierro',
-  'Pedro Garcia',
-] as const
 const MAX_FILES = 30
 const MAX_FILE_BYTES = 1_250_000
 const MAX_TOTAL_BYTES = 4_000_000
@@ -230,8 +223,6 @@ export default function SiteSurveysPage() {
       window.removeEventListener('focus', handleFocus)
     }
   }, [])
-
-  const performerOptions = useMemo(() => Array.from(new Set([...PERFORMED_BY_OPTIONS, ...(sessionName ? [sessionName] : []), ...(form.performedBy ? [form.performedBy] : [])])), [sessionName, form.performedBy])
 
   const customerOptions = useMemo(
     () => [...customers].sort((a, b) => a.company.localeCompare(b.company, 'es')),
@@ -603,13 +594,11 @@ export default function SiteSurveysPage() {
                   <Field label="Realiza">
                     <select
                       value={form.performedBy}
-                      onChange={(e) => setForm({ ...form, performedBy: e.target.value })}
+                      onChange={() => {}}
                       className="survey-input"
+                      aria-label="Realiza, usuario de solo lectura"
                     >
-                      <option value="">Seleccionar responsable</option>
-                      {performerOptions.map((person) => (
-                        <option key={person} value={person}>{person}</option>
-                      ))}
+                      <option value={form.performedBy}>{form.performedBy || 'Usuario de sesión no disponible'}</option>
                     </select>
                   </Field>
                   <Field label="Tiempo estimado *">
