@@ -9,7 +9,6 @@ import type { Customer } from '@/features/crm/types/customer'
 import { createClient } from '@/lib/supabase/client'
 import { Download, FileSpreadsheet, Upload, X } from 'lucide-react'
 import {
-  downloadQuoteTemplate,
   readQuoteSpreadsheet,
   type ImportedQuoteRow,
 } from '@/features/quotes/services/excelQuoteImport'
@@ -918,14 +917,6 @@ export default function QuotesPage() {
                         onChange={(event) => void handleExcelFile(event)}
                         className="hidden"
                       />
-                      <button
-                        type="button"
-                        onClick={downloadQuoteTemplate}
-                        className="inline-flex items-center gap-2 rounded-lg border border-slate-200 px-3 py-2 text-xs font-semibold transition hover:bg-slate-50 dark:border-slate-700 dark:hover:bg-slate-800"
-                      >
-                        <Download size={14} />
-                        Plantilla NEDVI
-                      </button>
                       <button
                         type="button"
                         onClick={() => excelInputRef.current?.click()}
