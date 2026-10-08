@@ -1,5 +1,5 @@
-import { PurchasingCloudMigration } from '@/features/purchasing/PurchasingCloudMigration'
 'use client'
+import { PurchasingCloudMigration } from '@/features/purchasing/PurchasingCloudMigration'
 
 import { FormEvent, useCallback, useEffect, useMemo, useState } from 'react'
 import { Pencil, Plus, Search, Trash2, Truck, X } from 'lucide-react'
