@@ -191,6 +191,7 @@ export default function SiteSurveysPage() {
   const [open, setOpen] = useState(false)
   const [editingId, setEditingId] = useState<string | null>(null)
   const [viewing, setViewing] = useState<SiteSurvey | null>(null)
+  const [previewFile, setPreviewFile] = useState<SurveyAttachment | null>(null)
   const [form, setForm] = useState<SurveyForm>(emptyForm())
   const [estimatedTimeUnit, setEstimatedTimeUnit] = useState<EstimatedTimeUnit>('Días')
   const [sessionName, setSessionName] = useState('')
@@ -656,8 +657,30 @@ export default function SiteSurveysPage() {
               <section className="rounded-2xl border border-[var(--border)] p-5"><p className="text-xs font-semibold uppercase tracking-wide text-[var(--muted)]">Descripción</p><p className="mt-3 whitespace-pre-wrap text-sm leading-6 text-[var(--foreground)]">{viewing.description}</p></section>
               <div className="grid gap-4 md:grid-cols-2"><section className="rounded-2xl border border-[var(--border)] p-5"><p className="text-xs font-semibold uppercase tracking-wide text-[var(--muted)]">Tiempo de ejecución</p><div className="mt-3 flex flex-wrap gap-2">{viewing.executionTimes.length ? viewing.executionTimes.map((value) => <span key={value} className="rounded-full bg-[#5496CC]/10 px-3 py-1.5 text-xs font-semibold text-[#5496CC]">{value}</span>) : <span className="text-sm text-[var(--muted)]">Sin opciones</span>}</div></section><Info label="Tiempo estimado" value={viewing.estimatedTime || 'Sin especificar'} large /></div>
               {viewing.drawing ? <section className="rounded-2xl border border-[var(--border)] p-5"><p className="text-xs font-semibold uppercase tracking-wide text-[var(--muted)]">Croquis / Plano</p><img src={viewing.drawing} alt="Croquis del levantamiento" className="mt-4 max-h-[480px] w-full rounded-xl border border-[var(--border)] bg-white object-contain" /></section> : null}
-              <section className="rounded-2xl border border-[var(--border)] p-5"><p className="text-xs font-semibold uppercase tracking-wide text-[var(--muted)]">Archivos adjuntos</p>{viewing.attachments.length ? <div className="mt-4 grid gap-3 sm:grid-cols-2">{viewing.attachments.map((file) => <div key={file.id} className="flex items-center gap-3 rounded-xl bg-[var(--surface-soft)] p-3"><span className="text-[#5496CC]">{file.type.startsWith('image/') ? <ImageIcon size={18} /> : <FileText size={18} />}</span><div className="min-w-0 flex-1"><p className="truncate text-sm font-semibold">{file.name}</p><p className="text-xs text-[var(--muted)]">{fileSize(file.size)}</p></div><button type="button" onClick={() => downloadAttachment(file)} className="rounded-lg p-2 text-[#5496CC] hover:bg-[#5496CC]/10"><Download size={15} /></button></div>)}</div> : <p className="mt-3 text-sm text-[var(--muted)]">Sin archivos adjuntos.</p>}</section>
+              <section className="rounded-2xl border border-[var(--border)] p-5"><p className="text-xs font-semibold uppercase tracking-wide text-[var(--muted)]">Archivos adjuntos</p>{viewing.attachments.length ? <div className="mt-4 grid gap-3 sm:grid-cols-2">{viewing.attachments.map((file) => <div key={file.id} className="flex items-center gap-3 rounded-xl bg-[var(--surface-soft)] p-3"><span className="text-[#5496CC]">{file.type.startsWith('image/') ? <ImageIcon size={18} /> : <FileText size={18} />}</span><button type="button" onClick={() => setPreviewFile(file)} title="Ver vista previa" className="min-w-0 flex-1 text-left hover:text-[#5496CC]"><p className="truncate text-sm font-semibold">{file.name}</p><p className="text-xs text-[var(--muted)]">{fileSize(file.size)} · Ver archivo</p></button><button type="button" aria-label={`Ver ${file.name}`} onClick={() => setPreviewFile(file)} className="rounded-lg p-2 text-[#5496CC] hover:bg-[#5496CC]/10"><Eye size={16}/></button><button type="button" aria-label={`Descargar ${file.name}`} onClick={() => downloadAttachment(file)} className="rounded-lg p-2 text-[#5496CC] hover:bg-[#5496CC]/10"><Download size={15} /></button></div>)}</div> : <p className="mt-3 text-sm text-[var(--muted)]">Sin archivos adjuntos.</p>}</section>
               <div className="flex flex-wrap justify-end gap-3"><button type="button" onClick={() => { setViewing(null); openEdit(viewing) }} className="inline-flex items-center gap-2 rounded-xl border border-[var(--border)] px-5 py-3 font-semibold text-[var(--foreground)]"><Pencil size={15} /> Editar</button><button type="button" onClick={() => printSurvey(viewing)} className="inline-flex items-center gap-2 rounded-xl bg-[#5496CC] px-5 py-3 font-semibold text-white"><FileDown size={16} /> PDF</button></div>
+            </div>
+          </div>
+        </div>
+      ) : null}
+
+      {previewFile ? (
+        <div className="fixed inset-0 z-[70] flex items-center justify-center bg-black/85 p-3 sm:p-6" role="dialog" aria-modal="true" aria-label={`Vista previa de ${previewFile.name}`}>
+          <div className="flex max-h-[96vh] w-full max-w-5xl flex-col overflow-hidden rounded-2xl bg-[var(--surface)] shadow-2xl">
+            <header className="flex items-center justify-between gap-3 border-b border-[var(--border)] p-4">
+              <div className="min-w-0"><p className="truncate font-semibold text-[var(--foreground)]">{previewFile.name}</p><p className="text-xs text-[var(--muted)]">{fileSize(previewFile.size)}</p></div>
+              <div className="flex shrink-0 gap-2"><button type="button" onClick={() => downloadAttachment(previewFile)} className="rounded-lg p-2 text-[#5496CC]" title="Descargar"><Download size={19}/></button><button type="button" onClick={() => setPreviewFile(null)} className="rounded-lg p-2 text-[var(--foreground)]" title="Cerrar"><X size={20}/></button></div>
+            </header>
+            <div className="min-h-0 flex-1 overflow-auto bg-black/10 p-3">
+              {previewFile.type.startsWith('image/') ? (
+                <img src={previewFile.dataUrl} alt={previewFile.name} className="mx-auto max-h-[78vh] max-w-full object-contain" />
+              ) : previewFile.type === 'application/pdf' || previewFile.name.toLowerCase().endsWith('.pdf') ? (
+                <iframe src={previewFile.dataUrl} title={previewFile.name} className="h-[75vh] w-full rounded-lg bg-white" />
+              ) : previewFile.type.startsWith('text/') || /\.(txt|csv|json|md)$/i.test(previewFile.name) ? (
+                <iframe src={previewFile.dataUrl} title={previewFile.name} className="h-[70vh] w-full rounded-lg bg-white" sandbox="" />
+              ) : (
+                <div className="flex min-h-64 flex-col items-center justify-center gap-3 text-center"><FileText size={40} className="text-[#5496CC]"/><p className="text-[var(--foreground)]">Este formato no admite vista previa en el navegador.</p><button type="button" onClick={() => downloadAttachment(previewFile)} className="rounded-lg bg-[#5496CC] px-4 py-2 font-semibold text-white">Descargar archivo</button></div>
+              )}
             </div>
           </div>
         </div>
