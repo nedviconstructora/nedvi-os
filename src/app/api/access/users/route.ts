@@ -394,6 +394,9 @@ export async function PATCH(request: Request) {
       active?: boolean
       role?: string
       permissions?: ModulePermission[]
+      phone?: string
+      name?: string
+      position?: string
     }
 
     const userId = body.userId?.trim()
@@ -409,6 +412,21 @@ export async function PATCH(request: Request) {
     }
 
     const admin = getAdminClient()
+
+    if (typeof body.phone === 'string' || typeof body.name === 'string' || typeof body.position === 'string') {
+      const phone = body.phone?.trim() ?? ''
+      const name = body.name?.trim() ?? ''
+      if (!name || !/^\\+?[\\d\\s().-]{10,20}$/.test(phone) || phone.replace(/\\D/g, '').length < 10) {
+        return NextResponse.json({ error: 'Nombre y teléfono válido (mínimo 10 dígitos) son obligatorios.' }, { status: 400 })
+      }
+      const { data: existing, error: readError } = await admin.from('profiles').select('role').eq('id',userId).maybeSingle()
+      if (readError || !existing || databaseRole(existing.role) === 'cliente') {
+        return NextResponse.json({ error: 'Solo puedes editar integrantes del equipo NEDVI.' }, { status: 403 })
+      }
+      const { error: updateError } = await admin.from('profiles').update({ full_name:name,first_name:name.split(' ')[0],phone,position:body.position?.trim() ?? '',updated_at:new Date().toISOString() }).eq('id',userId)
+      if (updateError) return NextResponse.json({ error: 'No pudimos guardar los datos del integrante.' }, { status: 500 })
+      return NextResponse.json({ userId,updated:true })
+    }
 
     if (body.role) {
       const role = databaseRole(body.role)
