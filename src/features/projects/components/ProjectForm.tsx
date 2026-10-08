@@ -4,6 +4,7 @@ import Link from 'next/link'
 import { useEffect, useMemo, useState, type FormEvent } from 'react'
 import { useRouter } from 'next/navigation'
 import { ExternalLink, MapPin, Save } from 'lucide-react'
+import { readAccessSession } from '@/features/access/services/accessStorage'
 import { getCustomersFromSupabase } from '@/features/crm/services/customerSupabase'
 import type { Customer } from '@/features/crm/types/customer'
 import {
@@ -58,6 +59,11 @@ export function ProjectForm({
   )
   const [error, setError] = useState<string | null>(null)
   const [saving, setSaving] = useState(false)
+  const [sessionManager, setSessionManager] = useState('')
+
+  useEffect(() => {
+    setSessionManager(readAccessSession()?.name?.trim() ?? '')
+  }, [])
   const [address, setAddress] = useState(initialValues?.address ?? '')
   const [latitude, setLatitude] = useState(
     typeof initialValues?.latitude === 'number' ? String(initialValues.latitude) : '',
@@ -166,6 +172,12 @@ export function ProjectForm({
       return
     }
 
+    const activeManager = readAccessSession()?.name?.trim() ?? ''
+    if (!activeManager && mode === 'create') {
+      setError('Inicia sesión nuevamente para identificar al responsable del proyecto.')
+      return
+    }
+
     const values: ProjectFormValues = {
       name: String(formData.get('name') ?? '').trim(),
       clientId: customer?.id,
@@ -178,7 +190,7 @@ export function ProjectForm({
       budget: Number(formData.get('budget') ?? 0),
       startDate: String(formData.get('startDate') ?? ''),
       estimatedCompletion: String(formData.get('estimatedCompletion') ?? ''),
-      manager: String(formData.get('manager') ?? '').trim(),
+      manager: mode === 'create' ? activeManager : (initialValues?.manager ?? activeManager),
       status,
       description: String(formData.get('description') ?? '').trim(),
     }
@@ -380,18 +392,13 @@ export function ProjectForm({
 
           <label className={labelClassName}>
             Responsable del proyecto
-            <select
+            <input
               name="manager"
-              defaultValue={initialValues?.manager}
+              value={mode === 'create' ? sessionManager : (initialValues?.manager ?? '')}
+              readOnly
+              placeholder="Usuario de sesión activa"
               className={inputClassName}
-            >
-              <option value="">Seleccionar responsable</option>
-              <option>Javier Moreno</option>
-              <option>Ana Ruiz</option>
-              <option>Carlos Méndez</option>
-              <option>Lucía Castillo</option>
-              <option>Miguel García</option>
-            </select>
+            />
           </label>
 
           <label className={labelClassName}>
