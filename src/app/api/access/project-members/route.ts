@@ -1,5 +1,17 @@
 import { NextResponse } from 'next/server'
+import { createClient as createAdminClient } from '@supabase/supabase-js'
 import { createClient as createServerClient } from '@/utils/supabase/server'
+
+function getAdminClient() {
+  const url = process.env.NEXT_PUBLIC_SUPABASE_URL
+  const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY
+  if (!url || !serviceRoleKey) {
+    throw new Error('Falta configuración de Supabase para gestionar el portal.')
+  }
+  return createAdminClient(url, serviceRoleKey, {
+    auth: { autoRefreshToken: false, persistSession: false },
+  })
+}
 
 function normalizeRole(value: unknown) {
   return String(value ?? '')
@@ -68,7 +80,8 @@ export async function GET(request: Request) {
     return NextResponse.json({ error: 'Usuario no válido.' }, { status: 400 })
   }
 
-  const { data, error } = await auth.supabase
+  const admin = getAdminClient()
+  const { data, error } = await admin
     .from('project_members')
     .select('project_id')
     .eq('user_id', userId)
@@ -114,7 +127,8 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: 'Usuario o cliente no válido.' }, { status: 400 })
   }
 
-  const { data: customerLink, error: customerLinkError } = await auth.supabase
+  const admin = getAdminClient()
+  const { data: customerLink, error: customerLinkError } = await admin
     .from('customer_users')
     .select('customer_id')
     .eq('user_id', userId)
@@ -137,7 +151,7 @@ export async function POST(request: Request) {
   }
 
   const { data: validProjects, error: validationError } = requestedProjectIds.length
-    ? await auth.supabase
+    ? await admin
         .from('projects')
         .select('id')
         .eq('customer_id', customerId)
@@ -161,7 +175,7 @@ export async function POST(request: Request) {
     )
   }
 
-  const { data: existingMemberships, error: existingError } = await auth.supabase
+  const { data: existingMemberships, error: existingError } = await admin
     .from('project_members')
     .select('project_id')
     .eq('user_id', userId)
@@ -180,7 +194,7 @@ export async function POST(request: Request) {
   const toDelete = Array.from(existingIds).filter((projectId) => !desiredIds.has(projectId))
 
   if (toInsert.length) {
-    const { error: insertError } = await auth.supabase
+    const { error: insertError } = await admin
       .from('project_members')
       .upsert(
         toInsert.map((projectId) => ({ project_id: projectId, user_id: userId })),
@@ -197,7 +211,7 @@ export async function POST(request: Request) {
   }
 
   if (toDelete.length) {
-    const { error: deleteError } = await auth.supabase
+    const { error: deleteError } = await admin
       .from('project_members')
       .delete()
       .eq('user_id', userId)
@@ -212,7 +226,7 @@ export async function POST(request: Request) {
     }
   }
 
-  const { data: persistedMemberships, error: persistedError } = await auth.supabase
+  const { data: persistedMemberships, error: persistedError } = await admin
     .from('project_members')
     .select('project_id')
     .eq('user_id', userId)
