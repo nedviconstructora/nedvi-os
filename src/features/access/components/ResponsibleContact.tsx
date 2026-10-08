@@ -2,18 +2,18 @@
 import { useEffect, useState } from 'react'
 import { MessageCircle } from 'lucide-react'
 
-export function ResponsibleContact({ name }: { name: string }) {
+export function ResponsibleContact({ name, projectId }: { name: string; projectId?: string }) {
   const [phone,setPhone] = useState<string | null>(null)
   useEffect(() => {
     let active = true
     setPhone(null)
     if (!name.trim()) return
-    fetch('/api/access/staff-contact?name='+encodeURIComponent(name.trim()),{cache:'no-store'})
+    fetch('/api/access/staff-contact?name='+encodeURIComponent(name.trim())+(projectId?'&projectId='+encodeURIComponent(projectId):''),{cache:'no-store'})
       .then(async response => response.ok ? response.json() as Promise<{phone?:string|null}> : null)
       .then(result => { if (active) setPhone(result?.phone?.trim() || null) })
       .catch(() => { if (active) setPhone(null) })
     return () => { active = false }
-  },[name])
+  },[name,projectId])
   const digits = (phone ?? '').replace(/\D/g,'')
   const whatsapp = digits.length === 10 ? '52'+digits : digits
   if (!phone) return null
