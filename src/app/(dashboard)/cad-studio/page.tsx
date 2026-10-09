@@ -106,6 +106,8 @@ export default function CadStudioPage() {
   const [uploadingCad, setUploadingCad] = useState(false)
   const [checkingAps, setCheckingAps] = useState(false)
   const [apsStatus, setApsStatus] = useState('Conexión Autodesk sin comprobar.')
+  const [automationStatus, setAutomationStatus] = useState('')
+  const [checkingAutomation, setCheckingAutomation] = useState(false)
   const svgRef = useRef<SVGSVGElement | null>(null)
   const dragRef = useRef<{id:string;origin:Point;initial:Shape[];moved:boolean} | null>(null)
 
@@ -273,6 +275,15 @@ export default function CadStudioPage() {
           } catch { setApsStatus('No se pudo consultar la conexión con Autodesk.') }
           finally { setCheckingAps(false) }
         }}>{checkingAps ? 'Comprobando APS...' : 'Probar conexión Autodesk'}</button>
+        <button type="button" className={button} disabled={checkingAutomation} onClick={async()=>{
+          setCheckingAutomation(true)
+          try {
+            const response=await fetch('/api/cad/automation-status',{cache:'no-store'})
+            const result=await response.json() as {message?:string,error?:string}
+            setAutomationStatus(result.message || result.error || 'No se pudo verificar Automation.')
+          }catch{setAutomationStatus('No se pudo conectar con el verificador de Automation.')}
+          finally{setCheckingAutomation(false)}
+        }}>{checkingAutomation?'Comprobando...':'Estado de conversión DWG editable'}</button>
         <label className={button + ' cursor-pointer'}>{inspecting ? 'Analizando archivo...' : 'Abrir archivo DWG / DXF'}
           <input type="file" accept=".dwg,.dxf" disabled={inspecting} className="hidden" onChange={async event => {
             const file = event.target.files?.[0]
@@ -336,6 +347,7 @@ export default function CadStudioPage() {
         <button className={button} onClick={() => {if(window.confirm('¿Vaciar el boceto actual?')){commit([]);setSelected(null)}}}><RotateCcw size={14} className="mr-1 inline"/>Limpiar</button>
       </div> : null}
       {checkingAps || apsStatus !== 'Conexión Autodesk sin comprobar.' ? <p role="status" className="text-sm text-[var(--muted)]">{apsStatus}</p> : null}
+      {automationStatus ? <p role="status" className="rounded-lg border border-[var(--border)] p-3 text-sm text-[var(--foreground)]">{automationStatus}</p> : null}
       {cadSource ? <button className={button} disabled={uploadingCad} onClick={async()=>{
         setUploadingCad(true)
         setMessage('Preparando carga segura hacia Autodesk...')
