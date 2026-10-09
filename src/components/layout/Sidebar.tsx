@@ -78,6 +78,7 @@ const navigationGroups: NavigationGroup[] = [
     items: [
       { label: 'Proyectos', href: '/projects', icon: HardHat },
       { label: 'Documentos', href: '/documents', icon: FileText },
+      { label: 'NEDVI CAD Studio', href: '/cad-studio', icon: Ruler },
     ],
   },
   {
