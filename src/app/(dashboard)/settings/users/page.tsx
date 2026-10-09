@@ -117,7 +117,6 @@ export default function UsersAndPermissionsPage() {
   const [createName, setCreateName] = useState('')
   const [createEmail, setCreateEmail] = useState('')
   const [createPhone, setCreatePhone] = useState('')
-  const [phoneFieldFocused, setPhoneFieldFocused] = useState(false)
   const [createPosition, setCreatePosition] = useState('')
   const [createPassword, setCreatePassword] = useState('')
   const [createConfirmPassword, setCreateConfirmPassword] = useState('')
@@ -202,7 +201,6 @@ export default function UsersAndPermissionsPage() {
     setCreateName('')
     setCreateEmail('')
     setCreatePhone('')
-    setPhoneFieldFocused(false)
     setCreatePosition('')
     setCreatePassword('')
     setCreateConfirmPassword('')
@@ -227,6 +225,11 @@ export default function UsersAndPermissionsPage() {
 
     if (!name || !email || !email.includes('@')) {
       setCreateError('Escribe el nombre y un correo válido.')
+      return
+    }
+
+    if (createPhone.replace(/\D/g, '').length < 10) {
+      setCreateError('Ingresa un teléfono de contacto válido de al menos 10 dígitos.')
       return
     }
 
@@ -878,30 +881,23 @@ export default function UsersAndPermissionsPage() {
 
               <label className="block">
                 <span className="text-xs font-semibold text-[var(--muted)]">Teléfono de contacto *</span>
-                <input
+                <textarea
                   required
-                  type="text"
-                  name="nedvi-internal-team-contact-entry"
+                  rows={1}
                   autoComplete="off"
                   data-lpignore="true"
                   data-1p-ignore="true"
                   inputMode="tel"
-                  readOnly={!phoneFieldFocused}
-                  pattern="[0-9+() .-]{10,20}"
                   maxLength={20}
                   value={createPhone}
-                  onChange={(event) => setCreatePhone(event.target.value.replace(/[^0-9+() .-]/g, ''))}
-                  onFocus={(event) => {
-                    // Ignore browser-injected values that did not go through React state.
-                    if (event.currentTarget.value !== createPhone) {
-                      event.currentTarget.value = createPhone
-                    }
-                    setPhoneFieldFocused(true)
+                  onChange={(event) => setCreatePhone(event.target.value.replace(/[^0-9+() .-]/g, '').replace(/\n/g, ''))}
+                  onKeyDown={(event) => {
+                    if (event.key === 'Enter') event.preventDefault()
                   }}
-                  onBlur={() => setPhoneFieldFocused(false)}
                   placeholder="Ingresa el teléfono del integrante"
+                  aria-label="Teléfono de contacto del nuevo integrante"
                   className="mt-2 h-11 w-full rounded-xl border border-[var(--border)] bg-[var(--surface-soft)] px-3 text-sm text-[var(--foreground)] outline-none focus:border-[#5496CC]"
-                />
+                ></textarea>
               </label>
 
               <label className="block">
