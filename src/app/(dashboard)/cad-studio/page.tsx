@@ -236,7 +236,7 @@ export default function CadStudioPage() {
         <h1 className="mt-2 text-3xl font-bold text-[var(--foreground)]">NEDVI CAD Studio</h1>
         <p className="mt-2 text-sm text-[var(--muted)]">Editor 2D experimental: importa líneas DXF ASCII, mueve segmentos y exporta bocetos. La escala se ajusta al lienzo y otras entidades pueden omitirse. El DWG original no se modifica.</p>
       </div>
-      {workspaceMode==='edit' ? <div className="flex flex-wrap items-center gap-2">
+      <div className="flex flex-wrap items-center gap-2">
         {(['select','line','rectangle','dimension'] as Tool[]).map(item => <button key={item} onClick={() => {setTool(item);setStart(null)}} className={button + (tool === item ? ' !bg-[#7BAEE3] !text-slate-950' : '')}>{item === 'select' ? 'Seleccionar' : item === 'line' ? 'Línea' : item === 'dimension' ? 'Cota aproximada' : 'Rectángulo'}</button>)}
         <span className="flex items-center gap-1"><span className="text-xs text-[var(--muted)]">Mover:</span><input type="number" min="1" max="200" value={moveStep} onChange={e=>setMoveStep(Math.max(1,Math.min(200,Number(e.target.value)||1)))} aria-label="Distancia para mover" className="w-16 rounded-lg border border-[var(--border)] bg-[var(--surface)] px-2 py-2 text-sm text-[var(--foreground)]"/>{([['←',-1,0],['→',1,0],['↑',0,-1],['↓',0,1]] as const).map(([label,x,y])=><button key={label} className={button} disabled={!selected} onClick={()=>moveSelected(x*moveStep,y*moveStep)} title={'Mover selección '+label}>{label}</button>)}</span>
         <button className={button} disabled={!selected} onClick={() => {commit(shapes.filter(s => s.id !== selected));setSelected(null)}}><Trash2 size={14} className="mr-1 inline"/>Borrar selección</button>
@@ -294,7 +294,6 @@ export default function CadStudioPage() {
         <label className={button + ' cursor-pointer'}>Importar proyecto JSON<input type="file" accept=".json,application/json" className="hidden" onChange={async e => {const file=e.target.files?.[0];e.target.value='';if(!file)return;try{if(file.size>2000000)throw Error('Archivo demasiado grande');const data=JSON.parse(await file.text()) as {format?:string;shapes?:unknown};if(data.format!=='nedvi-cad-v1'||!Array.isArray(data.shapes)||data.shapes.length>2000||!data.shapes.every(validShape))throw Error('Formato inválido');commit(data.shapes);setMessage('Proyecto importado correctamente.')}catch{setMessage('No se pudo importar: utiliza un proyecto JSON válido de NEDVI CAD.') }}}/></label>
         <button className={button} onClick={() => {if(window.confirm('¿Vaciar el boceto actual?')){commit([]);setSelected(null)}}}><RotateCcw size={14} className="mr-1 inline"/>Limpiar</button>
       </div>
-      </div> : null}
       <p role="status" className="text-sm text-[var(--muted)]">{apsStatus}</p>
       {cadSource ? <button className={button} disabled={uploadingCad} onClick={async()=>{
         setUploadingCad(true)
@@ -339,7 +338,6 @@ export default function CadStudioPage() {
         <p className="font-semibold">¿Cómo probar la edición?</p>
         <p className="mt-1">Pulsa «Cargar plano de prueba 2D», baja al lienzo cuadriculado, haz clic sobre una línea azul y usa las flechas «Mover» para desplazarla. Después puedes descargar el boceto con «Exportar boceto DXF».</p>
         <p className="mt-2 text-xs text-[var(--muted)]">Esta pestaña edita el boceto 2D y los DXF compatibles. Para revisar el DWG original cambia a «Visualizar DWG». Los cambios del boceto no modifican el DWG.</p>
-      </div>
       </div> : null}
       <section className="rounded-2xl border border-[var(--border)] bg-[var(--surface)] p-4">
         <h2 className="font-semibold text-[var(--foreground)]">Bitácora de revisiones CAD</h2>
@@ -360,7 +358,6 @@ export default function CadStudioPage() {
             : <rect key={shape.id} x={Math.min(shape.a.x,shape.b.x)} y={Math.min(shape.a.y,shape.b.y)} width={Math.abs(shape.a.x-shape.b.x)} height={Math.abs(shape.a.y-shape.b.y)} fill="transparent" stroke={selected===shape.id?'#f59e0b':'#2563eb'} strokeWidth={selected===shape.id?5:3} onPointerDown={e=>{if(tool==='select'){e.stopPropagation();setSelected(shape.id)}}}/>)}
           {start && cursor && ((tool==='line'||tool==='dimension')?<line x1={start.x} y1={start.y} x2={cursor.x} y2={cursor.y} stroke="#f59e0b" strokeWidth="2" strokeDasharray="7 5"/>:<rect x={Math.min(start.x,cursor.x)} y={Math.min(start.y,cursor.y)} width={Math.abs(cursor.x-start.x)} height={Math.abs(cursor.y-start.y)} fill="none" stroke="#f59e0b" strokeWidth="2" strokeDasharray="7 5"/>)}
         </svg>
-      </div>
       </div> : null}
       <div className="flex flex-wrap justify-between gap-3 text-xs text-[var(--muted)]">
         <span>{shapes.length} elementos · Cuadrícula con ajuste de 10 unidades · Dibuja arrastrando el cursor</span>
