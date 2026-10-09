@@ -117,6 +117,7 @@ export default function UsersAndPermissionsPage() {
   const [createName, setCreateName] = useState('')
   const [createEmail, setCreateEmail] = useState('')
   const [createPhone, setCreatePhone] = useState('')
+  const [phoneFieldFocused, setPhoneFieldFocused] = useState(false)
   const [createPosition, setCreatePosition] = useState('')
   const [createPassword, setCreatePassword] = useState('')
   const [createConfirmPassword, setCreateConfirmPassword] = useState('')
@@ -201,6 +202,7 @@ export default function UsersAndPermissionsPage() {
     setCreateName('')
     setCreateEmail('')
     setCreatePhone('')
+    setPhoneFieldFocused(false)
     setCreatePosition('')
     setCreatePassword('')
     setCreateConfirmPassword('')
@@ -613,7 +615,10 @@ export default function UsersAndPermissionsPage() {
               {isAdmin ? (
                 <button
                   type="button"
-                  onClick={() => setCreateUserOpen(true)}
+                  onClick={() => {
+                    resetCreateUserForm()
+                    setCreateUserOpen(true)
+                  }}
                   className="inline-flex h-10 items-center justify-center gap-2 rounded-xl bg-[#1F6FEB] px-4 text-sm font-semibold text-white shadow-sm transition hover:bg-[#1759C7]"
                 >
                   <UserPlus size={16} />
@@ -875,22 +880,26 @@ export default function UsersAndPermissionsPage() {
                 <span className="text-xs font-semibold text-[var(--muted)]">Teléfono de contacto *</span>
                 <input
                   required
-                  type="tel"
-                  name="nedvi-contact-mobile-number-only"
-                  autoComplete="new-password"
-                  inputMode="numeric"
+                  type="text"
+                  name="nedvi-internal-team-contact-entry"
+                  autoComplete="off"
+                  data-lpignore="true"
+                  data-1p-ignore="true"
+                  inputMode="tel"
+                  readOnly={!phoneFieldFocused}
                   pattern="[0-9+() .-]{10,20}"
                   maxLength={20}
                   value={createPhone}
                   onChange={(event) => setCreatePhone(event.target.value.replace(/[^0-9+() .-]/g, ''))}
                   onFocus={(event) => {
-                    // Some password managers insert login emails without firing an input event.
-                    if (/[@a-z]/i.test(event.currentTarget.value)) {
-                      event.currentTarget.value = ''
-                      setCreatePhone('')
+                    // Ignore browser-injected values that did not go through React state.
+                    if (event.currentTarget.value !== createPhone) {
+                      event.currentTarget.value = createPhone
                     }
+                    setPhoneFieldFocused(true)
                   }}
-                  placeholder="Ej. 664 558 1946"
+                  onBlur={() => setPhoneFieldFocused(false)}
+                  placeholder="Ingresa el teléfono del integrante"
                   className="mt-2 h-11 w-full rounded-xl border border-[var(--border)] bg-[var(--surface-soft)] px-3 text-sm text-[var(--foreground)] outline-none focus:border-[#5496CC]"
                 />
               </label>
