@@ -18,6 +18,29 @@ function validShape(value: unknown): value is Shape {
     !!item.a && !!item.b && [item.a.x,item.a.y,item.b.x,item.b.y].every(v => typeof v === 'number' && Number.isFinite(v) && v >= 0 && v <= 50000)
 }
 
+
+type DetectedCad = { name: string; format: 'DWG' | 'DXF'; details: string }
+
+async function inspectCadFile(file: File): Promise<DetectedCad> {
+  if (file.size > 40 * 1024 * 1024) throw new Error('El archivo supera el límite de inspección de 40 MB.')
+  const header = new Uint8Array(await file.slice(0, 32).arrayBuffer())
+  const ascii = Array.from(header).map(byte => String.fromCharCode(byte)).join('')
+  const extension = file.name.split('.').pop()?.toLowerCase()
+  if (ascii.startsWith('AC10') && /^AC10[0-9]{2}/.test(ascii.slice(0, 6))) {
+    return { name: file.name, format: 'DWG', details: 'Archivo DWG identificado por su cabecera AutoCAD. Para visualizar o modificar su contenido falta conectar el servicio de conversión Autodesk APS.' }
+  }
+  if (ascii.startsWith('AutoCAD Binary DXF')) {
+    return { name: file.name, format: 'DXF', details: 'DXF binario identificado. Esta versión todavía no interpreta DXF binarios.' }
+  }
+  const text = await file.slice(0, Math.min(file.size, 65536)).text()
+  const normalized = text.replace(/\r\n?/g, '\n')
+  if (/^\s*0\s*\nSECTION\s*\n\s*2\s*\n(?:HEADER|TABLES|BLOCKS|ENTITIES|OBJECTS)/i.test(normalized)) {
+    return { name: file.name, format: 'DXF', details: 'DXF ASCII reconocido. La lectura y edición de sus entidades se añadirá en una siguiente fase.' }
+  }
+  if (extension === 'dwg' || extension === 'dxf') throw new Error('La extensión es CAD, pero el contenido no tiene una cabecera DWG o DXF reconocible.')
+  throw new Error('Selecciona un archivo CAD válido con extensión .dwg o .dxf.')
+}
+
 export default function CadStudioPage() {
   const [shapes, setShapes] = useState<Shape[]>([])
   const [tool, setTool] = useState<Tool>('line')
@@ -27,6 +50,8 @@ export default function CadStudioPage() {
   const [history, setHistory] = useState<Shape[][]>([])
   const [ready, setReady] = useState(false)
   const [message, setMessage] = useState('')
+  const [cadFile, setCadFile] = useState<DetectedCad | null>(null)
+  const [inspecting, setInspecting] = useState(false)
   const svgRef = useRef<SVGSVGElement | null>(null)
 
   useEffect(() => {
@@ -111,9 +136,32 @@ export default function CadStudioPage() {
         <button className={button} onClick={() => {setMessage('Borrador guardado únicamente en este navegador de Windows.');localStorage.setItem(STORAGE_KEY,JSON.stringify(shapes))}}><Save size={14} className="mr-1 inline"/>Guardar borrador</button>
         <button className={button} onClick={() => download('nedvi-plano.svg', svgMarkup(), 'image/svg+xml')}><Download size={14} className="mr-1 inline"/>Exportar SVG</button>
         <button className={button} onClick={() => download('nedvi-plano.json', JSON.stringify({format:'nedvi-cad-v1',shapes},null,2), 'application/json')}>Exportar proyecto</button>
+        <label className={button + ' cursor-pointer'}>{inspecting ? 'Analizando archivo...' : 'Detectar DWG / DXF'}
+          <input type="file" accept=".dwg,.dxf" disabled={inspecting} className="hidden" onChange={async event => {
+            const file = event.target.files?.[0]
+            event.target.value = ''
+            if (!file) return
+            setInspecting(true)
+            setCadFile(null)
+            try {
+              const detected = await inspectCadFile(file)
+              setCadFile(detected)
+              setMessage(detected.details)
+            } catch (error) {
+              setMessage(error instanceof Error ? error.message : 'Archivo CAD no reconocido.')
+            } finally {
+              setInspecting(false)
+            }
+          }}/>
+        </label>
         <label className={button + ' cursor-pointer'}>Importar proyecto JSON<input type="file" accept=".json,application/json" className="hidden" onChange={async e => {const file=e.target.files?.[0];e.target.value='';if(!file)return;try{if(file.size>2000000)throw Error('Archivo demasiado grande');const data=JSON.parse(await file.text()) as {format?:string;shapes?:unknown};if(data.format!=='nedvi-cad-v1'||!Array.isArray(data.shapes)||data.shapes.length>2000||!data.shapes.every(validShape))throw Error('Formato inválido');commit(data.shapes);setMessage('Proyecto importado correctamente.')}catch{setMessage('No se pudo importar: utiliza un proyecto JSON válido de NEDVI CAD.') }}}/></label>
         <button className={button} onClick={() => {if(window.confirm('¿Vaciar el boceto actual?')){commit([]);setSelected(null)}}}><RotateCcw size={14} className="mr-1 inline"/>Limpiar</button>
       </div>
+      {cadFile ? <div className="rounded-xl border border-[#5496CC]/30 bg-[#5496CC]/10 p-4 text-sm text-[var(--foreground)]">
+        <p className="font-semibold">Archivo detectado: {cadFile.format} · {cadFile.name}</p>
+        <p className="mt-1 text-xs text-[var(--muted)]">{cadFile.details}</p>
+        <p className="mt-2 text-xs text-[var(--muted)]">El archivo no se convierte ni modifica. El boceto actual permanece intacto.</p>
+      </div> : null}
       <div className="overflow-auto rounded-2xl border border-[var(--border)] bg-white p-2 shadow-sm">
         <svg ref={svgRef} viewBox="0 0 1200 750" className="min-w-[650px] w-full touch-none select-none" style={{backgroundImage:'linear-gradient(#e8eef5 1px, transparent 1px), linear-gradient(90deg,#e8eef5 1px, transparent 1px)',backgroundSize:'25px 25px'}} onPointerDown={pointerDown} onPointerMove={e => {if(start)setCursor(point(e))}} onPointerUp={pointerUp} onPointerCancel={()=>{setStart(null);setCursor(null)}} aria-label="Lienzo de dibujo CAD">
           {shapes.map(shape => shape.kind==='line'
