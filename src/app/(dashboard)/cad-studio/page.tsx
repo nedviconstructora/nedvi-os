@@ -107,6 +107,7 @@ export default function CadStudioPage() {
   const [checkingAps, setCheckingAps] = useState(false)
   const [apsStatus, setApsStatus] = useState('Conexión Autodesk sin comprobar.')
   const svgRef = useRef<SVGSVGElement | null>(null)
+  const dragRef = useRef<{id:string;origin:Point;initial:Shape[];moved:boolean} | null>(null)
 
   useEffect(() => {
     try {
@@ -160,7 +161,7 @@ export default function CadStudioPage() {
   }
 
   function pointerDown(event: React.PointerEvent<SVGSVGElement>) {
-    if (tool === 'select') { setSelected(null); return }
+    if (tool === 'select') { if(!dragRef.current)setSelected(null); return }
     const p = point(event)
     setStart(p)
     setCursor(p)
@@ -168,6 +169,12 @@ export default function CadStudioPage() {
   }
 
   function pointerUp(event: React.PointerEvent<SVGSVGElement>) {
+    if(tool==='select' && dragRef.current){
+      const drag=dragRef.current
+      dragRef.current=null
+      if(drag.moved) setHistory(previous=>[...previous.slice(-29),drag.initial])
+      return
+    }
     if (!start || tool === 'select') return
     const end = point(event)
     if (end.x !== start.x || end.y !== start.y) {
@@ -175,6 +182,26 @@ export default function CadStudioPage() {
     }
     setStart(null)
     setCursor(null)
+  }
+
+  function selectAndDrag(event: React.PointerEvent<SVGElement>, id:string) {
+    if(tool!=='select')return
+    event.stopPropagation()
+    setSelected(id)
+    dragRef.current={id,origin:point(event as unknown as React.PointerEvent<SVGSVGElement>),initial:shapes,moved:false}
+    svgRef.current?.setPointerCapture(event.pointerId)
+  }
+
+  function pointerMove(event:React.PointerEvent<SVGSVGElement>) {
+    if(dragRef.current && tool==='select'){
+      const drag=dragRef.current
+      const here=point(event)
+      const dx=here.x-drag.origin.x,dy=here.y-drag.origin.y
+      if(dx||dy)drag.moved=true
+      setShapes(drag.initial.map(s=>s.id!==drag.id?s:{...s,a:{x:Math.max(0,s.a.x+dx),y:Math.max(0,s.a.y+dy)},b:{x:Math.max(0,s.b.x+dx),y:Math.max(0,s.b.y+dy)}}))
+      return
+    }
+    if(start)setCursor(point(event))
   }
 
   function moveSelected(dx:number,dy:number) {
@@ -335,7 +362,7 @@ export default function CadStudioPage() {
       </div> : null}
       {workspaceMode==='edit' ? <div className="rounded-xl border border-[#5496CC]/30 bg-[#5496CC]/10 p-4 text-sm text-[var(--foreground)]">
         <p className="font-semibold">¿Cómo probar la edición?</p>
-        <p className="mt-1">Pulsa «Cargar plano de prueba 2D», baja al lienzo cuadriculado, haz clic sobre una línea azul y usa las flechas «Mover» para desplazarla. Después puedes descargar el boceto con «Exportar boceto DXF».</p>
+        <p className="mt-1">Pulsa «Cargar plano de prueba 2D» o «Importar DXF editable». Selecciona la herramienta «Seleccionar» y arrastra una línea azul con el mouse para moverla. También puedes usar las flechas «Mover». Después puedes descargar el boceto con «Exportar boceto DXF».</p>
         <p className="mt-2 text-xs text-[var(--muted)]">Esta pestaña edita el boceto 2D y los DXF compatibles. Para revisar el DWG original cambia a «Visualizar DWG». Los cambios del boceto no modifican el DWG.</p>
       </div> : null}
       <section className="rounded-2xl border border-[var(--border)] bg-[var(--surface)] p-4">
@@ -353,8 +380,8 @@ export default function CadStudioPage() {
       {workspaceMode==='edit' ? <div className="space-y-3">
         {shapes.length===0 ? <div className="rounded-xl border border-amber-500/30 bg-amber-500/10 p-4 text-sm text-[var(--foreground)]"><p className="font-semibold">Editor 2D listo, sin entidades cargadas</p><p className="mt-1">Pulsa «Importar DXF editable» o «Cargar plano de prueba 2D». El archivo DWG de Autodesk no puede convertirse aquí automáticamente en geometría editable.</p></div> : null}
         <div id="nedvi-cad-2d-editor" className="overflow-auto rounded-2xl border border-[var(--border)] bg-white p-2 shadow-sm">
-        <svg ref={svgRef} viewBox="0 0 1200 750" className="min-w-[650px] w-full touch-none select-none" style={{backgroundImage:'linear-gradient(#e8eef5 1px, transparent 1px), linear-gradient(90deg,#e8eef5 1px, transparent 1px)',backgroundSize:'25px 25px'}} onPointerDown={pointerDown} onPointerMove={e => {if(start)setCursor(point(e))}} onPointerUp={pointerUp} onPointerCancel={()=>{setStart(null);setCursor(null)}} aria-label="Lienzo de dibujo CAD">
-          {shapes.map(shape => shape.kind==='dimension' ? <g key={shape.id} onPointerDown={e=>{if(tool==='select'){e.stopPropagation();setSelected(shape.id)}}}><line x1={shape.a.x} y1={shape.a.y} x2={shape.b.x} y2={shape.b.y} stroke="#b45309" strokeWidth="2"/><text x={(shape.a.x+shape.b.x)/2} y={(shape.a.y+shape.b.y)/2-7} fill="#92400e" fontSize="16">{Math.hypot(shape.b.x-shape.a.x,shape.b.y-shape.a.y).toFixed(1)} u</text></g> : shape.kind==='line'
+        <svg ref={svgRef} viewBox="0 0 1200 750" className="min-w-[650px] w-full touch-none select-none" style={{backgroundImage:'linear-gradient(#e8eef5 1px, transparent 1px), linear-gradient(90deg,#e8eef5 1px, transparent 1px)',backgroundSize:'25px 25px'}} onPointerDown={pointerDown} onPointerMove={pointerMove} onPointerUp={pointerUp} onPointerCancel={()=>{dragRef.current=null;setStart(null);setCursor(null)}} aria-label="Lienzo de dibujo CAD">
+          {shapes.map(shape => shape.kind==='dimension' ? <g key={shape.id} onPointerDown={e=>selectAndDrag(e,shape.id)}><line x1={shape.a.x} y1={shape.a.y} x2={shape.b.x} y2={shape.b.y} stroke="#b45309" strokeWidth="2"/><text x={(shape.a.x+shape.b.x)/2} y={(shape.a.y+shape.b.y)/2-7} fill="#92400e" fontSize="16">{Math.hypot(shape.b.x-shape.a.x,shape.b.y-shape.a.y).toFixed(1)} u</text></g> : shape.kind==='line'
             ? <line key={shape.id} x1={shape.a.x} y1={shape.a.y} x2={shape.b.x} y2={shape.b.y} stroke={selected===shape.id?'#f59e0b':'#2563eb'} strokeWidth={selected===shape.id?5:3} onPointerDown={e=>{if(tool==='select'){e.stopPropagation();setSelected(shape.id)}}}/>
             : <rect key={shape.id} x={Math.min(shape.a.x,shape.b.x)} y={Math.min(shape.a.y,shape.b.y)} width={Math.abs(shape.a.x-shape.b.x)} height={Math.abs(shape.a.y-shape.b.y)} fill="transparent" stroke={selected===shape.id?'#f59e0b':'#2563eb'} strokeWidth={selected===shape.id?5:3} onPointerDown={e=>{if(tool==='select'){e.stopPropagation();setSelected(shape.id)}}}/>)}
           {start && cursor && ((tool==='line'||tool==='dimension')?<line x1={start.x} y1={start.y} x2={cursor.x} y2={cursor.y} stroke="#f59e0b" strokeWidth="2" strokeDasharray="7 5"/>:<rect x={Math.min(start.x,cursor.x)} y={Math.min(start.y,cursor.y)} width={Math.abs(cursor.x-start.x)} height={Math.abs(cursor.y-start.y)} fill="none" stroke="#f59e0b" strokeWidth="2" strokeDasharray="7 5"/>)}
