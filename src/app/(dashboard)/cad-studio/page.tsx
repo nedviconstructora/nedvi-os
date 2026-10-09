@@ -86,6 +86,7 @@ function AutodeskCadViewer({urn}:{urn:string}) {
 }
 
 export default function CadStudioPage() {
+  const [workspaceMode, setWorkspaceMode] = useState<'view' | 'edit'>('view')
   const [shapes, setShapes] = useState<Shape[]>([])
   const [notes, setNotes] = useState<Array<{id:string;text:string;createdAt:string}>>([])
   const [noteInput, setNoteInput] = useState('')
@@ -192,7 +193,7 @@ export default function CadStudioPage() {
       {id:crypto.randomUUID(),kind:'line',a:{x:420,y:440},b:{x:420,y:520}},
       {id:crypto.randomUUID(),kind:'line',a:{x:150,y:330},b:{x:420,y:330}}
     ]
-    commit(plan);setSelected(null);setTool('select')
+    commit(plan);setSelected(null);setTool('select');setWorkspaceMode('edit')
     setMessage('Plano de prueba cargado: haz clic en una línea y utiliza las flechas para moverla. Después exporta el DXF.')
     document.getElementById('nedvi-cad-2d-editor')?.scrollIntoView({behavior:'smooth',block:'center'})
   }
@@ -235,7 +236,7 @@ export default function CadStudioPage() {
         <h1 className="mt-2 text-3xl font-bold text-[var(--foreground)]">NEDVI CAD Studio</h1>
         <p className="mt-2 text-sm text-[var(--muted)]">Editor 2D experimental: importa líneas DXF ASCII, mueve segmentos y exporta bocetos. La escala se ajusta al lienzo y otras entidades pueden omitirse. El DWG original no se modifica.</p>
       </div>
-      <div className="flex flex-wrap items-center gap-2">
+      {workspaceMode==='edit' ? <div className="flex flex-wrap items-center gap-2">
         {(['select','line','rectangle','dimension'] as Tool[]).map(item => <button key={item} onClick={() => {setTool(item);setStart(null)}} className={button + (tool === item ? ' !bg-[#7BAEE3] !text-slate-950' : '')}>{item === 'select' ? 'Seleccionar' : item === 'line' ? 'Línea' : item === 'dimension' ? 'Cota aproximada' : 'Rectángulo'}</button>)}
         <span className="flex items-center gap-1"><span className="text-xs text-[var(--muted)]">Mover:</span><input type="number" min="1" max="200" value={moveStep} onChange={e=>setMoveStep(Math.max(1,Math.min(200,Number(e.target.value)||1)))} aria-label="Distancia para mover" className="w-16 rounded-lg border border-[var(--border)] bg-[var(--surface)] px-2 py-2 text-sm text-[var(--foreground)]"/>{([['←',-1,0],['→',1,0],['↑',0,-1],['↓',0,1]] as const).map(([label,x,y])=><button key={label} className={button} disabled={!selected} onClick={()=>moveSelected(x*moveStep,y*moveStep)} title={'Mover selección '+label}>{label}</button>)}</span>
         <button className={button} disabled={!selected} onClick={() => {commit(shapes.filter(s => s.id !== selected));setSelected(null)}}><Trash2 size={14} className="mr-1 inline"/>Borrar selección</button>
@@ -285,7 +286,7 @@ export default function CadStudioPage() {
               const result=parseDxfLines(text)
               if(!window.confirm('¿Reemplazar el boceto actual con '+result.segments.length+' segmentos importados de '+file.name+'?'))return
               const incoming:Shape[]=result.segments.map(s=>({id:crypto.randomUUID(),kind:'line',a:s.a,b:s.b}))
-              commit(incoming);setSelected(null);setTool('select')
+              commit(incoming);setSelected(null);setTool('select');setWorkspaceMode('edit')
               setMessage('Se importaron '+incoming.length+' segmentos. '+result.ignored+' entidades no compatibles omitidas. Geometría ajustada para edición; verifica escala antes de utilizarla en obra.')
             }catch(error){setMessage(error instanceof Error?error.message:'No se pudo importar DXF.')}
           }}/>
@@ -293,6 +294,7 @@ export default function CadStudioPage() {
         <label className={button + ' cursor-pointer'}>Importar proyecto JSON<input type="file" accept=".json,application/json" className="hidden" onChange={async e => {const file=e.target.files?.[0];e.target.value='';if(!file)return;try{if(file.size>2000000)throw Error('Archivo demasiado grande');const data=JSON.parse(await file.text()) as {format?:string;shapes?:unknown};if(data.format!=='nedvi-cad-v1'||!Array.isArray(data.shapes)||data.shapes.length>2000||!data.shapes.every(validShape))throw Error('Formato inválido');commit(data.shapes);setMessage('Proyecto importado correctamente.')}catch{setMessage('No se pudo importar: utiliza un proyecto JSON válido de NEDVI CAD.') }}}/></label>
         <button className={button} onClick={() => {if(window.confirm('¿Vaciar el boceto actual?')){commit([]);setSelected(null)}}}><RotateCcw size={14} className="mr-1 inline"/>Limpiar</button>
       </div>
+      </div> : null}
       <p role="status" className="text-sm text-[var(--muted)]">{apsStatus}</p>
       {cadSource ? <button className={button} disabled={uploadingCad} onClick={async()=>{
         setUploadingCad(true)
@@ -309,12 +311,22 @@ export default function CadStudioPage() {
           const result=await finish.json() as {urn?:string,error?:string}
           if(!finish.ok || !result.urn) throw Error(result.error||'No se pudo iniciar la conversión.')
           setApsUrn(result.urn)
+          setWorkspaceMode('view')
           setConversionStatus('Procesando plano...')
           setMessage('Archivo enviado correctamente. Autodesk está preparando el visor.')
         }catch(error){setMessage(error instanceof Error?error.message:'No se pudo procesar el DWG.')}
         finally{setUploadingCad(false)}
       }}>{uploadingCad?'Subiendo DWG a Autodesk...':'Convertir y visualizar DWG con Autodesk'}</button> : null}
-      {apsUrn ? <div className="rounded-xl border border-[var(--border)] bg-[var(--surface)] p-4 text-sm text-[var(--foreground)]">
+      <div className="rounded-2xl border border-[var(--border)] bg-[var(--surface)] p-3">
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <div className="inline-flex gap-1 rounded-xl bg-[var(--surface-soft)] p-1">
+            <button type="button" onClick={()=>setWorkspaceMode('view')} aria-pressed={workspaceMode==='view'} className={button+(workspaceMode==='view'?' !bg-[#7BAEE3] !text-slate-950':'')}>Visualizar DWG</button>
+            <button type="button" onClick={()=>setWorkspaceMode('edit')} aria-pressed={workspaceMode==='edit'} className={button+(workspaceMode==='edit'?' !bg-[#7BAEE3] !text-slate-950':'')}>Editor 2D / DXF</button>
+          </div>
+          <span className="text-xs text-[var(--muted)]">{workspaceMode==='view'?'Visor Autodesk: archivo original de solo lectura':'Herramientas 2D: boceto o DXF compatible, independiente del DWG'}</span>
+        </div>
+      </div>
+      {workspaceMode==='view' && apsUrn ? <div className="rounded-xl border border-[var(--border)] bg-[var(--surface)] p-4 text-sm text-[var(--foreground)]">
         <p className="font-semibold">Estado de conversión: {conversionStatus}</p>
         {conversionStatus === 'success' ? <AutodeskCadViewer urn={apsUrn}/> : <p className="mt-2 text-xs text-[var(--muted)]">El procesamiento puede tardar varios minutos según el plano.</p>}
       </div> : null}
@@ -323,11 +335,12 @@ export default function CadStudioPage() {
         <p className="mt-1 text-xs text-[var(--muted)]">{cadFile.details}</p>
         <p className="mt-2 text-xs text-[var(--muted)]">Detectar solo inspecciona la cabecera. Para convertir utiliza el botón Autodesk; el DWG original permanece intacto.</p>
       </div> : null}
-      <div className="rounded-xl border border-[#5496CC]/30 bg-[#5496CC]/10 p-4 text-sm text-[var(--foreground)]">
+      {workspaceMode==='edit' ? <div className="rounded-xl border border-[#5496CC]/30 bg-[#5496CC]/10 p-4 text-sm text-[var(--foreground)]">
         <p className="font-semibold">¿Cómo probar la edición?</p>
         <p className="mt-1">Pulsa «Cargar plano de prueba 2D», baja al lienzo cuadriculado, haz clic sobre una línea azul y usa las flechas «Mover» para desplazarla. Después puedes descargar el boceto con «Exportar boceto DXF».</p>
-        <p className="mt-2 text-xs text-[var(--muted)]">El visor Autodesk de arriba es solo para consultar el DWG; el lienzo 2D de abajo es el editor. Las modificaciones no se aplican al DWG cargado.</p>
+        <p className="mt-2 text-xs text-[var(--muted)]">Esta pestaña edita el boceto 2D y los DXF compatibles. Para revisar el DWG original cambia a «Visualizar DWG». Los cambios del boceto no modifican el DWG.</p>
       </div>
+      </div> : null}
       <section className="rounded-2xl border border-[var(--border)] bg-[var(--surface)] p-4">
         <h2 className="font-semibold text-[var(--foreground)]">Bitácora de revisiones CAD</h2>
         <p className="mt-1 text-xs text-[var(--muted)]">Añade indicaciones para los planos. Se guardan solo en este navegador; no modifican la geometría DWG ni se sincronizan con el equipo.</p>
@@ -340,7 +353,7 @@ export default function CadStudioPage() {
           {notes.map(note=><div key={note.id} className="flex items-start justify-between gap-3 rounded-lg bg-[var(--surface-soft)] p-3 text-xs"><span className="text-[var(--foreground)]">{note.text}</span><button className="text-red-500" onClick={()=>setNotes(items=>items.filter(x=>x.id!==note.id))}>Eliminar</button></div>)}
         </div>
       </section>
-      <div id="nedvi-cad-2d-editor" className="overflow-auto rounded-2xl border border-[var(--border)] bg-white p-2 shadow-sm">
+      {workspaceMode==='edit' ? <div id="nedvi-cad-2d-editor" className="overflow-auto rounded-2xl border border-[var(--border)] bg-white p-2 shadow-sm">
         <svg ref={svgRef} viewBox="0 0 1200 750" className="min-w-[650px] w-full touch-none select-none" style={{backgroundImage:'linear-gradient(#e8eef5 1px, transparent 1px), linear-gradient(90deg,#e8eef5 1px, transparent 1px)',backgroundSize:'25px 25px'}} onPointerDown={pointerDown} onPointerMove={e => {if(start)setCursor(point(e))}} onPointerUp={pointerUp} onPointerCancel={()=>{setStart(null);setCursor(null)}} aria-label="Lienzo de dibujo CAD">
           {shapes.map(shape => shape.kind==='dimension' ? <g key={shape.id} onPointerDown={e=>{if(tool==='select'){e.stopPropagation();setSelected(shape.id)}}}><line x1={shape.a.x} y1={shape.a.y} x2={shape.b.x} y2={shape.b.y} stroke="#b45309" strokeWidth="2"/><text x={(shape.a.x+shape.b.x)/2} y={(shape.a.y+shape.b.y)/2-7} fill="#92400e" fontSize="16">{Math.hypot(shape.b.x-shape.a.x,shape.b.y-shape.a.y).toFixed(1)} u</text></g> : shape.kind==='line'
             ? <line key={shape.id} x1={shape.a.x} y1={shape.a.y} x2={shape.b.x} y2={shape.b.y} stroke={selected===shape.id?'#f59e0b':'#2563eb'} strokeWidth={selected===shape.id?5:3} onPointerDown={e=>{if(tool==='select'){e.stopPropagation();setSelected(shape.id)}}}/>
@@ -348,6 +361,7 @@ export default function CadStudioPage() {
           {start && cursor && ((tool==='line'||tool==='dimension')?<line x1={start.x} y1={start.y} x2={cursor.x} y2={cursor.y} stroke="#f59e0b" strokeWidth="2" strokeDasharray="7 5"/>:<rect x={Math.min(start.x,cursor.x)} y={Math.min(start.y,cursor.y)} width={Math.abs(cursor.x-start.x)} height={Math.abs(cursor.y-start.y)} fill="none" stroke="#f59e0b" strokeWidth="2" strokeDasharray="7 5"/>)}
         </svg>
       </div>
+      </div> : null}
       <div className="flex flex-wrap justify-between gap-3 text-xs text-[var(--muted)]">
         <span>{shapes.length} elementos · Cuadrícula con ajuste de 10 unidades · Dibuja arrastrando el cursor</span>
         <span role="status">{message || 'Los bocetos se conservan localmente en este navegador, no en Supabase.'}</span>
