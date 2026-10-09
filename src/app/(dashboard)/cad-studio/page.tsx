@@ -41,6 +41,49 @@ async function inspectCadFile(file: File): Promise<DetectedCad> {
   throw new Error('Selecciona un archivo CAD válido con extensión .dwg o .dxf.')
 }
 
+function AutodeskCadViewer({urn}:{urn:string}) {
+  const containerRef=useRef<HTMLDivElement>(null)
+  const [viewerError,setViewerError]=useState('')
+  useEffect(()=>{
+    let mounted=true
+    let viewer: {finish:()=>void} | null=null
+    const load=async()=>{
+      try{
+        const w=window as unknown as {Autodesk?:any}
+        if(!w.Autodesk?.Viewing){
+          if(!document.querySelector('link[data-aps-viewer]')){
+            const css=document.createElement('link');css.rel='stylesheet';css.dataset.apsViewer='true';css.href='https://developer.api.autodesk.com/modelderivative/v2/viewers/7.*/style.min.css';document.head.appendChild(css)
+          }
+          await new Promise<void>((resolve,reject)=>{
+            const existing=document.querySelector<HTMLScriptElement>('script[data-aps-viewer]')
+            if(existing){if(w.Autodesk?.Viewing){resolve();return}existing.addEventListener('load',()=>resolve(),{once:true});existing.addEventListener('error',()=>reject(Error('No se cargó el visor Autodesk.')),{once:true});return}
+            const script=document.createElement('script');script.dataset.apsViewer='true';script.src='https://developer.api.autodesk.com/modelderivative/v2/viewers/7.*/viewer3D.min.js';script.onload=()=>resolve();script.onerror=()=>reject(Error('No se cargó el visor Autodesk.'));document.body.appendChild(script)
+          })
+        }
+        const Autodesk=w.Autodesk
+        Autodesk.Viewing.Initializer({env:'AutodeskProduction2',api:'streamingV2',getAccessToken:async(callback:(token:string,expires:number)=>void)=>{
+          const resp=await fetch('/api/cad/aps-model?mode=token',{cache:'no-store'})
+          const value=await resp.json() as {access_token?:string,expires_in?:number}
+          if(value.access_token) callback(value.access_token,value.expires_in||3000)
+        }},()=>{
+          if(!mounted || !containerRef.current)return
+          const instance=new Autodesk.Viewing.GuiViewer3D(containerRef.current)
+          instance.start();viewer=instance
+          Autodesk.Viewing.Document.load('urn:'+urn,(doc:any)=>{
+            if(!mounted)return
+            const view=doc.getRoot().getDefaultGeometry()
+            if(view)instance.loadDocumentNode(doc,view)
+            else setViewerError('Autodesk no encontró geometría visible en este archivo.')
+          },()=>setViewerError('No se pudo cargar el plano convertido.'))
+        })
+      }catch(error){if(mounted)setViewerError(error instanceof Error?error.message:'Error abriendo el visor.')}
+    }
+    void load()
+    return()=>{mounted=false;viewer?.finish()}
+  },[urn])
+  return <div className="mt-4"><div ref={containerRef} style={{height:560,width:'100%',position:'relative'}}/>{viewerError?<p className="text-red-500 text-sm">{viewerError}</p>:null}</div>
+}
+
 export default function CadStudioPage() {
   const [shapes, setShapes] = useState<Shape[]>([])
   const [tool, setTool] = useState<Tool>('line')
@@ -52,6 +95,10 @@ export default function CadStudioPage() {
   const [message, setMessage] = useState('')
   const [cadFile, setCadFile] = useState<DetectedCad | null>(null)
   const [inspecting, setInspecting] = useState(false)
+  const [cadSource, setCadSource] = useState<File | null>(null)
+  const [apsUrn, setApsUrn] = useState<string | null>(null)
+  const [conversionStatus, setConversionStatus] = useState('')
+  const [uploadingCad, setUploadingCad] = useState(false)
   const [checkingAps, setCheckingAps] = useState(false)
   const [apsStatus, setApsStatus] = useState('Conexión Autodesk sin comprobar.')
   const svgRef = useRef<SVGSVGElement | null>(null)
@@ -66,6 +113,21 @@ export default function CadStudioPage() {
     } catch { /* Ignore invalid local drafts. */ }
     setReady(true)
   }, [])
+
+  useEffect(() => {
+    if (!apsUrn || conversionStatus === 'success' || conversionStatus === 'failed') return
+    let mounted = true
+    const check = async () => {
+      try {
+        const response = await fetch('/api/cad/aps-model?urn='+encodeURIComponent(apsUrn),{cache:'no-store'})
+        const result = await response.json() as {status?:string,error?:string,progress?:string}
+        if(mounted) setConversionStatus(result.error || result.status === 'success' ? (result.error ? 'failed' : 'success') : result.status === 'failed' ? 'failed' : result.status === 'inprogress' ? 'Convirtiendo: '+(result.progress||'') : 'Procesando plano...')
+      } catch { if(mounted) setConversionStatus('Esperando respuesta de Autodesk...') }
+    }
+    void check()
+    const interval=setInterval(()=>void check(),6000)
+    return ()=>{mounted=false;clearInterval(interval)}
+  },[apsUrn,conversionStatus === 'success',conversionStatus === 'failed'])
 
   useEffect(() => {
     if (ready) localStorage.setItem(STORAGE_KEY, JSON.stringify(shapes))
@@ -157,6 +219,9 @@ export default function CadStudioPage() {
             try {
               const detected = await inspectCadFile(file)
               setCadFile(detected)
+              setCadSource(detected.format === 'DWG' ? file : null)
+              setApsUrn(null)
+              setConversionStatus('')
               setMessage(detected.details)
             } catch (error) {
               setMessage(error instanceof Error ? error.message : 'Archivo CAD no reconocido.')
@@ -169,6 +234,30 @@ export default function CadStudioPage() {
         <button className={button} onClick={() => {if(window.confirm('¿Vaciar el boceto actual?')){commit([]);setSelected(null)}}}><RotateCcw size={14} className="mr-1 inline"/>Limpiar</button>
       </div>
       <p role="status" className="text-sm text-[var(--muted)]">{apsStatus}</p>
+      {cadSource ? <button className={button} disabled={uploadingCad} onClick={async()=>{
+        setUploadingCad(true)
+        setMessage('Preparando carga segura hacia Autodesk...')
+        try {
+          const start=await fetch('/api/cad/aps-upload',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({filename:cadSource.name,size:cadSource.size})})
+          const s=await start.json() as {error?:string,uploadUrl?:string,uploadKey?:string,objectKey?:string}
+          if(!start.ok || !s.uploadUrl || !s.uploadKey || !s.objectKey) throw Error(s.error||'No se pudo preparar el archivo.')
+          setMessage('Subiendo plano directamente al almacenamiento Autodesk...')
+          const upload=await fetch(s.uploadUrl,{method:'PUT',body:cadSource,headers:{'Content-Type':'application/octet-stream'}})
+          if(!upload.ok) throw Error('No se pudo transferir el DWG a Autodesk (HTTP '+upload.status+').')
+          setMessage('Iniciando conversión del plano...')
+          const finish=await fetch('/api/cad/aps-complete',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({objectKey:s.objectKey,uploadKey:s.uploadKey})})
+          const result=await finish.json() as {urn?:string,error?:string}
+          if(!finish.ok || !result.urn) throw Error(result.error||'No se pudo iniciar la conversión.')
+          setApsUrn(result.urn)
+          setConversionStatus('Procesando plano...')
+          setMessage('Archivo enviado correctamente. Autodesk está preparando el visor.')
+        }catch(error){setMessage(error instanceof Error?error.message:'No se pudo procesar el DWG.')}
+        finally{setUploadingCad(false)}
+      }}>{uploadingCad?'Subiendo DWG a Autodesk...':'Convertir y visualizar DWG con Autodesk'}</button> : null}
+      {apsUrn ? <div className="rounded-xl border border-[var(--border)] bg-[var(--surface)] p-4 text-sm text-[var(--foreground)]">
+        <p className="font-semibold">Estado de conversión: {conversionStatus}</p>
+        {conversionStatus === 'success' ? <AutodeskCadViewer urn={apsUrn}/> : <p className="mt-2 text-xs text-[var(--muted)]">El procesamiento puede tardar varios minutos según el plano.</p>}
+      </div> : null}
       {cadFile ? <div className="rounded-xl border border-[#5496CC]/30 bg-[#5496CC]/10 p-4 text-sm text-[var(--foreground)]">
         <p className="font-semibold">Archivo detectado: {cadFile.format} · {cadFile.name}</p>
         <p className="mt-1 text-xs text-[var(--muted)]">{cadFile.details}</p>
