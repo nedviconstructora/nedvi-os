@@ -68,6 +68,7 @@ const ROUTE_PERMISSIONS: Array<{ prefix: string; permission: ModulePermission }>
   { prefix: '/site-surveys', permission: 'commercial' },
   { prefix: '/quotes', permission: 'commercial' },
   { prefix: '/projects', permission: 'projects' },
+  { prefix: '/cad-studio', permission: 'projects' },
   { prefix: '/documents', permission: 'projects' },
   { prefix: '/budgets', permission: 'projects' },
   { prefix: '/requisitions', permission: 'purchasing' },
