@@ -871,12 +871,20 @@ export default function UsersAndPermissionsPage() {
 
               <label className="block">
                 <span className="text-xs font-semibold text-[var(--muted)]">Puesto</span>
-                <input
+                <textarea
+                  rows={1}
+                  autoComplete="off"
+                  data-lpignore="true"
+                  data-1p-ignore="true"
                   value={createPosition}
-                  onChange={(event) => setCreatePosition(event.target.value)}
+                  onChange={(event) => setCreatePosition(event.target.value.replace(/\n/g, ''))}
+                  onKeyDown={(event) => {
+                    if (event.key === 'Enter') event.preventDefault()
+                  }}
                   placeholder="Supervisor de obra"
-                  className="mt-2 h-11 w-full rounded-xl border border-[var(--border)] bg-[var(--surface-soft)] px-3 text-sm text-[var(--foreground)] outline-none focus:border-[#5496CC]"
-                />
+                  aria-label="Puesto del nuevo integrante"
+                  className="mt-2 h-11 w-full resize-none rounded-xl border border-[var(--border)] bg-[var(--surface-soft)] px-3 py-3 text-sm text-[var(--foreground)] outline-none focus:border-[#5496CC]"
+                ></textarea>
               </label>
 
               <label className="block">
