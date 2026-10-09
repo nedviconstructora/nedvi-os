@@ -2,45 +2,6 @@
 
 import { useEffect, useRef, useState } from 'react'
 import { AppShell } from '@/components/layout/AppShell'
-import { parseDxfLines } from '@/features/cad/services/dxfImport'
-import { Download, RotateCcw, Save, Trash2, Undo2 } from 'lucide-react'
-
-type Point = { x: number; y: number }
-type Shape = { id: string; kind: 'line' | 'rectangle' | 'dimension'; a: Point; b: Point }
-type Tool = 'select' | 'line' | 'rectangle' | 'dimension'
-const STORAGE_KEY = 'nedvi-cad-studio-draft-v1'
-const WIDTH = 1200
-const HEIGHT = 750
-
-function validShape(value: unknown): value is Shape {
-  if (!value || typeof value !== 'object') return false
-  const item = value as Partial<Shape>
-  return typeof item.id === 'string' && (item.kind === 'line' || item.kind === 'rectangle' || item.kind === 'dimension') &&
-    !!item.a && !!item.b && [item.a.x,item.a.y,item.b.x,item.b.y].every(v => typeof v === 'number' && Number.isFinite(v) && v >= 0 && v <= 50000)
-}
-
-
-type DetectedCad = { name: string; format: 'DWG' | 'DXF'; details: string }
-
-async function inspectCadFile(file: File): Promise<DetectedCad> {
-  if (file.size > 40 * 1024 * 1024) throw new Error('El archivo supera el límite de inspección de 40 MB.')
-  const header = new Uint8Array(await file.slice(0, 32).arrayBuffer())
-  const ascii = Array.from(header).map(byte => String.fromCharCode(byte)).join('')
-  const extension = file.name.split('.').pop()?.toLowerCase()
-  if (ascii.startsWith('AC10') && /^AC10[0-9]{2}/.test(ascii.slice(0, 6))) {
-    return { name: file.name, format: 'DWG', details: 'Archivo DWG válido identificado por su cabecera AutoCAD. Utiliza la conversión APS para visualizarlo; la edición nativa DWG aún no está disponible.' }
-  }
-  if (ascii.startsWith('AutoCAD Binary DXF')) {
-    return { name: file.name, format: 'DXF', details: 'DXF binario identificado. Esta versión todavía no interpreta DXF binarios.' }
-  }
-  const text = await file.slice(0, Math.min(file.size, 65536)).text()
-  const normalized = text.replace(/\r\n?/g, '\n')
-  if (/^\s*0\s*\nSECTION\s*\n\s*2\s*\n(?:HEADER|TABLES|BLOCKS|ENTITIES|OBJECTS)/i.test(normalized)) {
-    return { name: file.name, format: 'DXF', details: 'DXF ASCII reconocido. La lectura y edición de sus entidades se añadirá en una siguiente fase.' }
-  }
-  if (extension === 'dwg' || extension === 'dxf') throw new Error('La extensión es CAD, pero el contenido no tiene una cabecera DWG o DXF reconocible.')
-  throw new Error('Selecciona un archivo CAD válido con extensión .dwg o .dxf.')
-}
 
 function AutodeskCadViewer({urn}:{urn:string}) {
   const containerRef=useRef<HTMLDivElement>(null)
@@ -85,340 +46,81 @@ function AutodeskCadViewer({urn}:{urn:string}) {
   return <div className="mt-4"><div ref={containerRef} style={{height:560,width:'100%',position:'relative'}}/>{viewerError?<p className="text-red-500 text-sm">{viewerError}</p>:null}</div>
 }
 
+
 export default function CadStudioPage() {
-  const [workspaceMode, setWorkspaceMode] = useState<'view' | 'edit'>('view')
-  const [shapes, setShapes] = useState<Shape[]>([])
-  const [notes, setNotes] = useState<Array<{id:string;text:string;createdAt:string}>>([])
-  const [noteInput, setNoteInput] = useState('')
-  const [tool, setTool] = useState<Tool>('line')
-  const [selected, setSelected] = useState<string | null>(null)
-  const [moveStep, setMoveStep] = useState(10)
-  const [start, setStart] = useState<Point | null>(null)
-  const [cursor, setCursor] = useState<Point | null>(null)
-  const [history, setHistory] = useState<Shape[][]>([])
-  const [ready, setReady] = useState(false)
-  const [message, setMessage] = useState('')
-  const [cadFile, setCadFile] = useState<DetectedCad | null>(null)
-  const [inspecting, setInspecting] = useState(false)
-  const [cadSource, setCadSource] = useState<File | null>(null)
-  const [apsUrn, setApsUrn] = useState<string | null>(null)
-  const [conversionStatus, setConversionStatus] = useState('')
-  const [uploadingCad, setUploadingCad] = useState(false)
-  const [checkingAps, setCheckingAps] = useState(false)
-  const [apsStatus, setApsStatus] = useState('Conexión Autodesk sin comprobar.')
-  const [automationStatus, setAutomationStatus] = useState('')
-  const [checkingAutomation, setCheckingAutomation] = useState(false)
-  const svgRef = useRef<SVGSVGElement | null>(null)
-  const dragRef = useRef<{id:string;origin:Point;initial:Shape[];moved:boolean} | null>(null)
+  const [file,setFile]=useState<File|null>(null)
+  const [urn,setUrn]=useState<string|null>(null)
+  const [status,setStatus]=useState('')
+  const [message,setMessage]=useState('')
+  const [busy,setBusy]=useState(false)
 
-  useEffect(() => {
-    try {
-      const saved = localStorage.getItem(STORAGE_KEY)
-      if (saved) {
-        const parsed: unknown = JSON.parse(saved)
-        if (Array.isArray(parsed)) setShapes(parsed.filter(validShape).slice(0, 2000))
-      }
-    } catch { /* Ignore invalid local drafts. */ }
-    try { const savedNotes=JSON.parse(localStorage.getItem('nedvi-cad-notes-v1') || '[]') as unknown; if(Array.isArray(savedNotes)) setNotes(savedNotes.filter((item): item is {id:string;text:string;createdAt:string} => !!item && typeof item === 'object' && typeof item.id === 'string' && typeof item.text === 'string' && typeof item.createdAt === 'string').slice(0,100)) }catch{}
-    setReady(true)
-  }, [])
-
-  useEffect(() => {
-    if (!apsUrn || conversionStatus === 'success' || conversionStatus === 'failed') return
-    let mounted = true
-    const check = async () => {
-      try {
-        const response = await fetch('/api/cad/aps-model?urn='+encodeURIComponent(apsUrn),{cache:'no-store'})
-        const result = await response.json() as {status?:string,error?:string,progress?:string}
-        if(mounted) setConversionStatus(result.error || result.status === 'success' ? (result.error ? 'failed' : 'success') : result.status === 'failed' ? 'failed' : result.status === 'inprogress' ? 'Convirtiendo: '+(result.progress||'') : 'Procesando plano...')
-      } catch { if(mounted) setConversionStatus('Esperando respuesta de Autodesk...') }
+  useEffect(()=>{
+    if(!urn || status==='success' || status==='failed')return
+    let active=true
+    const check=async()=>{
+      try{
+        const response=await fetch('/api/cad/aps-model?urn='+encodeURIComponent(urn),{cache:'no-store'})
+        const result=await response.json() as {status?:string,error?:string,progress?:string}
+        if(!active)return
+        if(!response.ok || result.error){setStatus('failed');setMessage(result.error || 'No se pudo consultar el plano.');return}
+        if(result.status==='success')setStatus('success')
+        else if(result.status==='failed'){setStatus('failed');setMessage('Autodesk no pudo preparar este plano.')}
+        else setStatus('Procesando plano'+(result.progress?': '+result.progress:'...'))
+      }catch{if(active)setMessage('Esperando respuesta de Autodesk...')}
     }
     void check()
-    const interval=setInterval(()=>void check(),6000)
-    return ()=>{mounted=false;clearInterval(interval)}
-  },[apsUrn,conversionStatus === 'success',conversionStatus === 'failed'])
+    const timer=setInterval(()=>void check(),6000)
+    return()=>{active=false;clearInterval(timer)}
+  },[urn,status==='success',status==='failed'])
 
-  useEffect(() => {
-    if (ready) localStorage.setItem(STORAGE_KEY, JSON.stringify(shapes))
-  }, [ready, shapes])
-
-  useEffect(() => { if(ready) localStorage.setItem('nedvi-cad-notes-v1',JSON.stringify(notes)) },[ready,notes])
-
-  function commit(next: Shape[]) {
-    setHistory(previous => [...previous.slice(-29), shapes])
-    setShapes(next)
-    setMessage('Borrador actualizado en este dispositivo.')
+  async function openPlan(){
+    if(!file || busy)return
+    setBusy(true);setMessage('Preparando el plano para visualizar...');setUrn(null);setStatus('')
+    try{
+      const start=await fetch('/api/cad/aps-upload',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({filename:file.name,size:file.size})})
+      const uploadInfo=await start.json() as {error?:string,uploadUrl?:string,uploadKey?:string,objectKey?:string}
+      if(!start.ok || !uploadInfo.uploadUrl || !uploadInfo.uploadKey || !uploadInfo.objectKey)throw Error(uploadInfo.error || 'No se pudo preparar el plano.')
+      const upload=await fetch(uploadInfo.uploadUrl,{method:'PUT',headers:{'Content-Type':'application/octet-stream'},body:file})
+      if(!upload.ok)throw Error('No se pudo transferir el archivo a Autodesk (HTTP '+upload.status+').')
+      setMessage('Preparando vista previa...')
+      const complete=await fetch('/api/cad/aps-complete',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({objectKey:uploadInfo.objectKey,uploadKey:uploadInfo.uploadKey})})
+      const result=await complete.json() as {urn?:string,error?:string}
+      if(!complete.ok || !result.urn)throw Error(result.error || 'No se pudo iniciar el visor.')
+      setUrn(result.urn);setStatus('Procesando plano...')
+      setMessage('El plano original no se modificará.')
+    }catch(error){setMessage(error instanceof Error?error.message:'No se pudo abrir el plano.')}
+    finally{setBusy(false)}
   }
 
-  function point(event: React.PointerEvent<SVGSVGElement>): Point {
-    const svg = svgRef.current
-    if (!svg) return { x: 0, y: 0 }
-    const p = svg.createSVGPoint()
-    p.x = event.clientX
-    p.y = event.clientY
-    const transformed = svg.getScreenCTM()?.inverse()
-    if (!transformed) return { x: 0, y: 0 }
-    const target = p.matrixTransform(transformed)
-    return { x: Math.max(0, Math.min(WIDTH, Math.round(target.x / 10) * 10)), y: Math.max(0, Math.min(HEIGHT, Math.round(target.y / 10) * 10)) }
-  }
-
-  function pointerDown(event: React.PointerEvent<SVGSVGElement>) {
-    if (tool === 'select') { if(!dragRef.current)setSelected(null); return }
-    const p = point(event)
-    setStart(p)
-    setCursor(p)
-    event.currentTarget.setPointerCapture(event.pointerId)
-  }
-
-  function pointerUp(event: React.PointerEvent<SVGSVGElement>) {
-    if(tool==='select' && dragRef.current){
-      const drag=dragRef.current
-      dragRef.current=null
-      if(drag.moved) setHistory(previous=>[...previous.slice(-29),drag.initial])
-      return
-    }
-    if (!start || tool === 'select') return
-    const end = point(event)
-    if (end.x !== start.x || end.y !== start.y) {
-      commit([...shapes, { id: crypto.randomUUID(), kind: tool, a: start, b: end }])
-    }
-    setStart(null)
-    setCursor(null)
-  }
-
-  function selectAndDrag(event: React.PointerEvent<SVGElement>, id:string) {
-    if(tool!=='select')return
-    event.stopPropagation()
-    setSelected(id)
-    dragRef.current={id,origin:point(event as unknown as React.PointerEvent<SVGSVGElement>),initial:shapes,moved:false}
-    svgRef.current?.setPointerCapture(event.pointerId)
-  }
-
-  function pointerMove(event:React.PointerEvent<SVGSVGElement>) {
-    if(dragRef.current && tool==='select'){
-      const drag=dragRef.current
-      const here=point(event)
-      const dx=here.x-drag.origin.x,dy=here.y-drag.origin.y
-      if(dx||dy)drag.moved=true
-      setShapes(drag.initial.map(s=>s.id!==drag.id?s:{...s,a:{x:Math.max(0,s.a.x+dx),y:Math.max(0,s.a.y+dy)},b:{x:Math.max(0,s.b.x+dx),y:Math.max(0,s.b.y+dy)}}))
-      return
-    }
-    if(start)setCursor(point(event))
-  }
-
-  function moveSelected(dx:number,dy:number) {
-    if(!selected) return
-    commit(shapes.map(shape=>shape.id!==selected?shape:{...shape,a:{x:Math.max(0,shape.a.x+dx),y:Math.max(0,shape.a.y+dy)},b:{x:Math.max(0,shape.b.x+dx),y:Math.max(0,shape.b.y+dy)}}))
-  }
-
-  function loadTestPlan() {
-    if(shapes.length && !window.confirm('Se reemplazará el boceto 2D actual. ¿Continuar?'))return
-    const plan:Shape[]=[
-      {id:crypto.randomUUID(),kind:'line',a:{x:150,y:150},b:{x:700,y:150}},
-      {id:crypto.randomUUID(),kind:'line',a:{x:700,y:150},b:{x:700,y:520}},
-      {id:crypto.randomUUID(),kind:'line',a:{x:700,y:520},b:{x:150,y:520}},
-      {id:crypto.randomUUID(),kind:'line',a:{x:150,y:520},b:{x:150,y:150}},
-      {id:crypto.randomUUID(),kind:'line',a:{x:420,y:150},b:{x:420,y:360}},
-      {id:crypto.randomUUID(),kind:'line',a:{x:420,y:440},b:{x:420,y:520}},
-      {id:crypto.randomUUID(),kind:'line',a:{x:150,y:330},b:{x:420,y:330}}
-    ]
-    commit(plan);setSelected(null);setTool('select');setWorkspaceMode('edit')
-    setMessage('Plano de prueba cargado: haz clic en una línea y utiliza las flechas para moverla. Después exporta el DXF.')
-    document.getElementById('nedvi-cad-2d-editor')?.scrollIntoView({behavior:'smooth',block:'center'})
-  }
-
-  function svgMarkup() {
-    const shapeTags = shapes.map(shape => shape.kind === 'dimension' ? `<g><line x1="${shape.a.x}" y1="${shape.a.y}" x2="${shape.b.x}" y2="${shape.b.y}" stroke="#b45309" stroke-width="2"/><text x="${(shape.a.x+shape.b.x)/2}" y="${(shape.a.y+shape.b.y)/2-6}" fill="#92400e" font-size="16">${Math.hypot(shape.b.x-shape.a.x,shape.b.y-shape.a.y).toFixed(1)} u</text></g>` : shape.kind === 'line'
-      ? `<line x1="${shape.a.x}" y1="${shape.a.y}" x2="${shape.b.x}" y2="${shape.b.y}" stroke="#2563eb" stroke-width="2"/>`
-      : `<rect x="${Math.min(shape.a.x,shape.b.x)}" y="${Math.min(shape.a.y,shape.b.y)}" width="${Math.abs(shape.a.x-shape.b.x)}" height="${Math.abs(shape.a.y-shape.b.y)}" fill="none" stroke="#2563eb" stroke-width="2"/>`).join('')
-    return `<svg xmlns="http://www.w3.org/2000/svg" width="${WIDTH}" height="${HEIGHT}" viewBox="0 0 ${WIDTH} ${HEIGHT}"><rect width="100%" height="100%" fill="white"/>${shapeTags}</svg>`
-  }
-
-  function download(filename: string, text: string, mime: string) {
-    const url = URL.createObjectURL(new Blob([text], { type: mime }))
-    const anchor = document.createElement('a')
-    anchor.href = url
-    anchor.download = filename
-    anchor.click()
-    setTimeout(() => URL.revokeObjectURL(url), 1000)
-  }
-
-  function exportDxf() {
-    const lines=['0','SECTION','2','HEADER','9','$ACADVER','1','AC1009','0','ENDSEC','0','SECTION','2','ENTITIES']
-    const segment=(a:Point,b:Point)=>{ lines.push('0','LINE','8','NEDVI_BOCETO','10',String(a.x),'20',String(-a.y),'30','0','11',String(b.x),'21',String(-b.y),'31','0') }
-    shapes.forEach(shape=>{
-      if(shape.kind==='rectangle'){
-        const {a,b}=shape;const x1=Math.min(a.x,b.x),x2=Math.max(a.x,b.x),y1=Math.min(a.y,b.y),y2=Math.max(a.y,b.y)
-        segment({x:x1,y:y1},{x:x2,y:y1});segment({x:x2,y:y1},{x:x2,y:y2});segment({x:x2,y:y2},{x:x1,y:y2});segment({x:x1,y:y2},{x:x1,y:y1})
-      }else segment(shape.a,shape.b)
-    })
-    lines.push('0','ENDSEC','0','EOF')
-    download('nedvi-boceto-2d.dxf',lines.join('\r\n'),'application/dxf')
-    setMessage('DXF del boceto exportado. Las unidades son arbitrarias y no modifica el DWG original.')
-  }
-
-  const button = 'rounded-lg border border-[var(--border)] bg-[var(--surface)] px-3 py-2 text-sm font-semibold text-[var(--foreground)] hover:bg-[var(--surface-soft)]'
   return <AppShell>
-    <div className="mx-auto max-w-[1500px] space-y-5 p-2 sm:p-5">
-      <div>
+    <main className="mx-auto max-w-[1500px] space-y-5 p-3 sm:p-6">
+      <header>
         <p className="text-xs font-semibold uppercase tracking-widest text-[#5496CC]">Gestión de Proyectos</p>
-        <h1 className="mt-2 text-3xl font-bold text-[var(--foreground)]">NEDVI CAD Studio</h1>
-        <p className="mt-2 text-sm text-[var(--muted)]">Visualiza DWG con Autodesk o trabaja en el editor 2D con bocetos y archivos DXF compatibles. El DWG original permanece intacto.</p>
-      </div>
-      <div className="flex flex-wrap items-center gap-2">
-        <button className={button} disabled={checkingAps} onClick={async () => {
-          setCheckingAps(true)
-          try {
-            const response = await fetch('/api/cad/aps-status', { cache: 'no-store' })
-            const data = await response.json() as { connected?: boolean; error?: string }
-            setApsStatus(data.connected ? 'Autodesk APS conectado y autenticado correctamente.' : (data.error ?? 'No se pudo conectar con Autodesk.'))
-          } catch { setApsStatus('No se pudo consultar la conexión con Autodesk.') }
-          finally { setCheckingAps(false) }
-        }}>{checkingAps ? 'Comprobando APS...' : 'Probar conexión Autodesk'}</button>
-        <button type="button" className={button} disabled={checkingAutomation} onClick={async()=>{
-          setCheckingAutomation(true)
-          try {
-            const response=await fetch('/api/cad/automation-status',{cache:'no-store'})
-            const result=await response.json() as {message?:string,error?:string}
-            setAutomationStatus(result.message || result.error || 'No se pudo verificar Automation.')
-          }catch{setAutomationStatus('No se pudo conectar con el verificador de Automation.')}
-          finally{setCheckingAutomation(false)}
-        }}>{checkingAutomation?'Comprobando...':'Estado de conversión DWG editable'}</button>
-        <label className={button + ' cursor-pointer'}>{inspecting ? 'Analizando archivo...' : 'Abrir archivo DWG / DXF'}
-          <input type="file" accept=".dwg,.dxf" disabled={inspecting} className="hidden" onChange={async event => {
-            const file = event.target.files?.[0]
-            event.target.value = ''
-            if (!file) return
-            setInspecting(true)
-            setCadFile(null)
-            try {
-              const detected = await inspectCadFile(file)
-              if(detected.format === 'DXF'){
-                if(file.size > 8*1024*1024) throw new Error('Este editor admite DXF ASCII de hasta 8 MB.')
-                const content=await file.text()
-                const result=parseDxfLines(content)
-                if(shapes.length && !window.confirm('¿Reemplazar el boceto actual con '+result.segments.length+' segmentos del DXF?')) return
-                commit(result.segments.map(s=>({id:crypto.randomUUID(),kind:'line',a:s.a,b:s.b})))
-                setSelected(null)
-                setTool('select')
-                setWorkspaceMode('edit')
-                setCadFile(detected)
-                setCadSource(null)
-                setMessage('DXF cargado en el editor: '+result.segments.length+' segmentos. '+result.ignored+' entidades no compatibles omitidas. La escala fue adaptada al lienzo; no utilices estas medidas para obra.')
-              } else {
-                setCadFile(detected)
-                setCadSource(file)
-                setApsUrn(null)
-                setConversionStatus('')
-                setWorkspaceMode('view')
-                setMessage(detected.details)
-              }
-            } catch (error) {
-              setMessage(error instanceof Error ? error.message : 'Archivo CAD no reconocido.')
-            } finally {
-              setInspecting(false)
-            }
-          }}/>
-        </label>
-      </div>
-      {workspaceMode==='edit' ? <div className="flex flex-wrap items-center gap-2">
-        {(['select','line','rectangle','dimension'] as Tool[]).map(item => <button key={item} onClick={() => {setTool(item);setStart(null)}} className={button + (tool === item ? ' !bg-[#7BAEE3] !text-slate-950' : '')}>{item === 'select' ? 'Seleccionar' : item === 'line' ? 'Línea' : item === 'dimension' ? 'Cota aproximada' : 'Rectángulo'}</button>)}
-        <span className="flex items-center gap-1"><span className="text-xs text-[var(--muted)]">Mover:</span><input type="number" min="1" max="200" value={moveStep} onChange={e=>setMoveStep(Math.max(1,Math.min(200,Number(e.target.value)||1)))} aria-label="Distancia para mover" className="w-16 rounded-lg border border-[var(--border)] bg-[var(--surface)] px-2 py-2 text-sm text-[var(--foreground)]"/>{([['←',-1,0],['→',1,0],['↑',0,-1],['↓',0,1]] as const).map(([label,x,y])=><button key={label} className={button} disabled={!selected} onClick={()=>moveSelected(x*moveStep,y*moveStep)} title={'Mover selección '+label}>{label}</button>)}</span>
-        <button className={button} disabled={!selected} onClick={() => {commit(shapes.filter(s => s.id !== selected));setSelected(null)}}><Trash2 size={14} className="mr-1 inline"/>Borrar selección</button>
-        <button className={button} disabled={!history.length} onClick={() => {const last=history[history.length-1];setHistory(h=>h.slice(0,-1));setShapes(last)}}><Undo2 size={14} className="mr-1 inline"/>Deshacer</button>
-        <button className={button} onClick={() => {setMessage('Borrador guardado únicamente en este navegador de Windows.');localStorage.setItem(STORAGE_KEY,JSON.stringify(shapes))}}><Save size={14} className="mr-1 inline"/>Guardar borrador</button>
-        <button className={button} onClick={loadTestPlan}>Cargar plano de prueba 2D</button>
-        <button className={button} onClick={exportDxf}>Exportar boceto DXF</button>
-        <label className={button + ' cursor-pointer'}>Importar DXF editable
-          <input type="file" accept=".dxf" className="hidden" onChange={async e=>{
-            const file=e.target.files?.[0];e.target.value='';if(!file)return
-            try {
-              if(file.size>8*1024*1024)throw Error('El DXF supera 8 MB.')
-              const text=await file.text()
-              if(!text.includes('SECTION'))throw Error('Solo se admiten DXF ASCII.')
-              const result=parseDxfLines(text)
-              if(!window.confirm('¿Reemplazar el boceto actual con '+result.segments.length+' segmentos importados de '+file.name+'?'))return
-              const incoming:Shape[]=result.segments.map(s=>({id:crypto.randomUUID(),kind:'line',a:s.a,b:s.b}))
-              commit(incoming);setSelected(null);setTool('select');setWorkspaceMode('edit')
-              setMessage('Se importaron '+incoming.length+' segmentos. '+result.ignored+' entidades no compatibles omitidas. Geometría ajustada para edición; verifica escala antes de utilizarla en obra.')
-            }catch(error){setMessage(error instanceof Error?error.message:'No se pudo importar DXF.')}
-          }}/>
-        </label>
-        <button className={button} onClick={() => {if(window.confirm('¿Vaciar el boceto actual?')){commit([]);setSelected(null)}}}><RotateCcw size={14} className="mr-1 inline"/>Limpiar</button>
-      </div> : null}
-      {checkingAps || apsStatus !== 'Conexión Autodesk sin comprobar.' ? <p role="status" className="text-sm text-[var(--muted)]">{apsStatus}</p> : null}
-      {automationStatus ? <p role="status" className="rounded-lg border border-[var(--border)] p-3 text-sm text-[var(--foreground)]">{automationStatus}</p> : null}
-      {cadSource ? <button className={button} disabled={uploadingCad} onClick={async()=>{
-        setUploadingCad(true)
-        setMessage('Preparando carga segura hacia Autodesk...')
-        try {
-          const start=await fetch('/api/cad/aps-upload',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({filename:cadSource.name,size:cadSource.size})})
-          const s=await start.json() as {error?:string,uploadUrl?:string,uploadKey?:string,objectKey?:string}
-          if(!start.ok || !s.uploadUrl || !s.uploadKey || !s.objectKey) throw Error(s.error||'No se pudo preparar el archivo.')
-          setMessage('Subiendo plano directamente al almacenamiento Autodesk...')
-          const upload=await fetch(s.uploadUrl,{method:'PUT',body:cadSource,headers:{'Content-Type':'application/octet-stream'}})
-          if(!upload.ok) throw Error('No se pudo transferir el DWG a Autodesk (HTTP '+upload.status+').')
-          setMessage('Iniciando conversión del plano...')
-          const finish=await fetch('/api/cad/aps-complete',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({objectKey:s.objectKey,uploadKey:s.uploadKey})})
-          const result=await finish.json() as {urn?:string,error?:string}
-          if(!finish.ok || !result.urn) throw Error(result.error||'No se pudo iniciar la conversión.')
-          setApsUrn(result.urn)
-          setWorkspaceMode('view')
-          setConversionStatus('Procesando plano...')
-          setMessage('Archivo enviado correctamente. Autodesk está preparando el visor.')
-        }catch(error){setMessage(error instanceof Error?error.message:'No se pudo procesar el DWG.')}
-        finally{setUploadingCad(false)}
-      }}>{uploadingCad?'Subiendo DWG a Autodesk...':'Convertir y visualizar DWG con Autodesk'}</button> : null}
-      <div className="rounded-2xl border border-[var(--border)] bg-[var(--surface)] p-3">
-        <div className="flex flex-wrap items-center justify-between gap-3">
-          <div className="inline-flex gap-1 rounded-xl bg-[var(--surface-soft)] p-1">
-            <button type="button" onClick={()=>setWorkspaceMode('view')} aria-pressed={workspaceMode==='view'} className={button+(workspaceMode==='view'?' !bg-[#7BAEE3] !text-slate-950':'')}>Visualizar DWG</button>
-            <button type="button" onClick={()=>setWorkspaceMode('edit')} aria-pressed={workspaceMode==='edit'} className={button+(workspaceMode==='edit'?' !bg-[#7BAEE3] !text-slate-950':'')}>Editor 2D / DXF</button>
-          </div>
-          <span className="text-xs text-[var(--muted)]">{workspaceMode==='view'?'Visor Autodesk: archivo original de solo lectura':'Herramientas 2D: boceto o DXF compatible, independiente del DWG'}</span>
-        </div>
-      </div>
-      {workspaceMode==='view' && apsUrn ? <div className="rounded-xl border border-[var(--border)] bg-[var(--surface)] p-4 text-sm text-[var(--foreground)]">
-        <p className="font-semibold">Estado de conversión: {conversionStatus}</p>
-        {conversionStatus === 'success' ? <AutodeskCadViewer urn={apsUrn}/> : <p className="mt-2 text-xs text-[var(--muted)]">El procesamiento puede tardar varios minutos según el plano.</p>}
-      </div> : null}
-      {cadFile ? <div className="rounded-xl border border-[#5496CC]/30 bg-[#5496CC]/10 p-4 text-sm text-[var(--foreground)]">
-        <p className="font-semibold">Archivo detectado: {cadFile.format} · {cadFile.name}</p>
-        <p className="mt-1 text-xs text-[var(--muted)]">{cadFile.details}</p>
-        <p className="mt-2 text-xs text-[var(--muted)]">Los DXF ASCII compatibles se abren en el editor; los DWG se muestran mediante Autodesk en modo consulta. Convertir DWG a geometría editable requiere activar AutoCAD Automation.</p>
-      </div> : null}
-      {workspaceMode==='edit' ? <div className="rounded-xl border border-[#5496CC]/30 bg-[#5496CC]/10 p-4 text-sm text-[var(--foreground)]">
-        <p className="font-semibold">¿Cómo probar la edición?</p>
-        <p className="mt-1">Pulsa «Cargar plano de prueba 2D» o «Importar DXF editable». Selecciona la herramienta «Seleccionar» y arrastra una línea azul con el mouse para moverla. También puedes usar las flechas «Mover». Después puedes descargar el boceto con «Exportar boceto DXF».</p>
-        <p className="mt-2 text-xs text-[var(--muted)]">Esta pestaña edita el boceto 2D y los DXF compatibles. Para revisar el DWG original cambia a «Visualizar DWG». Los cambios del boceto no modifican el DWG.</p>
-      </div> : null}
+        <h1 className="mt-2 text-3xl font-bold text-[var(--foreground)]">Visor de planos NEDVI</h1>
+        <p className="mt-2 text-sm text-[var(--muted)]">Consulta planos DWG con Autodesk. Solo visualización: sin herramientas de edición ni exportación.</p>
+      </header>
       <section className="rounded-2xl border border-[var(--border)] bg-[var(--surface)] p-4">
-        <h2 className="font-semibold text-[var(--foreground)]">Bitácora de revisiones CAD</h2>
-        <p className="mt-1 text-xs text-[var(--muted)]">Añade indicaciones para los planos. Se guardan solo en este navegador; no modifican la geometría DWG ni se sincronizan con el equipo.</p>
-        <div className="mt-3 flex flex-wrap gap-2">
-          <input aria-label="Nueva observación del plano" maxLength={400} value={noteInput} onChange={e=>setNoteInput(e.target.value)} placeholder="Ej. Revisar medida de acceso principal" className="min-w-[220px] flex-1 rounded-lg border border-[var(--border)] bg-[var(--background)] px-3 py-2 text-sm text-[var(--foreground)]"/>
-          <button className={button} onClick={()=>{const value=noteInput.trim();if(value){setNotes(items=>[...items.slice(-99),{id:crypto.randomUUID(),text:value,createdAt:new Date().toISOString()}]);setNoteInput('')}}}>Añadir observación</button>
-          <button className={button} onClick={()=>download('nedvi-revisiones.json',JSON.stringify({format:'nedvi-cad-notes-v1',source:cadFile?.name||null,notes},null,2),'application/json')}>Exportar revisiones JSON</button>
+        <div className="flex flex-wrap items-center gap-3">
+          <label className="inline-flex cursor-pointer items-center rounded-lg border border-[var(--border)] bg-[var(--surface-soft)] px-4 py-2 text-sm font-semibold text-[var(--foreground)]">
+            Elegir plano DWG
+            <input className="sr-only" type="file" accept=".dwg" onChange={async e=>{
+              const selected=e.target.files?.[0];e.target.value='';if(!selected)return
+              setUrn(null);setStatus('');setFile(null)
+              if(selected.size>20*1024*1024 || !selected.size){setMessage('El archivo DWG debe tener entre 1 byte y 20 MB.');return}
+              const header=String.fromCharCode(...new Uint8Array(await selected.slice(0,6).arrayBuffer()))
+              if(!/^AC10[0-9]{2}$/.test(header)){setMessage('Este archivo no tiene una cabecera DWG válida.');return}
+              setFile(selected);setMessage('Plano seleccionado. Pulsa Visualizar plano.')
+            }}/>
+          </label>
+          {file?<span className="text-sm text-[var(--foreground)]">{file.name}</span>:<span className="text-sm text-[var(--muted)]">Selecciona un DWG para abrirlo.</span>}
+          <button type="button" disabled={!file || busy} onClick={()=>void openPlan()} className="rounded-lg bg-[#7BAEE3] px-4 py-2 text-sm font-semibold text-slate-950 hover:bg-[#6c9ed2] disabled:cursor-not-allowed disabled:opacity-50">{busy?'Preparando...':'Visualizar plano'}</button>
         </div>
-        <div className="mt-3 space-y-2">
-          {notes.map(note=><div key={note.id} className="flex items-start justify-between gap-3 rounded-lg bg-[var(--surface-soft)] p-3 text-xs"><span className="text-[var(--foreground)]">{note.text}</span><button className="text-red-500" onClick={()=>setNotes(items=>items.filter(x=>x.id!==note.id))}>Eliminar</button></div>)}
-        </div>
+        {message?<p role="status" className="mt-3 text-sm text-[var(--muted)]">{message}</p>:null}
       </section>
-      {workspaceMode==='edit' ? <div className="space-y-3">
-        {shapes.length===0 ? <div className="rounded-xl border border-amber-500/30 bg-amber-500/10 p-4 text-sm text-[var(--foreground)]"><p className="font-semibold">Editor 2D listo, sin entidades cargadas</p><p className="mt-1">Pulsa «Importar DXF editable» o «Cargar plano de prueba 2D». El archivo DWG de Autodesk no puede convertirse aquí automáticamente en geometría editable.</p></div> : null}
-        <div id="nedvi-cad-2d-editor" className="overflow-auto rounded-2xl border border-[var(--border)] bg-white p-2 shadow-sm">
-        <svg ref={svgRef} viewBox="0 0 1200 750" className="min-w-[650px] w-full touch-none select-none" style={{backgroundImage:'linear-gradient(#e8eef5 1px, transparent 1px), linear-gradient(90deg,#e8eef5 1px, transparent 1px)',backgroundSize:'25px 25px'}} onPointerDown={pointerDown} onPointerMove={pointerMove} onPointerUp={pointerUp} onPointerCancel={()=>{dragRef.current=null;setStart(null);setCursor(null)}} aria-label="Lienzo de dibujo CAD">
-          {shapes.map(shape => shape.kind==='dimension' ? <g key={shape.id} onPointerDown={e=>selectAndDrag(e,shape.id)}><line x1={shape.a.x} y1={shape.a.y} x2={shape.b.x} y2={shape.b.y} stroke="#b45309" strokeWidth="2"/><text x={(shape.a.x+shape.b.x)/2} y={(shape.a.y+shape.b.y)/2-7} fill="#92400e" fontSize="16">{Math.hypot(shape.b.x-shape.a.x,shape.b.y-shape.a.y).toFixed(1)} u</text></g> : shape.kind==='line'
-            ? <line key={shape.id} x1={shape.a.x} y1={shape.a.y} x2={shape.b.x} y2={shape.b.y} stroke={selected===shape.id?'#f59e0b':'#2563eb'} strokeWidth={selected===shape.id?5:3} onPointerDown={e=>{if(tool==='select'){e.stopPropagation();setSelected(shape.id)}}}/>
-            : <rect key={shape.id} x={Math.min(shape.a.x,shape.b.x)} y={Math.min(shape.a.y,shape.b.y)} width={Math.abs(shape.a.x-shape.b.x)} height={Math.abs(shape.a.y-shape.b.y)} fill="transparent" stroke={selected===shape.id?'#f59e0b':'#2563eb'} strokeWidth={selected===shape.id?5:3} onPointerDown={e=>{if(tool==='select'){e.stopPropagation();setSelected(shape.id)}}}/>)}
-          {start && cursor && ((tool==='line'||tool==='dimension')?<line x1={start.x} y1={start.y} x2={cursor.x} y2={cursor.y} stroke="#f59e0b" strokeWidth="2" strokeDasharray="7 5"/>:<rect x={Math.min(start.x,cursor.x)} y={Math.min(start.y,cursor.y)} width={Math.abs(cursor.x-start.x)} height={Math.abs(cursor.y-start.y)} fill="none" stroke="#f59e0b" strokeWidth="2" strokeDasharray="7 5"/>)}
-        </svg>
-      </div>
-      </div> : null}
-      <div className="flex flex-wrap justify-between gap-3 text-xs text-[var(--muted)]">
-        <span>{shapes.length} elementos · Cuadrícula con ajuste de 10 unidades · Dibuja arrastrando el cursor</span>
-        <span role="status">{message || 'Los bocetos se conservan localmente en este navegador, no en Supabase.'}</span>
-      </div>
-    </div>
+      {urn?<section className="rounded-2xl border border-[var(--border)] bg-[var(--surface)] p-4">
+        <p className="text-sm font-semibold text-[var(--foreground)]">{status==='success'?'Plano listo para visualizar':status==='failed'?'No se pudo procesar el plano':status}</p>
+        {status==='success'?<AutodeskCadViewer urn={urn}/>:null}
+      </section>:null}
+    </main>
   </AppShell>
 }
