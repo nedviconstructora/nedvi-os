@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from 'react'
 import { AppShell } from '@/components/layout/AppShell'
+import { parseDxfLines } from '@/features/cad/services/dxfImport'
 import { Download, RotateCcw, Save, Trash2, Undo2 } from 'lucide-react'
 
 type Point = { x: number; y: number }
@@ -90,6 +91,7 @@ export default function CadStudioPage() {
   const [noteInput, setNoteInput] = useState('')
   const [tool, setTool] = useState<Tool>('line')
   const [selected, setSelected] = useState<string | null>(null)
+  const [moveStep, setMoveStep] = useState(10)
   const [start, setStart] = useState<Point | null>(null)
   const [cursor, setCursor] = useState<Point | null>(null)
   const [history, setHistory] = useState<Shape[][]>([])
@@ -174,6 +176,11 @@ export default function CadStudioPage() {
     setCursor(null)
   }
 
+  function moveSelected(dx:number,dy:number) {
+    if(!selected) return
+    commit(shapes.map(shape=>shape.id!==selected?shape:{...shape,a:{x:Math.max(0,shape.a.x+dx),y:Math.max(0,shape.a.y+dy)},b:{x:Math.max(0,shape.b.x+dx),y:Math.max(0,shape.b.y+dy)}}))
+  }
+
   function svgMarkup() {
     const shapeTags = shapes.map(shape => shape.kind === 'dimension' ? `<g><line x1="${shape.a.x}" y1="${shape.a.y}" x2="${shape.b.x}" y2="${shape.b.y}" stroke="#b45309" stroke-width="2"/><text x="${(shape.a.x+shape.b.x)/2}" y="${(shape.a.y+shape.b.y)/2-6}" fill="#92400e" font-size="16">${Math.hypot(shape.b.x-shape.a.x,shape.b.y-shape.a.y).toFixed(1)} u</text></g>` : shape.kind === 'line'
       ? `<line x1="${shape.a.x}" y1="${shape.a.y}" x2="${shape.b.x}" y2="${shape.b.y}" stroke="#2563eb" stroke-width="2"/>`
@@ -200,7 +207,7 @@ export default function CadStudioPage() {
       }else segment(shape.a,shape.b)
     })
     lines.push('0','ENDSEC','0','EOF')
-    download('nedvi-boceto-2d.dxf',lines.join('\\r\\n'),'application/dxf')
+    download('nedvi-boceto-2d.dxf',lines.join('\r\n'),'application/dxf')
     setMessage('DXF del boceto exportado. Las unidades son arbitrarias y no modifica el DWG original.')
   }
 
@@ -210,10 +217,11 @@ export default function CadStudioPage() {
       <div>
         <p className="text-xs font-semibold uppercase tracking-widest text-[#5496CC]">Gestión de Proyectos</p>
         <h1 className="mt-2 text-3xl font-bold text-[var(--foreground)]">NEDVI CAD Studio</h1>
-        <p className="mt-2 text-sm text-[var(--muted)]">Editor de bocetos técnicos 2D · Primera versión. No es un editor DWG/DXF ni sustituye planos CAD certificados.</p>
+        <p className="mt-2 text-sm text-[var(--muted)]">Editor 2D experimental: importa líneas DXF ASCII, mueve segmentos y exporta bocetos. La escala se ajusta al lienzo y otras entidades pueden omitirse. El DWG original no se modifica.</p>
       </div>
       <div className="flex flex-wrap items-center gap-2">
         {(['select','line','rectangle','dimension'] as Tool[]).map(item => <button key={item} onClick={() => {setTool(item);setStart(null)}} className={button + (tool === item ? ' !bg-[#7BAEE3] !text-slate-950' : '')}>{item === 'select' ? 'Seleccionar' : item === 'line' ? 'Línea' : item === 'dimension' ? 'Cota aproximada' : 'Rectángulo'}</button>)}
+        <span className="flex items-center gap-1"><span className="text-xs text-[var(--muted)]">Mover:</span><input type="number" min="1" max="200" value={moveStep} onChange={e=>setMoveStep(Math.max(1,Math.min(200,Number(e.target.value)||1)))} aria-label="Distancia para mover" className="w-16 rounded-lg border border-[var(--border)] bg-[var(--surface)] px-2 py-2 text-sm text-[var(--foreground)]"/>{([['←',-1,0],['→',1,0],['↑',0,-1],['↓',0,1]] as const).map(([label,x,y])=><button key={label} className={button} disabled={!selected} onClick={()=>moveSelected(x*moveStep,y*moveStep)} title={'Mover selección '+label}>{label}</button>)}</span>
         <button className={button} disabled={!selected} onClick={() => {commit(shapes.filter(s => s.id !== selected));setSelected(null)}}><Trash2 size={14} className="mr-1 inline"/>Borrar selección</button>
         <button className={button} disabled={!history.length} onClick={() => {const last=history[history.length-1];setHistory(h=>h.slice(0,-1));setShapes(last)}}><Undo2 size={14} className="mr-1 inline"/>Deshacer</button>
         <button className={button} onClick={() => {setMessage('Borrador guardado únicamente en este navegador de Windows.');localStorage.setItem(STORAGE_KEY,JSON.stringify(shapes))}}><Save size={14} className="mr-1 inline"/>Guardar borrador</button>
@@ -248,6 +256,21 @@ export default function CadStudioPage() {
             } finally {
               setInspecting(false)
             }
+          }}/>
+        </label>
+        <label className={button + ' cursor-pointer'}>Importar DXF editable
+          <input type="file" accept=".dxf" className="hidden" onChange={async e=>{
+            const file=e.target.files?.[0];e.target.value='';if(!file)return
+            try {
+              if(file.size>8*1024*1024)throw Error('El DXF supera 8 MB.')
+              const text=await file.text()
+              if(!text.includes('SECTION'))throw Error('Solo se admiten DXF ASCII.')
+              const result=parseDxfLines(text)
+              if(!window.confirm('¿Reemplazar el boceto actual con '+result.segments.length+' segmentos importados de '+file.name+'?'))return
+              const incoming:Shape[]=result.segments.map(s=>({id:crypto.randomUUID(),kind:'line',a:s.a,b:s.b}))
+              commit(incoming);setSelected(null);setTool('select')
+              setMessage('Se importaron '+incoming.length+' segmentos. '+result.ignored+' entidades no compatibles omitidas. Geometría ajustada para edición; verifica escala antes de utilizarla en obra.')
+            }catch(error){setMessage(error instanceof Error?error.message:'No se pudo importar DXF.')}
           }}/>
         </label>
         <label className={button + ' cursor-pointer'}>Importar proyecto JSON<input type="file" accept=".json,application/json" className="hidden" onChange={async e => {const file=e.target.files?.[0];e.target.value='';if(!file)return;try{if(file.size>2000000)throw Error('Archivo demasiado grande');const data=JSON.parse(await file.text()) as {format?:string;shapes?:unknown};if(data.format!=='nedvi-cad-v1'||!Array.isArray(data.shapes)||data.shapes.length>2000||!data.shapes.every(validShape))throw Error('Formato inválido');commit(data.shapes);setMessage('Proyecto importado correctamente.')}catch{setMessage('No se pudo importar: utiliza un proyecto JSON válido de NEDVI CAD.') }}}/></label>
