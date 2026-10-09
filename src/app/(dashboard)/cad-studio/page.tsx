@@ -181,6 +181,22 @@ export default function CadStudioPage() {
     commit(shapes.map(shape=>shape.id!==selected?shape:{...shape,a:{x:Math.max(0,shape.a.x+dx),y:Math.max(0,shape.a.y+dy)},b:{x:Math.max(0,shape.b.x+dx),y:Math.max(0,shape.b.y+dy)}}))
   }
 
+  function loadTestPlan() {
+    if(shapes.length && !window.confirm('Se reemplazará el boceto 2D actual. ¿Continuar?'))return
+    const plan:Shape[]=[
+      {id:crypto.randomUUID(),kind:'line',a:{x:150,y:150},b:{x:700,y:150}},
+      {id:crypto.randomUUID(),kind:'line',a:{x:700,y:150},b:{x:700,y:520}},
+      {id:crypto.randomUUID(),kind:'line',a:{x:700,y:520},b:{x:150,y:520}},
+      {id:crypto.randomUUID(),kind:'line',a:{x:150,y:520},b:{x:150,y:150}},
+      {id:crypto.randomUUID(),kind:'line',a:{x:420,y:150},b:{x:420,y:360}},
+      {id:crypto.randomUUID(),kind:'line',a:{x:420,y:440},b:{x:420,y:520}},
+      {id:crypto.randomUUID(),kind:'line',a:{x:150,y:330},b:{x:420,y:330}}
+    ]
+    commit(plan);setSelected(null);setTool('select')
+    setMessage('Plano de prueba cargado: haz clic en una línea y utiliza las flechas para moverla. Después exporta el DXF.')
+    document.getElementById('nedvi-cad-2d-editor')?.scrollIntoView({behavior:'smooth',block:'center'})
+  }
+
   function svgMarkup() {
     const shapeTags = shapes.map(shape => shape.kind === 'dimension' ? `<g><line x1="${shape.a.x}" y1="${shape.a.y}" x2="${shape.b.x}" y2="${shape.b.y}" stroke="#b45309" stroke-width="2"/><text x="${(shape.a.x+shape.b.x)/2}" y="${(shape.a.y+shape.b.y)/2-6}" fill="#92400e" font-size="16">${Math.hypot(shape.b.x-shape.a.x,shape.b.y-shape.a.y).toFixed(1)} u</text></g>` : shape.kind === 'line'
       ? `<line x1="${shape.a.x}" y1="${shape.a.y}" x2="${shape.b.x}" y2="${shape.b.y}" stroke="#2563eb" stroke-width="2"/>`
@@ -225,6 +241,7 @@ export default function CadStudioPage() {
         <button className={button} disabled={!selected} onClick={() => {commit(shapes.filter(s => s.id !== selected));setSelected(null)}}><Trash2 size={14} className="mr-1 inline"/>Borrar selección</button>
         <button className={button} disabled={!history.length} onClick={() => {const last=history[history.length-1];setHistory(h=>h.slice(0,-1));setShapes(last)}}><Undo2 size={14} className="mr-1 inline"/>Deshacer</button>
         <button className={button} onClick={() => {setMessage('Borrador guardado únicamente en este navegador de Windows.');localStorage.setItem(STORAGE_KEY,JSON.stringify(shapes))}}><Save size={14} className="mr-1 inline"/>Guardar borrador</button>
+        <button className={button} onClick={loadTestPlan}>Cargar plano de prueba 2D</button>
         <button className={button} onClick={exportDxf}>Exportar boceto DXF</button>
         <button className={button} onClick={() => download('nedvi-plano.svg', svgMarkup(), 'image/svg+xml')}><Download size={14} className="mr-1 inline"/>Exportar SVG</button>
         <button className={button} onClick={() => download('nedvi-plano.json', JSON.stringify({format:'nedvi-cad-v1',shapes},null,2), 'application/json')}>Exportar proyecto</button>
@@ -306,6 +323,11 @@ export default function CadStudioPage() {
         <p className="mt-1 text-xs text-[var(--muted)]">{cadFile.details}</p>
         <p className="mt-2 text-xs text-[var(--muted)]">Detectar solo inspecciona la cabecera. Para convertir utiliza el botón Autodesk; el DWG original permanece intacto.</p>
       </div> : null}
+      <div className="rounded-xl border border-[#5496CC]/30 bg-[#5496CC]/10 p-4 text-sm text-[var(--foreground)]">
+        <p className="font-semibold">¿Cómo probar la edición?</p>
+        <p className="mt-1">Pulsa «Cargar plano de prueba 2D», baja al lienzo cuadriculado, haz clic sobre una línea azul y usa las flechas «Mover» para desplazarla. Después puedes descargar el boceto con «Exportar boceto DXF».</p>
+        <p className="mt-2 text-xs text-[var(--muted)]">El visor Autodesk de arriba es solo para consultar el DWG; el lienzo 2D de abajo es el editor. Las modificaciones no se aplican al DWG cargado.</p>
+      </div>
       <section className="rounded-2xl border border-[var(--border)] bg-[var(--surface)] p-4">
         <h2 className="font-semibold text-[var(--foreground)]">Bitácora de revisiones CAD</h2>
         <p className="mt-1 text-xs text-[var(--muted)]">Añade indicaciones para los planos. Se guardan solo en este navegador; no modifican la geometría DWG ni se sincronizan con el equipo.</p>
@@ -318,7 +340,7 @@ export default function CadStudioPage() {
           {notes.map(note=><div key={note.id} className="flex items-start justify-between gap-3 rounded-lg bg-[var(--surface-soft)] p-3 text-xs"><span className="text-[var(--foreground)]">{note.text}</span><button className="text-red-500" onClick={()=>setNotes(items=>items.filter(x=>x.id!==note.id))}>Eliminar</button></div>)}
         </div>
       </section>
-      <div className="overflow-auto rounded-2xl border border-[var(--border)] bg-white p-2 shadow-sm">
+      <div id="nedvi-cad-2d-editor" className="overflow-auto rounded-2xl border border-[var(--border)] bg-white p-2 shadow-sm">
         <svg ref={svgRef} viewBox="0 0 1200 750" className="min-w-[650px] w-full touch-none select-none" style={{backgroundImage:'linear-gradient(#e8eef5 1px, transparent 1px), linear-gradient(90deg,#e8eef5 1px, transparent 1px)',backgroundSize:'25px 25px'}} onPointerDown={pointerDown} onPointerMove={e => {if(start)setCursor(point(e))}} onPointerUp={pointerUp} onPointerCancel={()=>{setStart(null);setCursor(null)}} aria-label="Lienzo de dibujo CAD">
           {shapes.map(shape => shape.kind==='dimension' ? <g key={shape.id} onPointerDown={e=>{if(tool==='select'){e.stopPropagation();setSelected(shape.id)}}}><line x1={shape.a.x} y1={shape.a.y} x2={shape.b.x} y2={shape.b.y} stroke="#b45309" strokeWidth="2"/><text x={(shape.a.x+shape.b.x)/2} y={(shape.a.y+shape.b.y)/2-7} fill="#92400e" fontSize="16">{Math.hypot(shape.b.x-shape.a.x,shape.b.y-shape.a.y).toFixed(1)} u</text></g> : shape.kind==='line'
             ? <line key={shape.id} x1={shape.a.x} y1={shape.a.y} x2={shape.b.x} y2={shape.b.y} stroke={selected===shape.id?'#f59e0b':'#2563eb'} strokeWidth={selected===shape.id?5:3} onPointerDown={e=>{if(tool==='select'){e.stopPropagation();setSelected(shape.id)}}}/>
