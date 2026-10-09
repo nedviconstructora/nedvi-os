@@ -48,6 +48,8 @@ export function Header({ onOpenMenu, isDark, onToggleTheme, showCompanyLogo = fa
   const [uploadingAvatar, setUploadingAvatar] = useState(false)
   const [notificationPermission, setNotificationPermission] = useState<NotificationPermission | 'unsupported'>('default')
   const [notificationsOpen, setNotificationsOpen] = useState(false)
+  const [internalNotifications, setInternalNotifications] = useState<Array<{ id: string; title: string; body: string; target_path: string; created_at: string; read_at: string | null }>>([])
+  const [internalUserId, setInternalUserId] = useState<string | null>(null)
   const [agendaItems, setAgendaItems] = useState<AgendaItem[]>([])
   const [refreshing, setRefreshing] = useState(false)
   const avatarInputRef = useRef<HTMLInputElement | null>(null)
@@ -127,6 +129,46 @@ export function Header({ onOpenMenu, isDark, onToggleTheme, showCompanyLogo = fa
     }
   }, [])
 
+  useEffect(() => {
+    if (user.role === 'Cliente') return
+    let alive = true
+    const supabase = createClient()
+    let timer: ReturnType<typeof setInterval> | undefined
+
+    const fetchNotifications = async (uid: string) => {
+      const { data, error } = await supabase.from('internal_notifications')
+        .select('id,title,body,target_path,created_at,read_at')
+        .eq('recipient_id', uid).order('created_at', { ascending: false }).limit(50)
+      if (alive && !error) setInternalNotifications(data ?? [])
+    }
+
+    void supabase.auth.getUser().then(({ data }) => {
+      if (!alive || !data.user) return
+      setInternalUserId(data.user.id)
+      void fetchNotifications(data.user.id)
+      timer = setInterval(() => { if (document.visibilityState === 'visible') void fetchNotifications(data.user!.id) }, 15000)
+    })
+    return () => { alive = false; if (timer) clearInterval(timer) }
+  }, [user.role])
+
+  async function markInternalRead(id: string) {
+    if (!internalUserId) return
+    const supabase = createClient()
+    const { error } = await supabase.from('internal_notifications')
+      .update({ read_at: new Date().toISOString() })
+      .eq('id', id).eq('recipient_id', internalUserId)
+    if (!error) setInternalNotifications((items) => items.map((item) => item.id === id ? { ...item, read_at: new Date().toISOString() } : item))
+  }
+
+  async function markAllInternalRead() {
+    if (!internalUserId) return
+    const supabase = createClient()
+    const { error } = await supabase.from('internal_notifications')
+      .update({ read_at: new Date().toISOString() })
+      .eq('recipient_id', internalUserId).is('read_at', null)
+    if (!error) setInternalNotifications((items) => items.map((item) => ({ ...item, read_at: item.read_at ?? new Date().toISOString() })))
+  }
+
   const pendingAgenda = useMemo(
     () =>
       sortAgendaActivities(agendaItems)
@@ -135,7 +177,8 @@ export function Header({ onOpenMenu, isDark, onToggleTheme, showCompanyLogo = fa
     [agendaItems],
   )
 
-  const notificationCount = pendingAgenda.length + alerts.length
+  const unreadInternal = internalNotifications.filter((item) => !item.read_at).length
+  const notificationCount = pendingAgenda.length + alerts.length + unreadInternal
 
   function formatAgendaDate(item: AgendaItem) {
     const value = new Date(`${item.date}T${item.time}:00`)
@@ -394,7 +437,33 @@ export function Header({ onOpenMenu, isDark, onToggleTheme, showCompanyLogo = fa
                 </span>
               </div>
 
+              {internalNotifications.some((item) => !item.read_at) ? (
+                <button type="button" onClick={() => void markAllInternalRead()} className="w-full border-b border-[var(--border)] px-4 py-2 text-right text-xs font-medium text-[#5496CC] hover:bg-[var(--surface-soft)]">
+                  Marcar todas como leídas
+                </button>
+              ) : null}
               <div className="max-h-[58dvh] overflow-y-auto">
+                {user.role !== 'Cliente' ? (
+                  <div className="border-b border-[var(--border)] p-3">
+                    <p className="px-1 pb-2 text-[10px] font-semibold uppercase tracking-[0.12em] text-[var(--muted)]">Movimientos de NEDVI</p>
+                    {internalNotifications.length === 0 ? (
+                      <p className="px-2 py-3 text-xs text-[var(--muted)]">Sin movimientos recientes.</p>
+                    ) : (
+                      <div className="space-y-1">
+                        {internalNotifications.map((item) => (
+                          <Link key={item.id} href={item.target_path} onClick={() => { void markInternalRead(item.id); setNotificationsOpen(false) }} className={`block rounded-xl px-3 py-2.5 hover:bg-[var(--surface-soft)] ${!item.read_at ? 'bg-[#5496CC]/10' : ''}`}>
+                            <span className="flex items-center gap-2 text-xs font-semibold text-[var(--foreground)]">
+                              {!item.read_at ? <span className="h-2 w-2 rounded-full bg-[#5496CC]" /> : null}
+                              {item.title}
+                            </span>
+                            <span className="mt-1 block text-xs text-[var(--muted)]">{item.body}</span>
+                            <span className="mt-1 block text-[10px] text-[var(--muted)]">{new Date(item.created_at).toLocaleString('es-MX')}</span>
+                          </Link>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                ) : null}
                 {alerts.length > 0 ? (
                   <div className="border-b border-[var(--border)] p-3">
                     <p className="px-1 pb-2 text-[10px] font-semibold uppercase tracking-[0.12em] text-[var(--muted)]">
