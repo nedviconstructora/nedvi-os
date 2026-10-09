@@ -79,7 +79,7 @@ export default function RootLayout({
           </div>
         </div>
         {children}
-        <PwaManager />
+        <PwaManager initialVersion={process.env.VERCEL_GIT_COMMIT_SHA || process.env.NEXT_PUBLIC_APP_VERSION || 'development'} />
       </body>
     </html>
   )
