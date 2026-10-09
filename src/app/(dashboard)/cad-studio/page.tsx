@@ -234,18 +234,9 @@ export default function CadStudioPage() {
       <div>
         <p className="text-xs font-semibold uppercase tracking-widest text-[#5496CC]">Gestión de Proyectos</p>
         <h1 className="mt-2 text-3xl font-bold text-[var(--foreground)]">NEDVI CAD Studio</h1>
-        <p className="mt-2 text-sm text-[var(--muted)]">Editor 2D experimental: importa líneas DXF ASCII, mueve segmentos y exporta bocetos. La escala se ajusta al lienzo y otras entidades pueden omitirse. El DWG original no se modifica.</p>
+        <p className="mt-2 text-sm text-[var(--muted)]">Visualiza DWG con Autodesk o trabaja en el editor 2D con bocetos y archivos DXF compatibles. El DWG original permanece intacto.</p>
       </div>
       <div className="flex flex-wrap items-center gap-2">
-        {(['select','line','rectangle','dimension'] as Tool[]).map(item => <button key={item} onClick={() => {setTool(item);setStart(null)}} className={button + (tool === item ? ' !bg-[#7BAEE3] !text-slate-950' : '')}>{item === 'select' ? 'Seleccionar' : item === 'line' ? 'Línea' : item === 'dimension' ? 'Cota aproximada' : 'Rectángulo'}</button>)}
-        <span className="flex items-center gap-1"><span className="text-xs text-[var(--muted)]">Mover:</span><input type="number" min="1" max="200" value={moveStep} onChange={e=>setMoveStep(Math.max(1,Math.min(200,Number(e.target.value)||1)))} aria-label="Distancia para mover" className="w-16 rounded-lg border border-[var(--border)] bg-[var(--surface)] px-2 py-2 text-sm text-[var(--foreground)]"/>{([['←',-1,0],['→',1,0],['↑',0,-1],['↓',0,1]] as const).map(([label,x,y])=><button key={label} className={button} disabled={!selected} onClick={()=>moveSelected(x*moveStep,y*moveStep)} title={'Mover selección '+label}>{label}</button>)}</span>
-        <button className={button} disabled={!selected} onClick={() => {commit(shapes.filter(s => s.id !== selected));setSelected(null)}}><Trash2 size={14} className="mr-1 inline"/>Borrar selección</button>
-        <button className={button} disabled={!history.length} onClick={() => {const last=history[history.length-1];setHistory(h=>h.slice(0,-1));setShapes(last)}}><Undo2 size={14} className="mr-1 inline"/>Deshacer</button>
-        <button className={button} onClick={() => {setMessage('Borrador guardado únicamente en este navegador de Windows.');localStorage.setItem(STORAGE_KEY,JSON.stringify(shapes))}}><Save size={14} className="mr-1 inline"/>Guardar borrador</button>
-        <button className={button} onClick={loadTestPlan}>Cargar plano de prueba 2D</button>
-        <button className={button} onClick={exportDxf}>Exportar boceto DXF</button>
-        <button className={button} onClick={() => download('nedvi-plano.svg', svgMarkup(), 'image/svg+xml')}><Download size={14} className="mr-1 inline"/>Exportar SVG</button>
-        <button className={button} onClick={() => download('nedvi-plano.json', JSON.stringify({format:'nedvi-cad-v1',shapes},null,2), 'application/json')}>Exportar proyecto</button>
         <button className={button} disabled={checkingAps} onClick={async () => {
           setCheckingAps(true)
           try {
@@ -276,6 +267,15 @@ export default function CadStudioPage() {
             }
           }}/>
         </label>
+      </div>
+      {workspaceMode==='edit' ? <div className="flex flex-wrap items-center gap-2">
+        {(['select','line','rectangle','dimension'] as Tool[]).map(item => <button key={item} onClick={() => {setTool(item);setStart(null)}} className={button + (tool === item ? ' !bg-[#7BAEE3] !text-slate-950' : '')}>{item === 'select' ? 'Seleccionar' : item === 'line' ? 'Línea' : item === 'dimension' ? 'Cota aproximada' : 'Rectángulo'}</button>)}
+        <span className="flex items-center gap-1"><span className="text-xs text-[var(--muted)]">Mover:</span><input type="number" min="1" max="200" value={moveStep} onChange={e=>setMoveStep(Math.max(1,Math.min(200,Number(e.target.value)||1)))} aria-label="Distancia para mover" className="w-16 rounded-lg border border-[var(--border)] bg-[var(--surface)] px-2 py-2 text-sm text-[var(--foreground)]"/>{([['←',-1,0],['→',1,0],['↑',0,-1],['↓',0,1]] as const).map(([label,x,y])=><button key={label} className={button} disabled={!selected} onClick={()=>moveSelected(x*moveStep,y*moveStep)} title={'Mover selección '+label}>{label}</button>)}</span>
+        <button className={button} disabled={!selected} onClick={() => {commit(shapes.filter(s => s.id !== selected));setSelected(null)}}><Trash2 size={14} className="mr-1 inline"/>Borrar selección</button>
+        <button className={button} disabled={!history.length} onClick={() => {const last=history[history.length-1];setHistory(h=>h.slice(0,-1));setShapes(last)}}><Undo2 size={14} className="mr-1 inline"/>Deshacer</button>
+        <button className={button} onClick={() => {setMessage('Borrador guardado únicamente en este navegador de Windows.');localStorage.setItem(STORAGE_KEY,JSON.stringify(shapes))}}><Save size={14} className="mr-1 inline"/>Guardar borrador</button>
+        <button className={button} onClick={loadTestPlan}>Cargar plano de prueba 2D</button>
+        <button className={button} onClick={exportDxf}>Exportar boceto DXF</button>
         <label className={button + ' cursor-pointer'}>Importar DXF editable
           <input type="file" accept=".dxf" className="hidden" onChange={async e=>{
             const file=e.target.files?.[0];e.target.value='';if(!file)return
@@ -291,10 +291,9 @@ export default function CadStudioPage() {
             }catch(error){setMessage(error instanceof Error?error.message:'No se pudo importar DXF.')}
           }}/>
         </label>
-        <label className={button + ' cursor-pointer'}>Importar proyecto JSON<input type="file" accept=".json,application/json" className="hidden" onChange={async e => {const file=e.target.files?.[0];e.target.value='';if(!file)return;try{if(file.size>2000000)throw Error('Archivo demasiado grande');const data=JSON.parse(await file.text()) as {format?:string;shapes?:unknown};if(data.format!=='nedvi-cad-v1'||!Array.isArray(data.shapes)||data.shapes.length>2000||!data.shapes.every(validShape))throw Error('Formato inválido');commit(data.shapes);setMessage('Proyecto importado correctamente.')}catch{setMessage('No se pudo importar: utiliza un proyecto JSON válido de NEDVI CAD.') }}}/></label>
         <button className={button} onClick={() => {if(window.confirm('¿Vaciar el boceto actual?')){commit([]);setSelected(null)}}}><RotateCcw size={14} className="mr-1 inline"/>Limpiar</button>
-      </div>
-      <p role="status" className="text-sm text-[var(--muted)]">{apsStatus}</p>
+      </div> : null}
+      {checkingAps || apsStatus !== 'Conexión Autodesk sin comprobar.' ? <p role="status" className="text-sm text-[var(--muted)]">{apsStatus}</p> : null}
       {cadSource ? <button className={button} disabled={uploadingCad} onClick={async()=>{
         setUploadingCad(true)
         setMessage('Preparando carga segura hacia Autodesk...')
@@ -351,13 +350,16 @@ export default function CadStudioPage() {
           {notes.map(note=><div key={note.id} className="flex items-start justify-between gap-3 rounded-lg bg-[var(--surface-soft)] p-3 text-xs"><span className="text-[var(--foreground)]">{note.text}</span><button className="text-red-500" onClick={()=>setNotes(items=>items.filter(x=>x.id!==note.id))}>Eliminar</button></div>)}
         </div>
       </section>
-      {workspaceMode==='edit' ? <div id="nedvi-cad-2d-editor" className="overflow-auto rounded-2xl border border-[var(--border)] bg-white p-2 shadow-sm">
+      {workspaceMode==='edit' ? <div className="space-y-3">
+        {shapes.length===0 ? <div className="rounded-xl border border-amber-500/30 bg-amber-500/10 p-4 text-sm text-[var(--foreground)]"><p className="font-semibold">Editor 2D listo, sin entidades cargadas</p><p className="mt-1">Pulsa «Importar DXF editable» o «Cargar plano de prueba 2D». El archivo DWG de Autodesk no puede convertirse aquí automáticamente en geometría editable.</p></div> : null}
+        <div id="nedvi-cad-2d-editor" className="overflow-auto rounded-2xl border border-[var(--border)] bg-white p-2 shadow-sm">
         <svg ref={svgRef} viewBox="0 0 1200 750" className="min-w-[650px] w-full touch-none select-none" style={{backgroundImage:'linear-gradient(#e8eef5 1px, transparent 1px), linear-gradient(90deg,#e8eef5 1px, transparent 1px)',backgroundSize:'25px 25px'}} onPointerDown={pointerDown} onPointerMove={e => {if(start)setCursor(point(e))}} onPointerUp={pointerUp} onPointerCancel={()=>{setStart(null);setCursor(null)}} aria-label="Lienzo de dibujo CAD">
           {shapes.map(shape => shape.kind==='dimension' ? <g key={shape.id} onPointerDown={e=>{if(tool==='select'){e.stopPropagation();setSelected(shape.id)}}}><line x1={shape.a.x} y1={shape.a.y} x2={shape.b.x} y2={shape.b.y} stroke="#b45309" strokeWidth="2"/><text x={(shape.a.x+shape.b.x)/2} y={(shape.a.y+shape.b.y)/2-7} fill="#92400e" fontSize="16">{Math.hypot(shape.b.x-shape.a.x,shape.b.y-shape.a.y).toFixed(1)} u</text></g> : shape.kind==='line'
             ? <line key={shape.id} x1={shape.a.x} y1={shape.a.y} x2={shape.b.x} y2={shape.b.y} stroke={selected===shape.id?'#f59e0b':'#2563eb'} strokeWidth={selected===shape.id?5:3} onPointerDown={e=>{if(tool==='select'){e.stopPropagation();setSelected(shape.id)}}}/>
             : <rect key={shape.id} x={Math.min(shape.a.x,shape.b.x)} y={Math.min(shape.a.y,shape.b.y)} width={Math.abs(shape.a.x-shape.b.x)} height={Math.abs(shape.a.y-shape.b.y)} fill="transparent" stroke={selected===shape.id?'#f59e0b':'#2563eb'} strokeWidth={selected===shape.id?5:3} onPointerDown={e=>{if(tool==='select'){e.stopPropagation();setSelected(shape.id)}}}/>)}
           {start && cursor && ((tool==='line'||tool==='dimension')?<line x1={start.x} y1={start.y} x2={cursor.x} y2={cursor.y} stroke="#f59e0b" strokeWidth="2" strokeDasharray="7 5"/>:<rect x={Math.min(start.x,cursor.x)} y={Math.min(start.y,cursor.y)} width={Math.abs(cursor.x-start.x)} height={Math.abs(cursor.y-start.y)} fill="none" stroke="#f59e0b" strokeWidth="2" strokeDasharray="7 5"/>)}
         </svg>
+      </div>
       </div> : null}
       <div className="flex flex-wrap justify-between gap-3 text-xs text-[var(--muted)]">
         <span>{shapes.length} elementos · Cuadrícula con ajuste de 10 unidades · Dibuja arrastrando el cursor</span>
