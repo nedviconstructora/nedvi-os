@@ -850,23 +850,33 @@ export default function UsersAndPermissionsPage() {
             <div className="grid gap-4 p-6 sm:grid-cols-2">
               <label className="block sm:col-span-2">
                 <span className="text-xs font-semibold text-[var(--muted)]">Nombre completo *</span>
-                <input
+                <textarea
+                  rows={1}
+                  autoComplete="off"
+                  data-lpignore="true"
+                  data-1p-ignore="true"
                   value={createName}
-                  onChange={(event) => setCreateName(event.target.value)}
+                  onChange={(event) => setCreateName(event.target.value.replace(/\n/g, ''))}
+                  onKeyDown={(event) => { if (event.key === 'Enter') event.preventDefault() }}
                   placeholder="Ej. Juan Pérez"
-                  className="mt-2 h-11 w-full rounded-xl border border-[var(--border)] bg-[var(--surface-soft)] px-3 text-sm text-[var(--foreground)] outline-none focus:border-[#5496CC]"
-                />
+                  className="mt-2 h-11 w-full resize-none rounded-xl border border-[var(--border)] bg-[var(--surface-soft)] px-3 py-3 text-sm text-[var(--foreground)] outline-none focus:border-[#5496CC]"
+                ></textarea>
               </label>
 
               <label className="block sm:col-span-2">
                 <span className="text-xs font-semibold text-[var(--muted)]">Correo de acceso *</span>
-                <input
-                  type="email"
+                <textarea
+                  rows={1}
+                  autoComplete="off"
+                  data-lpignore="true"
+                  data-1p-ignore="true"
+                  inputMode="email"
                   value={createEmail}
-                  onChange={(event) => setCreateEmail(event.target.value)}
+                  onChange={(event) => setCreateEmail(event.target.value.replace(/\s/g, ''))}
+                  onKeyDown={(event) => { if (event.key === 'Enter') event.preventDefault() }}
                   placeholder="usuario@nedviconstructora.com"
-                  className="mt-2 h-11 w-full rounded-xl border border-[var(--border)] bg-[var(--surface-soft)] px-3 text-sm text-[var(--foreground)] outline-none focus:border-[#5496CC]"
-                />
+                  className="mt-2 h-11 w-full resize-none rounded-xl border border-[var(--border)] bg-[var(--surface-soft)] px-3 py-3 text-sm text-[var(--foreground)] outline-none focus:border-[#5496CC]"
+                ></textarea>
               </label>
 
               <label className="block">
@@ -913,6 +923,7 @@ export default function UsersAndPermissionsPage() {
                 <div className="relative mt-2">
                   <input
                     type={createShowPassword ? 'text' : 'password'}
+                    autoComplete="new-password"
                     value={createPassword}
                     onChange={(event) => setCreatePassword(event.target.value)}
                     placeholder="Mínimo 8 caracteres"
@@ -937,6 +948,7 @@ export default function UsersAndPermissionsPage() {
                 <span className="text-xs font-semibold text-[var(--muted)]">Confirmar contraseña *</span>
                 <input
                   type={createShowPassword ? 'text' : 'password'}
+                  autoComplete="new-password"
                   value={createConfirmPassword}
                   onChange={(event) => setCreateConfirmPassword(event.target.value)}
                   placeholder="Repite la contraseña"
