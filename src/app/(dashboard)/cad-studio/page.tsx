@@ -31,6 +31,9 @@ function AutodeskCadViewer({urn}:{urn:string}) {
           if(!mounted || !containerRef.current)return
           const instance=new Autodesk.Viewing.GuiViewer3D(containerRef.current)
           instance.start();viewer=instance
+          // Rueda hacia adelante = acercar; hacia atrás = alejar.
+          instance.prefs?.set('reverseMouseZoomDir', true)
+          instance.navigation?.setReverseZoomDirection(true)
           Autodesk.Viewing.Document.load('urn:'+urn,(doc:any)=>{
             if(!mounted)return
             const view=doc.getRoot().getDefaultGeometry()
