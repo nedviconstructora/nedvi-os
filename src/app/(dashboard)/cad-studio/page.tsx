@@ -5,8 +5,8 @@ import { AppShell } from '@/components/layout/AppShell'
 import { Download, RotateCcw, Save, Trash2, Undo2 } from 'lucide-react'
 
 type Point = { x: number; y: number }
-type Shape = { id: string; kind: 'line' | 'rectangle'; a: Point; b: Point }
-type Tool = 'select' | 'line' | 'rectangle'
+type Shape = { id: string; kind: 'line' | 'rectangle' | 'dimension'; a: Point; b: Point }
+type Tool = 'select' | 'line' | 'rectangle' | 'dimension'
 const STORAGE_KEY = 'nedvi-cad-studio-draft-v1'
 const WIDTH = 1200
 const HEIGHT = 750
@@ -14,7 +14,7 @@ const HEIGHT = 750
 function validShape(value: unknown): value is Shape {
   if (!value || typeof value !== 'object') return false
   const item = value as Partial<Shape>
-  return typeof item.id === 'string' && (item.kind === 'line' || item.kind === 'rectangle') &&
+  return typeof item.id === 'string' && (item.kind === 'line' || item.kind === 'rectangle' || item.kind === 'dimension') &&
     !!item.a && !!item.b && [item.a.x,item.a.y,item.b.x,item.b.y].every(v => typeof v === 'number' && Number.isFinite(v) && v >= 0 && v <= 50000)
 }
 
@@ -27,7 +27,7 @@ async function inspectCadFile(file: File): Promise<DetectedCad> {
   const ascii = Array.from(header).map(byte => String.fromCharCode(byte)).join('')
   const extension = file.name.split('.').pop()?.toLowerCase()
   if (ascii.startsWith('AC10') && /^AC10[0-9]{2}/.test(ascii.slice(0, 6))) {
-    return { name: file.name, format: 'DWG', details: 'Archivo DWG identificado por su cabecera AutoCAD. Para visualizar o modificar su contenido falta conectar el servicio de conversión Autodesk APS.' }
+    return { name: file.name, format: 'DWG', details: 'Archivo DWG válido identificado por su cabecera AutoCAD. Utiliza la conversión APS para visualizarlo; la edición nativa DWG aún no está disponible.' }
   }
   if (ascii.startsWith('AutoCAD Binary DXF')) {
     return { name: file.name, format: 'DXF', details: 'DXF binario identificado. Esta versión todavía no interpreta DXF binarios.' }
@@ -86,6 +86,8 @@ function AutodeskCadViewer({urn}:{urn:string}) {
 
 export default function CadStudioPage() {
   const [shapes, setShapes] = useState<Shape[]>([])
+  const [notes, setNotes] = useState<Array<{id:string;text:string;createdAt:string}>>([])
+  const [noteInput, setNoteInput] = useState('')
   const [tool, setTool] = useState<Tool>('line')
   const [selected, setSelected] = useState<string | null>(null)
   const [start, setStart] = useState<Point | null>(null)
@@ -111,6 +113,7 @@ export default function CadStudioPage() {
         if (Array.isArray(parsed)) setShapes(parsed.filter(validShape).slice(0, 2000))
       }
     } catch { /* Ignore invalid local drafts. */ }
+    try { const savedNotes=JSON.parse(localStorage.getItem('nedvi-cad-notes-v1') || '[]') as unknown; if(Array.isArray(savedNotes)) setNotes(savedNotes.filter((item): item is {id:string;text:string;createdAt:string} => !!item && typeof item === 'object' && typeof item.id === 'string' && typeof item.text === 'string' && typeof item.createdAt === 'string').slice(0,100)) }catch{}
     setReady(true)
   }, [])
 
@@ -132,6 +135,8 @@ export default function CadStudioPage() {
   useEffect(() => {
     if (ready) localStorage.setItem(STORAGE_KEY, JSON.stringify(shapes))
   }, [ready, shapes])
+
+  useEffect(() => { if(ready) localStorage.setItem('nedvi-cad-notes-v1',JSON.stringify(notes)) },[ready,notes])
 
   function commit(next: Shape[]) {
     setHistory(previous => [...previous.slice(-29), shapes])
@@ -170,7 +175,7 @@ export default function CadStudioPage() {
   }
 
   function svgMarkup() {
-    const shapeTags = shapes.map(shape => shape.kind === 'line'
+    const shapeTags = shapes.map(shape => shape.kind === 'dimension' ? `<g><line x1="${shape.a.x}" y1="${shape.a.y}" x2="${shape.b.x}" y2="${shape.b.y}" stroke="#b45309" stroke-width="2"/><text x="${(shape.a.x+shape.b.x)/2}" y="${(shape.a.y+shape.b.y)/2-6}" fill="#92400e" font-size="16">${Math.hypot(shape.b.x-shape.a.x,shape.b.y-shape.a.y).toFixed(1)} u</text></g>` : shape.kind === 'line'
       ? `<line x1="${shape.a.x}" y1="${shape.a.y}" x2="${shape.b.x}" y2="${shape.b.y}" stroke="#2563eb" stroke-width="2"/>`
       : `<rect x="${Math.min(shape.a.x,shape.b.x)}" y="${Math.min(shape.a.y,shape.b.y)}" width="${Math.abs(shape.a.x-shape.b.x)}" height="${Math.abs(shape.a.y-shape.b.y)}" fill="none" stroke="#2563eb" stroke-width="2"/>`).join('')
     return `<svg xmlns="http://www.w3.org/2000/svg" width="${WIDTH}" height="${HEIGHT}" viewBox="0 0 ${WIDTH} ${HEIGHT}"><rect width="100%" height="100%" fill="white"/>${shapeTags}</svg>`
@@ -185,6 +190,20 @@ export default function CadStudioPage() {
     setTimeout(() => URL.revokeObjectURL(url), 1000)
   }
 
+  function exportDxf() {
+    const lines=['0','SECTION','2','HEADER','9','$ACADVER','1','AC1009','0','ENDSEC','0','SECTION','2','ENTITIES']
+    const segment=(a:Point,b:Point)=>{ lines.push('0','LINE','8','NEDVI_BOCETO','10',String(a.x),'20',String(-a.y),'30','0','11',String(b.x),'21',String(-b.y),'31','0') }
+    shapes.forEach(shape=>{
+      if(shape.kind==='rectangle'){
+        const {a,b}=shape;const x1=Math.min(a.x,b.x),x2=Math.max(a.x,b.x),y1=Math.min(a.y,b.y),y2=Math.max(a.y,b.y)
+        segment({x:x1,y:y1},{x:x2,y:y1});segment({x:x2,y:y1},{x:x2,y:y2});segment({x:x2,y:y2},{x:x1,y:y2});segment({x:x1,y:y2},{x:x1,y:y1})
+      }else segment(shape.a,shape.b)
+    })
+    lines.push('0','ENDSEC','0','EOF')
+    download('nedvi-boceto-2d.dxf',lines.join('\\r\\n'),'application/dxf')
+    setMessage('DXF del boceto exportado. Las unidades son arbitrarias y no modifica el DWG original.')
+  }
+
   const button = 'rounded-lg border border-[var(--border)] bg-[var(--surface)] px-3 py-2 text-sm font-semibold text-[var(--foreground)] hover:bg-[var(--surface-soft)]'
   return <AppShell>
     <div className="mx-auto max-w-[1500px] space-y-5 p-2 sm:p-5">
@@ -194,10 +213,11 @@ export default function CadStudioPage() {
         <p className="mt-2 text-sm text-[var(--muted)]">Editor de bocetos técnicos 2D · Primera versión. No es un editor DWG/DXF ni sustituye planos CAD certificados.</p>
       </div>
       <div className="flex flex-wrap items-center gap-2">
-        {(['select','line','rectangle'] as Tool[]).map(item => <button key={item} onClick={() => {setTool(item);setStart(null)}} className={button + (tool === item ? ' !bg-[#7BAEE3] !text-slate-950' : '')}>{item === 'select' ? 'Seleccionar' : item === 'line' ? 'Línea' : 'Rectángulo'}</button>)}
+        {(['select','line','rectangle','dimension'] as Tool[]).map(item => <button key={item} onClick={() => {setTool(item);setStart(null)}} className={button + (tool === item ? ' !bg-[#7BAEE3] !text-slate-950' : '')}>{item === 'select' ? 'Seleccionar' : item === 'line' ? 'Línea' : item === 'dimension' ? 'Cota aproximada' : 'Rectángulo'}</button>)}
         <button className={button} disabled={!selected} onClick={() => {commit(shapes.filter(s => s.id !== selected));setSelected(null)}}><Trash2 size={14} className="mr-1 inline"/>Borrar selección</button>
         <button className={button} disabled={!history.length} onClick={() => {const last=history[history.length-1];setHistory(h=>h.slice(0,-1));setShapes(last)}}><Undo2 size={14} className="mr-1 inline"/>Deshacer</button>
         <button className={button} onClick={() => {setMessage('Borrador guardado únicamente en este navegador de Windows.');localStorage.setItem(STORAGE_KEY,JSON.stringify(shapes))}}><Save size={14} className="mr-1 inline"/>Guardar borrador</button>
+        <button className={button} onClick={exportDxf}>Exportar boceto DXF</button>
         <button className={button} onClick={() => download('nedvi-plano.svg', svgMarkup(), 'image/svg+xml')}><Download size={14} className="mr-1 inline"/>Exportar SVG</button>
         <button className={button} onClick={() => download('nedvi-plano.json', JSON.stringify({format:'nedvi-cad-v1',shapes},null,2), 'application/json')}>Exportar proyecto</button>
         <button className={button} disabled={checkingAps} onClick={async () => {
@@ -261,14 +281,26 @@ export default function CadStudioPage() {
       {cadFile ? <div className="rounded-xl border border-[#5496CC]/30 bg-[#5496CC]/10 p-4 text-sm text-[var(--foreground)]">
         <p className="font-semibold">Archivo detectado: {cadFile.format} · {cadFile.name}</p>
         <p className="mt-1 text-xs text-[var(--muted)]">{cadFile.details}</p>
-        <p className="mt-2 text-xs text-[var(--muted)]">El archivo no se convierte ni modifica. El boceto actual permanece intacto.</p>
+        <p className="mt-2 text-xs text-[var(--muted)]">Detectar solo inspecciona la cabecera. Para convertir utiliza el botón Autodesk; el DWG original permanece intacto.</p>
       </div> : null}
+      <section className="rounded-2xl border border-[var(--border)] bg-[var(--surface)] p-4">
+        <h2 className="font-semibold text-[var(--foreground)]">Bitácora de revisiones CAD</h2>
+        <p className="mt-1 text-xs text-[var(--muted)]">Añade indicaciones para los planos. Se guardan solo en este navegador; no modifican la geometría DWG ni se sincronizan con el equipo.</p>
+        <div className="mt-3 flex flex-wrap gap-2">
+          <input aria-label="Nueva observación del plano" maxLength={400} value={noteInput} onChange={e=>setNoteInput(e.target.value)} placeholder="Ej. Revisar medida de acceso principal" className="min-w-[220px] flex-1 rounded-lg border border-[var(--border)] bg-[var(--background)] px-3 py-2 text-sm text-[var(--foreground)]"/>
+          <button className={button} onClick={()=>{const value=noteInput.trim();if(value){setNotes(items=>[...items.slice(-99),{id:crypto.randomUUID(),text:value,createdAt:new Date().toISOString()}]);setNoteInput('')}}}>Añadir observación</button>
+          <button className={button} onClick={()=>download('nedvi-revisiones.json',JSON.stringify({format:'nedvi-cad-notes-v1',source:cadFile?.name||null,notes},null,2),'application/json')}>Exportar revisiones JSON</button>
+        </div>
+        <div className="mt-3 space-y-2">
+          {notes.map(note=><div key={note.id} className="flex items-start justify-between gap-3 rounded-lg bg-[var(--surface-soft)] p-3 text-xs"><span className="text-[var(--foreground)]">{note.text}</span><button className="text-red-500" onClick={()=>setNotes(items=>items.filter(x=>x.id!==note.id))}>Eliminar</button></div>)}
+        </div>
+      </section>
       <div className="overflow-auto rounded-2xl border border-[var(--border)] bg-white p-2 shadow-sm">
         <svg ref={svgRef} viewBox="0 0 1200 750" className="min-w-[650px] w-full touch-none select-none" style={{backgroundImage:'linear-gradient(#e8eef5 1px, transparent 1px), linear-gradient(90deg,#e8eef5 1px, transparent 1px)',backgroundSize:'25px 25px'}} onPointerDown={pointerDown} onPointerMove={e => {if(start)setCursor(point(e))}} onPointerUp={pointerUp} onPointerCancel={()=>{setStart(null);setCursor(null)}} aria-label="Lienzo de dibujo CAD">
-          {shapes.map(shape => shape.kind==='line'
+          {shapes.map(shape => shape.kind==='dimension' ? <g key={shape.id} onPointerDown={e=>{if(tool==='select'){e.stopPropagation();setSelected(shape.id)}}}><line x1={shape.a.x} y1={shape.a.y} x2={shape.b.x} y2={shape.b.y} stroke="#b45309" strokeWidth="2"/><text x={(shape.a.x+shape.b.x)/2} y={(shape.a.y+shape.b.y)/2-7} fill="#92400e" fontSize="16">{Math.hypot(shape.b.x-shape.a.x,shape.b.y-shape.a.y).toFixed(1)} u</text></g> : shape.kind==='line'
             ? <line key={shape.id} x1={shape.a.x} y1={shape.a.y} x2={shape.b.x} y2={shape.b.y} stroke={selected===shape.id?'#f59e0b':'#2563eb'} strokeWidth={selected===shape.id?5:3} onPointerDown={e=>{if(tool==='select'){e.stopPropagation();setSelected(shape.id)}}}/>
             : <rect key={shape.id} x={Math.min(shape.a.x,shape.b.x)} y={Math.min(shape.a.y,shape.b.y)} width={Math.abs(shape.a.x-shape.b.x)} height={Math.abs(shape.a.y-shape.b.y)} fill="transparent" stroke={selected===shape.id?'#f59e0b':'#2563eb'} strokeWidth={selected===shape.id?5:3} onPointerDown={e=>{if(tool==='select'){e.stopPropagation();setSelected(shape.id)}}}/>)}
-          {start && cursor && (tool==='line'?<line x1={start.x} y1={start.y} x2={cursor.x} y2={cursor.y} stroke="#f59e0b" strokeWidth="2" strokeDasharray="7 5"/>:<rect x={Math.min(start.x,cursor.x)} y={Math.min(start.y,cursor.y)} width={Math.abs(cursor.x-start.x)} height={Math.abs(cursor.y-start.y)} fill="none" stroke="#f59e0b" strokeWidth="2" strokeDasharray="7 5"/>)}
+          {start && cursor && ((tool==='line'||tool==='dimension')?<line x1={start.x} y1={start.y} x2={cursor.x} y2={cursor.y} stroke="#f59e0b" strokeWidth="2" strokeDasharray="7 5"/>:<rect x={Math.min(start.x,cursor.x)} y={Math.min(start.y,cursor.y)} width={Math.abs(cursor.x-start.x)} height={Math.abs(cursor.y-start.y)} fill="none" stroke="#f59e0b" strokeWidth="2" strokeDasharray="7 5"/>)}
         </svg>
       </div>
       <div className="flex flex-wrap justify-between gap-3 text-xs text-[var(--muted)]">
