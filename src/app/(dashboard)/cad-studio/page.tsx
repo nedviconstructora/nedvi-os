@@ -52,6 +52,8 @@ export default function CadStudioPage() {
   const [message, setMessage] = useState('')
   const [cadFile, setCadFile] = useState<DetectedCad | null>(null)
   const [inspecting, setInspecting] = useState(false)
+  const [checkingAps, setCheckingAps] = useState(false)
+  const [apsStatus, setApsStatus] = useState('Conexión Autodesk sin comprobar.')
   const svgRef = useRef<SVGSVGElement | null>(null)
 
   useEffect(() => {
@@ -136,6 +138,15 @@ export default function CadStudioPage() {
         <button className={button} onClick={() => {setMessage('Borrador guardado únicamente en este navegador de Windows.');localStorage.setItem(STORAGE_KEY,JSON.stringify(shapes))}}><Save size={14} className="mr-1 inline"/>Guardar borrador</button>
         <button className={button} onClick={() => download('nedvi-plano.svg', svgMarkup(), 'image/svg+xml')}><Download size={14} className="mr-1 inline"/>Exportar SVG</button>
         <button className={button} onClick={() => download('nedvi-plano.json', JSON.stringify({format:'nedvi-cad-v1',shapes},null,2), 'application/json')}>Exportar proyecto</button>
+        <button className={button} disabled={checkingAps} onClick={async () => {
+          setCheckingAps(true)
+          try {
+            const response = await fetch('/api/cad/aps-status', { cache: 'no-store' })
+            const data = await response.json() as { connected?: boolean; error?: string }
+            setApsStatus(data.connected ? 'Autodesk APS conectado y autenticado correctamente.' : (data.error ?? 'No se pudo conectar con Autodesk.'))
+          } catch { setApsStatus('No se pudo consultar la conexión con Autodesk.') }
+          finally { setCheckingAps(false) }
+        }}>{checkingAps ? 'Comprobando APS...' : 'Probar conexión Autodesk'}</button>
         <label className={button + ' cursor-pointer'}>{inspecting ? 'Analizando archivo...' : 'Detectar DWG / DXF'}
           <input type="file" accept=".dwg,.dxf" disabled={inspecting} className="hidden" onChange={async event => {
             const file = event.target.files?.[0]
@@ -157,6 +168,7 @@ export default function CadStudioPage() {
         <label className={button + ' cursor-pointer'}>Importar proyecto JSON<input type="file" accept=".json,application/json" className="hidden" onChange={async e => {const file=e.target.files?.[0];e.target.value='';if(!file)return;try{if(file.size>2000000)throw Error('Archivo demasiado grande');const data=JSON.parse(await file.text()) as {format?:string;shapes?:unknown};if(data.format!=='nedvi-cad-v1'||!Array.isArray(data.shapes)||data.shapes.length>2000||!data.shapes.every(validShape))throw Error('Formato inválido');commit(data.shapes);setMessage('Proyecto importado correctamente.')}catch{setMessage('No se pudo importar: utiliza un proyecto JSON válido de NEDVI CAD.') }}}/></label>
         <button className={button} onClick={() => {if(window.confirm('¿Vaciar el boceto actual?')){commit([]);setSelected(null)}}}><RotateCcw size={14} className="mr-1 inline"/>Limpiar</button>
       </div>
+      <p role="status" className="text-sm text-[var(--muted)]">{apsStatus}</p>
       {cadFile ? <div className="rounded-xl border border-[#5496CC]/30 bg-[#5496CC]/10 p-4 text-sm text-[var(--foreground)]">
         <p className="font-semibold">Archivo detectado: {cadFile.format} · {cadFile.name}</p>
         <p className="mt-1 text-xs text-[var(--muted)]">{cadFile.details}</p>
