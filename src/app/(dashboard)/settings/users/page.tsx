@@ -10,6 +10,7 @@ import {
   EyeOff,
   KeyRound,
   Search,
+  RefreshCw,
   ShieldCheck,
   Trash2,
   UserCheck,
@@ -91,6 +92,7 @@ export default function UsersAndPermissionsPage() {
   const [passwordRequests, setPasswordRequests] = useState<PasswordResetRequest[]>([])
   const [users, setUsers] = useState<AccessUser[]>([])
   const [search, setSearch] = useState('')
+  const [refreshing, setRefreshing] = useState(false)
   const [editUser, setEditUser] = useState<AccessUser | null>(null)
   const [editName, setEditName] = useState('')
   const [editPhone, setEditPhone] = useState('')
@@ -145,6 +147,16 @@ export default function UsersAndPermissionsPage() {
     } catch (loadError) {
       console.error('Error al sincronizar usuarios desde Supabase:', loadError)
       setUsers(readAccessUsers())
+    }
+  }
+
+  async function handleManualRefresh() {
+    if (refreshing) return
+    setRefreshing(true)
+    try {
+      await refresh()
+    } finally {
+      setRefreshing(false)
     }
   }
 
@@ -538,6 +550,10 @@ export default function UsersAndPermissionsPage() {
           >
             <ArrowLeft size={16} /> Volver a NEDVI OS
           </Link>
+          <button type="button" onClick={() => void handleManualRefresh()} disabled={refreshing} className="mb-5 ml-2 inline-flex items-center gap-2 rounded-xl border border-[#5496CC] px-3 py-2 text-sm font-semibold text-[#5496CC] transition hover:bg-[#5496CC]/10 disabled:opacity-60">
+            <RefreshCw size={16} className={refreshing ? 'animate-spin' : ''} />
+            {refreshing ? 'Actualizando...' : 'Actualizar'}
+          </button>
           <p className="text-xs font-semibold uppercase tracking-[0.18em] text-[#5496CC]">Configuración</p>
           <h1 className="mt-2 text-3xl font-bold tracking-[-0.04em] text-[var(--foreground)]">
             Usuarios y permisos
