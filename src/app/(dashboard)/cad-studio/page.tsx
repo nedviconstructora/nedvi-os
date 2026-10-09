@@ -46,7 +46,7 @@ function AutodeskCadViewer({urn}:{urn:string}) {
   const [viewerError,setViewerError]=useState('')
   useEffect(()=>{
     let mounted=true
-    let viewer: {finish:()=>void} | null=null
+    let viewer: any = null
     const load=async()=>{
       try{
         const w=window as unknown as {Autodesk?:any}
