@@ -94,6 +94,11 @@ export default function UsersAndPermissionsPage() {
   const [search, setSearch] = useState('')
   const [refreshing, setRefreshing] = useState(false)
   const [editUser, setEditUser] = useState<AccessUser | null>(null)
+  const [editClient, setEditClient] = useState<AccessUser | null>(null)
+  const [clientName, setClientName] = useState('')
+  const [clientPhone, setClientPhone] = useState('')
+  const [clientEditError, setClientEditError] = useState('')
+  const [savingClient, setSavingClient] = useState(false)
   const [editName, setEditName] = useState('')
   const [editPhone, setEditPhone] = useState('')
   const [editPosition, setEditPosition] = useState('')
@@ -415,6 +420,35 @@ export default function UsersAndPermissionsPage() {
     }
   }
 
+  function openEditClient(user: AccessUser) {
+    setEditClient(user)
+    setClientName(user.name)
+    setClientPhone(user.phone ?? '')
+    setClientEditError('')
+  }
+
+  async function saveClientChanges() {
+    if (!editClient || savingClient || !isAdmin) return
+    setSavingClient(true)
+    setClientEditError('')
+    try {
+      const response = await fetch('/api/access/client/profile', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        cache: 'no-store',
+        body: JSON.stringify({ userId: editClient.id, name: clientName.trim(), phone: clientPhone.trim() }),
+      })
+      const result = await response.json() as { error?: string }
+      if (!response.ok) throw new Error(result.error ?? 'No se pudo editar el cliente.')
+      setEditClient(null)
+      await refresh()
+    } catch (error) {
+      setClientEditError(error instanceof Error ? error.message : 'Error actualizando el cliente.')
+    } finally {
+      setSavingClient(false)
+    }
+  }
+
   function openEditUser(user: AccessUser) {
     setEditUser(user)
     setEditName(user.name)
@@ -709,7 +743,10 @@ export default function UsersAndPermissionsPage() {
             <div className="border-t border-[var(--border)] bg-[#5496CC]/10 px-5 py-3 text-sm font-bold text-[var(--foreground)]">Clientes · {clientUsers.length} cuentas</div>
             {clientUsers.map(user => <div key={user.id} className="flex flex-wrap items-center justify-between gap-3 border-b border-[var(--border)] p-5">
               <div><p className="text-sm font-semibold text-[var(--foreground)]">{user.name}</p><p className="text-xs text-[var(--muted)]">{user.email} · {user.customerFolio || 'Sin folio'}</p></div>
-              <span className="rounded-lg bg-[#5496CC]/10 px-3 py-1 text-xs font-semibold text-[#5496CC]">Cliente · {user.status}</span>
+              <div className="flex items-center gap-2">
+                <span className="rounded-lg bg-[#5496CC]/10 px-3 py-1 text-xs font-semibold text-[#5496CC]">Cliente · {user.status}</span>
+                <button type="button" disabled={!isAdmin || !user.customerId} onClick={() => openEditClient(user)} className="inline-flex items-center gap-1.5 rounded-lg border border-[#5496CC]/30 px-3 py-1.5 text-xs font-semibold text-[#5496CC] disabled:opacity-40"><UserRoundCog size={14}/>Editar cliente</button>
+              </div>
             </div>)}
             {!visibleUsers.length && search ? <div className="p-8 text-center text-sm text-[var(--muted)]">No se encontraron usuarios.</div> : null}
           </div>
@@ -994,6 +1031,25 @@ export default function UsersAndPermissionsPage() {
         </div>
       ) : null}
 
+      {editClient ? (
+        <div className="fixed inset-0 z-[65] flex items-center justify-center bg-black/60 p-4">
+          <div className="w-full max-w-md space-y-4 rounded-2xl border border-[var(--border)] bg-[var(--surface)] p-6 shadow-2xl">
+            <div className="flex items-center justify-between">
+              <h2 className="text-lg font-bold text-[var(--foreground)]">Editar cliente</h2>
+              <button type="button" aria-label="Cerrar" disabled={savingClient} onClick={() => setEditClient(null)}><X size={19}/></button>
+            </div>
+            <p className="text-xs text-[var(--muted)]">Se actualizarán los datos de contacto del CRM y la cuenta del portal. El correo, folio y proyectos permanecerán intactos.</p>
+            <label className="block text-xs text-[var(--muted)]">Nombre completo
+              <input autoComplete="off" value={clientName} onChange={e => setClientName(e.target.value)} className="mt-2 h-11 w-full rounded-xl border border-[var(--border)] bg-[var(--surface-soft)] px-3 text-sm text-[var(--foreground)]"/>
+            </label>
+            <label className="block text-xs text-[var(--muted)]">Teléfono
+              <input type="tel" autoComplete="off" inputMode="tel" value={clientPhone} onChange={e => setClientPhone(e.target.value)} className="mt-2 h-11 w-full rounded-xl border border-[var(--border)] bg-[var(--surface-soft)] px-3 text-sm text-[var(--foreground)]"/>
+            </label>
+            {clientEditError ? <p role="alert" className="text-sm text-red-500">{clientEditError}</p> : null}
+            <button type="button" disabled={savingClient} onClick={() => void saveClientChanges()} className="w-full rounded-xl bg-[#5496CC] px-4 py-3 text-sm font-semibold text-white disabled:opacity-50">{savingClient ? 'Guardando...' : 'Guardar cambios'}</button>
+          </div>
+        </div>
+      ) : null}
       {editUser ? <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/60 p-4"><div className="w-full max-w-md space-y-4 rounded-2xl border border-[var(--border)] bg-[var(--surface)] p-6 shadow-2xl"><div className="flex items-center justify-between"><h2 className="text-lg font-bold text-[var(--foreground)]">Editar integrante NEDVI</h2><button onClick={() => setEditUser(null)} type="button" aria-label="Cerrar"><X size={19}/></button></div><label className="block text-xs text-[var(--muted)]">Nombre completo<input value={editName} onChange={e=>setEditName(e.target.value)} autoComplete="off" className="mt-2 h-11 w-full rounded-lg border border-[var(--border)] bg-[var(--surface-soft)] px-3 text-[var(--foreground)]"/></label><label className="block text-xs text-[var(--muted)]">Puesto<input value={editPosition} onChange={e=>setEditPosition(e.target.value)} autoComplete="off" className="mt-2 h-11 w-full rounded-lg border border-[var(--border)] bg-[var(--surface-soft)] px-3 text-[var(--foreground)]"/></label><label className="block text-xs text-[var(--muted)]">Teléfono de contacto<input type="tel" inputMode="tel" name="edit-staff-phone" autoComplete="off" value={editPhone} onChange={e=>setEditPhone(e.target.value)} placeholder="Ej. 664 558 1946" className="mt-2 h-11 w-full rounded-lg border border-[var(--border)] bg-[var(--surface-soft)] px-3 text-[var(--foreground)]"/></label>{editError?<p className="text-sm text-red-500">{editError}</p>:null}<button type="button" onClick={() => void saveEditedUser()} disabled={editingUser} className="w-full rounded-xl bg-[#5496CC] px-4 py-3 font-semibold text-white disabled:opacity-50">{editingUser?'Guardando...':'Guardar cambios'}</button></div></div> : null}
       {passwordUser ? (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/55 p-4 backdrop-blur-sm">
