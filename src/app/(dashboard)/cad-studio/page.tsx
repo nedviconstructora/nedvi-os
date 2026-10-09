@@ -273,7 +273,7 @@ export default function CadStudioPage() {
           } catch { setApsStatus('No se pudo consultar la conexión con Autodesk.') }
           finally { setCheckingAps(false) }
         }}>{checkingAps ? 'Comprobando APS...' : 'Probar conexión Autodesk'}</button>
-        <label className={button + ' cursor-pointer'}>{inspecting ? 'Analizando archivo...' : 'Detectar DWG / DXF'}
+        <label className={button + ' cursor-pointer'}>{inspecting ? 'Analizando archivo...' : 'Abrir archivo DWG / DXF'}
           <input type="file" accept=".dwg,.dxf" disabled={inspecting} className="hidden" onChange={async event => {
             const file = event.target.files?.[0]
             event.target.value = ''
@@ -282,11 +282,26 @@ export default function CadStudioPage() {
             setCadFile(null)
             try {
               const detected = await inspectCadFile(file)
-              setCadFile(detected)
-              setCadSource(detected.format === 'DWG' ? file : null)
-              setApsUrn(null)
-              setConversionStatus('')
-              setMessage(detected.details)
+              if(detected.format === 'DXF'){
+                if(file.size > 8*1024*1024) throw new Error('Este editor admite DXF ASCII de hasta 8 MB.')
+                const content=await file.text()
+                const result=parseDxfLines(content)
+                if(shapes.length && !window.confirm('¿Reemplazar el boceto actual con '+result.segments.length+' segmentos del DXF?')) return
+                commit(result.segments.map(s=>({id:crypto.randomUUID(),kind:'line',a:s.a,b:s.b})))
+                setSelected(null)
+                setTool('select')
+                setWorkspaceMode('edit')
+                setCadFile(detected)
+                setCadSource(null)
+                setMessage('DXF cargado en el editor: '+result.segments.length+' segmentos. '+result.ignored+' entidades no compatibles omitidas. La escala fue adaptada al lienzo; no utilices estas medidas para obra.')
+              } else {
+                setCadFile(detected)
+                setCadSource(file)
+                setApsUrn(null)
+                setConversionStatus('')
+                setWorkspaceMode('view')
+                setMessage(detected.details)
+              }
             } catch (error) {
               setMessage(error instanceof Error ? error.message : 'Archivo CAD no reconocido.')
             } finally {
@@ -358,7 +373,7 @@ export default function CadStudioPage() {
       {cadFile ? <div className="rounded-xl border border-[#5496CC]/30 bg-[#5496CC]/10 p-4 text-sm text-[var(--foreground)]">
         <p className="font-semibold">Archivo detectado: {cadFile.format} · {cadFile.name}</p>
         <p className="mt-1 text-xs text-[var(--muted)]">{cadFile.details}</p>
-        <p className="mt-2 text-xs text-[var(--muted)]">Detectar solo inspecciona la cabecera. Para convertir utiliza el botón Autodesk; el DWG original permanece intacto.</p>
+        <p className="mt-2 text-xs text-[var(--muted)]">Los DXF ASCII compatibles se abren en el editor; los DWG se muestran mediante Autodesk en modo consulta. Convertir DWG a geometría editable requiere activar AutoCAD Automation.</p>
       </div> : null}
       {workspaceMode==='edit' ? <div className="rounded-xl border border-[#5496CC]/30 bg-[#5496CC]/10 p-4 text-sm text-[var(--foreground)]">
         <p className="font-semibold">¿Cómo probar la edición?</p>
