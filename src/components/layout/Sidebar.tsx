@@ -23,6 +23,7 @@ import {
   LayoutDashboard,
   LogOut,
   Ruler,
+  Search,
   Settings2,
   ShoppingCart,
   Truck,
@@ -66,6 +67,7 @@ const navigationGroups: NavigationGroup[] = [
     permission: 'commercial',
     items: [
       { label: 'Clientes', href: '/crm', icon: UsersRound },
+      { label: 'Buscar folio', href: '/folio-search', icon: Search },
       { label: 'Oportunidades', href: '/opportunities', icon: ClipboardList },
       { label: 'Levantamiento', href: '/site-surveys', icon: Ruler },
       { label: 'Cotizaciones', href: '/quotes', icon: FileText },
