@@ -37,9 +37,20 @@ function AutodeskCadViewer({urn}:{urn:string}) {
           instance.navigation?.setReverseZoomDirection(true)
           Autodesk.Viewing.Document.load('urn:'+urn,(doc:any)=>{
             if(!mounted)return
-            const view=doc.getRoot().getDefaultGeometry()
-            if(view)instance.loadDocumentNode(doc,view)
-            else setViewerError('Autodesk no encontró geometría visible en este archivo.')
+            const root=doc.getRoot()
+            // Some 2D DWG derivatives have no default geometry node.
+            const defaultView=root.getDefaultGeometry?.()
+            const views2d=root.search?.({type:'geometry',role:'2d'}) || []
+            const views3d=root.search?.({type:'geometry',role:'3d'}) || []
+            const geometries=root.search?.({type:'geometry'}) || []
+            const view=defaultView || views2d[0] || views3d[0] || geometries[0]
+            if(view){
+              Promise.resolve(instance.loadDocumentNode(doc,view)).catch(()=>{
+                if(mounted)setViewerError('Autodesk no pudo cargar la vista de este plano. Revisa si contiene referencias externas o vistas compatibles.')
+              })
+            }else{
+              setViewerError('Autodesk procesó el DWG pero no generó vistas 2D/3D visibles. Revisa que el archivo contenga geometría en Model o Layout y que no dependa de referencias externas.')
+            }
           },()=>setViewerError('No se pudo cargar el plano convertido.'))
         })
       }catch(error){if(mounted)setViewerError(error instanceof Error?error.message:'Error abriendo el visor.')}
