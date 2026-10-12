@@ -231,7 +231,7 @@ export function AppShell({ children }: AppShellProps) {
         ) : null}
 
         <div className="flex min-w-0 flex-1 flex-col print:block">
-          <div className="print:hidden">
+          <div className="relative z-[60] print:hidden">
             <Header
               onOpenMenu={() => setMobileMenuOpen(true)}
               isDark={isDark}
@@ -241,7 +241,7 @@ export function AppShell({ children }: AppShellProps) {
             />
           </div>
 
-          <main className="min-w-0 flex-1 bg-[var(--background)] p-5 transition-colors duration-300 sm:p-8 print:bg-white print:p-0">
+          <main className="relative z-0 min-w-0 flex-1 bg-[var(--background)] p-5 transition-colors duration-300 sm:p-8 print:bg-white print:p-0">
             {hasRouteAccess ? (
               children
             ) : (
