@@ -825,11 +825,11 @@ export default function QuotesPage() {
                     </td>
                     <td className="px-4 py-4">
                       <div className="flex max-w-[360px] flex-wrap gap-2">
-                        <button onClick={() => openEdit(quote)} className="rounded-lg border border-[#7BAEE3]/45 bg-[#7BAEE3]/10 px-3 py-1.5 text-xs font-semibold text-[#235C9D] dark:text-[#B9E2FF] transition hover:bg-[#7BAEE3]/20">Editar</button>
-                        <button onClick={() => duplicateQuote(quote)} className="rounded-lg border border-[#7BAEE3]/45 bg-[#7BAEE3]/10 px-3 py-1.5 text-xs font-semibold text-[#235C9D] dark:text-[#B9E2FF] transition hover:bg-[#7BAEE3]/20">Duplicar</button>
-                        <button onClick={() => printPdf(quote)} className="rounded-lg border border-[#7BAEE3]/45 bg-[#7BAEE3]/10 px-3 py-1.5 text-xs font-semibold text-[#235C9D] dark:text-[#B9E2FF] transition hover:bg-[#7BAEE3]/20">PDF</button>
-                        <button onClick={() => convertToProject(quote)} disabled={quote.convertedToProject} className="rounded-lg border border-emerald-500/45 bg-emerald-500/10 px-3 py-1.5 text-xs font-semibold text-emerald-700 dark:text-emerald-300 disabled:cursor-not-allowed disabled:opacity-65">{quote.convertedToProject ? 'Proyecto creado' : 'Crear proyecto'}</button>
-                        <button onClick={() => deleteQuote(quote)} className="rounded-lg border border-red-500/40 px-3 py-1.5 text-xs font-semibold text-red-600 dark:text-red-300 hover:bg-red-500/10">Eliminar</button>
+                        <button onClick={() => openEdit(quote)} className="nedvi-quote-action nedvi-quote-action-blue rounded-lg border px-3 py-1.5 text-xs font-bold transition">Editar</button>
+                        <button onClick={() => duplicateQuote(quote)} className="nedvi-quote-action nedvi-quote-action-blue rounded-lg border px-3 py-1.5 text-xs font-bold transition">Duplicar</button>
+                        <button onClick={() => printPdf(quote)} className="nedvi-quote-action nedvi-quote-action-blue rounded-lg border px-3 py-1.5 text-xs font-bold transition">PDF</button>
+                        <button onClick={() => convertToProject(quote)} disabled={quote.convertedToProject} className="nedvi-quote-action nedvi-quote-action-green rounded-lg border px-3 py-1.5 text-xs font-bold transition disabled:cursor-not-allowed">{quote.convertedToProject ? 'Proyecto creado' : 'Crear proyecto'}</button>
+                        <button onClick={() => deleteQuote(quote)} className="nedvi-quote-action nedvi-quote-action-red rounded-lg border px-3 py-1.5 text-xs font-bold transition">Eliminar</button>
                       </div>
                     </td>
                   </tr>
