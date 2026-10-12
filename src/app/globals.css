@@ -781,3 +781,18 @@ textarea {
 .theme-dark .nedvi-project-status-risk { background: #78350f; border-color: #d97706; color: #fde68a; }
 .theme-dark .nedvi-project-status-completed { background: #4c1d95; border-color: #8b5cf6; color: #ede9fe; }
 .theme-dark .nedvi-project-status-hold { background: #334155; border-color: #64748b; color: #e2e8f0; }
+
+
+/* Document preview action — stronger contrast in light and dark modes. */
+.theme-light .nedvi-document-view-action {
+  background-color: #cce3ff !important;
+  border-color: #2670b8 !important;
+  color: #104a83 !important;
+}
+.theme-light .nedvi-document-view-action:hover { background-color: #a9d2ff !important; }
+.theme-dark .nedvi-document-view-action {
+  background-color: rgba(123,174,227,.18);
+  border-color: rgba(123,174,227,.55);
+  color: #c4e7ff;
+}
+.theme-dark .nedvi-document-view-action:hover { background-color: rgba(123,174,227,.30); }
