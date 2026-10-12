@@ -70,7 +70,6 @@ type Quote = {
 }
 
 const STORAGE_KEY = 'nedvi_quotes'
-const SEQUENCE_KEY = 'nedvi_quotes_sequence'
 const PROJECT_INTAKE_KEY = 'nedvi_projects_from_quotes'
 
 const unitOptions: UnitMeasure[] = [
@@ -124,24 +123,6 @@ function money(value: number, currency: QuoteCurrency = 'MXN') {
     maximumFractionDigits: 2,
   }).format(value)
   return `${currency} $${amount}`
-}
-
-function nextFolio() {
-  const year = new Date().getFullYear()
-  const raw = localStorage.getItem(SEQUENCE_KEY)
-  let sequence = 1
-
-  if (raw) {
-    try {
-      const saved = JSON.parse(raw) as { year: number; sequence: number }
-      sequence = saved.year === year ? saved.sequence + 1 : 1
-    } catch {
-      sequence = 1
-    }
-  }
-
-  localStorage.setItem(SEQUENCE_KEY, JSON.stringify({ year, sequence }))
-  return `NV-${year}-${String(sequence).padStart(4, '0')}`
 }
 
 function quoteTotals(concepts: QuoteItem[], taxRate: number) {
@@ -670,7 +651,7 @@ export default function QuotesPage() {
       } else {
         const quote: Quote = {
           id: crypto.randomUUID(),
-          folio: nextFolio(),
+          folio: '', // Supabase asigna el folio definitivo del cliente de forma centralizada.
           customerId: matchedCustomer.id,
           client: matchedCustomer.company,
           customerInfo: savedCustomerInfo,
@@ -706,7 +687,7 @@ export default function QuotesPage() {
     const duplicated: Quote = {
       ...quote,
       id: crypto.randomUUID(),
-      folio: nextFolio(),
+      folio: '', // Supabase asigna el folio definitivo del cliente de forma centralizada.
       createdAt: new Date().toISOString().slice(0, 10),
       status: 'Borrador',
       convertedToProject: false,
@@ -806,7 +787,7 @@ export default function QuotesPage() {
           <div>
             <p className="text-sm text-slate-500 dark:text-slate-400">Comercial y Ventas</p>
             <h1 className="text-3xl font-bold tracking-tight">Cotizaciones</h1>
-            <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">El folio NV-AÑO-#### identifica el expediente durante todo el proceso.</p>
+            <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">El folio se vincula al cliente: NV-0001-C01, NV-0001-C02, etc.</p>
           </div>
           <button onClick={openNew} className="rounded-xl bg-[#7BAEE3] px-5 py-3 font-semibold text-slate-950 transition hover:brightness-95">+ Nueva cotización</button>
         </div>
