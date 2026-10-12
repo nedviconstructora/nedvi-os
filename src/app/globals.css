@@ -725,11 +725,16 @@ textarea {
 
 /* CRM customer actions: strong contrast in both application themes. */
 .theme-light .nedvi-customer-action-blue {
-  background-color: #e4f0ff;
-  border-color: #3980c5;
-  color: #154e88;
+  background-color: #d8ebff;
+  border-color: #2f7fcb;
+  color: #0f4f8a;
+  box-shadow: 0 1px 2px rgba(15, 79, 138, 0.08);
 }
-.theme-light .nedvi-customer-action-blue:hover { background-color: #cce3ff; }
+.theme-light .nedvi-customer-action-blue:hover {
+  background-color: #bddfff;
+  border-color: #256fb4;
+  color: #0b4579;
+}
 .theme-light .nedvi-customer-action-red {
   background-color: #fff0f0;
   border-color: #dc535a;
