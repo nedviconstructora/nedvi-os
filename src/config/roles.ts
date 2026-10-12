@@ -64,6 +64,7 @@ const ROUTE_PERMISSIONS: Array<{ prefix: string; permission: ModulePermission }>
   { prefix: '/client', permission: 'client-portal' },
   { prefix: '/dashboard', permission: 'dashboard' },
   { prefix: '/crm', permission: 'commercial' },
+  { prefix: '/folio-search', permission: 'commercial' },
   { prefix: '/opportunities', permission: 'commercial' },
   { prefix: '/site-surveys', permission: 'commercial' },
   { prefix: '/quotes', permission: 'commercial' },
