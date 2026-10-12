@@ -513,7 +513,7 @@ export default function DocumentsPage() {
                           <button
                             type="button"
                             onClick={() => setPreviewDocument(document)}
-                            className="inline-flex items-center gap-1.5 rounded-lg border border-[#5496CC]/45 bg-[#5496CC]/10 px-2.5 py-2 text-xs font-bold text-[#235C9D] transition hover:bg-[#5496CC]/20 dark:text-[#B9E2FF]"
+                            className="nedvi-document-view-action inline-flex items-center gap-1.5 rounded-lg border px-3 py-2 text-xs font-bold shadow-sm transition"
                             aria-label={`Visualizar ${document.name}`}
                             title="Visualizar documento"
                           >
