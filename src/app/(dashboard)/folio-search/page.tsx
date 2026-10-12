@@ -41,8 +41,8 @@ export default function FolioSearchPage() {
       const supabase = createClient()
       // Customer search uses the existing RLS-protected customer service.
       const customers = await getCustomersFromSupabase()
-      const found = customers.find((item) => item.folio.toUpperCase() === term)
-        ?? customers.find((item) => term.startsWith(item.folio.toUpperCase() + '-'))
+      const found = customers.find((item) => (item.folio ?? '').toUpperCase() === term)
+        ?? customers.find((item) => term.startsWith((item.folio ?? '').toUpperCase() + '-'))
       if (!found) {
         setLoaded(true)
         return
