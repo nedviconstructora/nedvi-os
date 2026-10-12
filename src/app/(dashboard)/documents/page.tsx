@@ -3,6 +3,7 @@
 import { FormEvent, useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import {
   Download,
+  Eye,
   FileArchive,
   FileText,
   FileUp,
@@ -194,6 +195,8 @@ export default function DocumentsPage() {
   const [file, setFile] = useState<File | null>(null)
   const [saving, setSaving] = useState(false)
   const fileInputRef = useRef<HTMLInputElement | null>(null)
+  const [previewDocument, setPreviewDocument] = useState<ProjectDocument | null>(null)
+  const [previewUrl, setPreviewUrl] = useState<string | null>(null)
 
   const loadData = useCallback(async () => {
     const currentProjects = readProjects()
@@ -239,6 +242,26 @@ export default function DocumentsPage() {
       window.removeEventListener('focus', handleFocus)
     }
   }, [loadData])
+
+  useEffect(() => {
+    if (!previewDocument) {
+      setPreviewUrl(null)
+      return
+    }
+    const url = URL.createObjectURL(previewDocument.file)
+    setPreviewUrl(url)
+    return () => URL.revokeObjectURL(url)
+  }, [previewDocument])
+
+  const previewKind = previewDocument
+    ? previewDocument.fileType === 'application/pdf' || /\\.pdf$/i.test(previewDocument.fileName)
+      ? 'pdf'
+      : previewDocument.fileType.startsWith('image/') && !/svg/i.test(previewDocument.fileType)
+        ? 'image'
+        : previewDocument.fileType.startsWith('text/') || /\\.(txt|csv|json|md)$/i.test(previewDocument.fileName)
+          ? 'text'
+          : 'unsupported'
+    : 'unsupported'
 
   const filteredDocuments = useMemo(() => {
     const query = search.trim().toLowerCase()
@@ -489,6 +512,15 @@ export default function DocumentsPage() {
                         <div className="flex gap-2">
                           <button
                             type="button"
+                            onClick={() => setPreviewDocument(document)}
+                            className="inline-flex items-center gap-1.5 rounded-lg border border-[#5496CC]/45 bg-[#5496CC]/10 px-2.5 py-2 text-xs font-bold text-[#235C9D] transition hover:bg-[#5496CC]/20 dark:text-[#B9E2FF]"
+                            aria-label={`Visualizar ${document.name}`}
+                            title="Visualizar documento"
+                          >
+                            <Eye size={15} /> Ver
+                          </button>
+                          <button
+                            type="button"
                             onClick={() => downloadDocument(document)}
                             className="rounded-lg border border-[var(--border)] p-2 text-[var(--foreground)] transition hover:border-[#5496CC] hover:text-[#5496CC]"
                             aria-label={`Descargar ${document.name}`}
@@ -514,6 +546,39 @@ export default function DocumentsPage() {
         </div>
 
       </div>
+
+      {previewDocument ? (
+        <div className="fixed inset-0 z-[65] flex items-center justify-center bg-black/70 p-3 backdrop-blur-sm sm:p-6" role="dialog" aria-modal="true" aria-label={`Vista previa de ${previewDocument.name}`}>
+          <div className="flex h-[90vh] w-full max-w-6xl flex-col overflow-hidden rounded-2xl border border-[var(--border)] bg-[var(--surface)] shadow-2xl">
+            <div className="flex flex-wrap items-center justify-between gap-3 border-b border-[var(--border)] px-4 py-3 sm:px-6">
+              <div className="min-w-0">
+                <p className="truncate text-base font-bold text-[var(--foreground)]">{previewDocument.name}</p>
+                <p className="truncate text-xs text-[var(--muted)]">{previewDocument.fileName} · {formatSize(previewDocument.fileSize)}</p>
+              </div>
+              <div className="flex items-center gap-2">
+                <button type="button" onClick={() => downloadDocument(previewDocument)} className="inline-flex items-center gap-2 rounded-lg bg-[#5496CC] px-3 py-2 text-xs font-bold text-white"><Download size={15}/> Descargar</button>
+                <button type="button" onClick={() => setPreviewDocument(null)} className="rounded-lg border border-[var(--border)] p-2 text-[var(--foreground)]" aria-label="Cerrar vista previa"><X size={18}/></button>
+              </div>
+            </div>
+            <div className="flex min-h-0 flex-1 items-center justify-center overflow-auto bg-[var(--surface-soft)] p-3 sm:p-5">
+              {previewUrl && previewKind === 'pdf' ? (
+                <iframe src={previewUrl} title={`PDF: ${previewDocument.name}`} className="h-full w-full rounded-lg border border-[var(--border)] bg-white"/>
+              ) : previewUrl && previewKind === 'image' ? (
+                <img src={previewUrl} alt={previewDocument.name} className="max-h-full max-w-full rounded-lg object-contain"/>
+              ) : previewUrl && previewKind === 'text' ? (
+                <iframe src={previewUrl} title={`Texto: ${previewDocument.name}`} sandbox="" className="h-full w-full rounded-lg border border-[var(--border)] bg-white"/>
+              ) : (
+                <div className="max-w-md space-y-3 text-center">
+                  <FileText size={42} className="mx-auto text-[#5496CC]"/>
+                  <p className="font-semibold text-[var(--foreground)]">Este formato no tiene vista previa integrada</p>
+                  <p className="text-sm text-[var(--muted)]">Puedes descargarlo y abrirlo con la aplicación correspondiente. Los archivos de Word, Excel, DWG y otros formatos especiales necesitan un visor compatible.</p>
+                  <button type="button" onClick={() => downloadDocument(previewDocument)} className="rounded-xl bg-[#5496CC] px-4 py-2 text-sm font-semibold text-white">Descargar archivo</button>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      ) : null}
 
       {open ? (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/55 p-4">
