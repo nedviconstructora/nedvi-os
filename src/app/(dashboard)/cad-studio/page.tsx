@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from 'react'
 import { AppShell } from '@/components/layout/AppShell'
+import { DraftingCompass, Upload, ExternalLink, Download, Maximize2, FileType2, Layers3 } from 'lucide-react'
 
 function AutodeskCadViewer({urn}:{urn:string}) {
   const containerRef=useRef<HTMLDivElement>(null)
@@ -56,6 +57,25 @@ export default function CadStudioPage() {
   const [status,setStatus]=useState('')
   const [message,setMessage]=useState('')
   const [busy,setBusy]=useState(false)
+  const viewerSectionRef=useRef<HTMLElement>(null)
+
+  function downloadOriginal(){
+    if(!file)return
+    const url=URL.createObjectURL(file)
+    const link=document.createElement('a')
+    link.href=url
+    link.download=file.name
+    document.body.appendChild(link)
+    link.click()
+    link.remove()
+    window.setTimeout(()=>URL.revokeObjectURL(url),1000)
+  }
+
+  async function expandViewer(){
+    if(!viewerSectionRef.current)return
+    try{await viewerSectionRef.current.requestFullscreen()}
+    catch{setMessage('No se pudo activar la pantalla completa en este navegador.')}
+  }
 
   useEffect(()=>{
     if(!urn || status==='success' || status==='failed')return
@@ -97,16 +117,24 @@ export default function CadStudioPage() {
 
   return <AppShell>
     <main className="mx-auto max-w-[1500px] space-y-5 p-3 sm:p-6">
-      <header>
-        <p className="text-xs font-semibold uppercase tracking-widest text-[#5496CC]">Gestión de Proyectos</p>
-        <h1 className="mt-2 text-3xl font-bold text-[var(--foreground)]">Visor de planos NEDVI</h1>
-        <p className="mt-2 text-sm text-[var(--muted)]">Consulta planos DWG con Autodesk. Solo visualización: sin herramientas de edición ni exportación.</p>
+      <header className="flex flex-col gap-4 rounded-3xl border border-[var(--border)] bg-[var(--surface)] p-5 shadow-sm sm:p-6 lg:flex-row lg:items-center lg:justify-between">
+        <div>
+          <p className="flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.2em] text-[#7BAEE3]"><DraftingCompass size={18}/> NEDVI CAD Studio</p>
+          <h1 className="mt-2 text-2xl font-bold text-[var(--foreground)] sm:text-3xl">Visualización y gestión de planos</h1>
+          <p className="mt-2 max-w-2xl text-sm text-[var(--muted)]">Consulta archivos DWG con Autodesk sin alterar su original. Cuando necesites editar, continúa en AutoCAD Web.</p>
+        </div>
+        <a href="https://web.autocad.com/" target="_blank" rel="noopener noreferrer" className="inline-flex shrink-0 items-center justify-center gap-2 rounded-xl border border-[var(--border)] bg-[var(--surface-soft)] px-4 py-3 text-sm font-semibold text-[var(--foreground)] hover:opacity-80">
+          <ExternalLink size={17}/> Abrir AutoCAD Web
+        </a>
       </header>
-      <section className="rounded-2xl border border-[var(--border)] bg-[var(--surface)] p-4">
-        <div className="flex flex-wrap items-center gap-3">
-          <label className="inline-flex cursor-pointer items-center rounded-lg border border-[var(--border)] bg-[var(--surface-soft)] px-4 py-2 text-sm font-semibold text-[var(--foreground)]">
-            Elegir plano DWG
-            <input className="sr-only" type="file" accept=".dwg" onChange={async e=>{
+
+      <div className="grid min-w-0 gap-5 lg:grid-cols-[290px_minmax(0,1fr)]">
+        <aside className="self-start rounded-3xl border border-[var(--border)] bg-[var(--surface)] p-5 shadow-sm">
+          <h2 className="flex items-center gap-2 text-lg font-semibold text-[var(--foreground)]"><Layers3 size={19} className="text-[#7BAEE3]"/> Archivos del proyecto</h2>
+          <p className="mt-1 text-sm text-[var(--muted)]">Selecciona un plano DWG para visualizarlo.</p>
+          <label className="mt-5 flex min-h-11 cursor-pointer items-center justify-center gap-2 rounded-xl bg-[#7BAEE3] px-4 py-3 text-sm font-semibold text-slate-950 hover:bg-[#6c9ed2] focus-within:ring-2 focus-within:ring-blue-500">
+            <Upload size={17}/> Subir plano DWG
+            <input className="sr-only" type="file" accept=".dwg" disabled={busy} onChange={async e=>{
               const selected=e.target.files?.[0];e.target.value='';if(!selected)return
               setUrn(null);setStatus('');setFile(null)
               if(selected.size>20*1024*1024 || !selected.size){setMessage('El archivo DWG debe tener entre 1 byte y 20 MB.');return}
@@ -115,15 +143,38 @@ export default function CadStudioPage() {
               setFile(selected);setMessage('Plano seleccionado. Pulsa Visualizar plano.')
             }}/>
           </label>
-          {file?<span className="text-sm text-[var(--foreground)]">{file.name}</span>:<span className="text-sm text-[var(--muted)]">Selecciona un DWG para abrirlo.</span>}
-          <button type="button" disabled={!file || busy} onClick={()=>void openPlan()} className="rounded-lg bg-[#7BAEE3] px-4 py-2 text-sm font-semibold text-slate-950 hover:bg-[#6c9ed2] disabled:cursor-not-allowed disabled:opacity-50">{busy?'Preparando...':'Visualizar plano'}</button>
-        </div>
-        {message?<p role="status" className="mt-3 text-sm text-[var(--muted)]">{message}</p>:null}
-      </section>
-      {urn?<section className="rounded-2xl border border-[var(--border)] bg-[var(--surface)] p-4">
-        <p className="text-sm font-semibold text-[var(--foreground)]">{status==='success'?'Plano listo para visualizar':status==='failed'?'No se pudo procesar el plano':status}</p>
-        {status==='success'?<AutodeskCadViewer urn={urn}/>:null}
-      </section>:null}
+          {file ? <div className="mt-4 rounded-2xl border border-[#7BAEE3]/50 bg-[#7BAEE3]/10 p-4">
+            <div className="flex items-start gap-3"><FileType2 className="mt-0.5 shrink-0 text-[#7BAEE3]" size={20}/><div className="min-w-0">
+              <p className="break-all text-sm font-semibold text-[var(--foreground)]">{file.name}</p>
+              <p className="mt-1 text-xs text-[var(--muted)]">DWG · {(file.size/1024/1024).toFixed(2)} MB</p>
+            </div></div>
+          </div> : <div className="mt-4 rounded-2xl border border-dashed border-[var(--border)] p-5 text-center text-sm text-[var(--muted)]">Aún no has seleccionado un plano.</div>}
+          <p className="mt-4 text-xs leading-relaxed text-[var(--muted)]">Formatos del visor: DWG, hasta 20 MB. Para DXF utiliza la importación específica disponible en NEDVI OS. Los archivos seleccionados solo permanecen en esta sesión del navegador.</p>
+        </aside>
+
+        <section ref={viewerSectionRef} className="min-w-0 overflow-auto rounded-3xl border border-[var(--border)] bg-[var(--surface)] p-4 shadow-sm sm:p-5 fullscreen:h-screen fullscreen:rounded-none fullscreen:bg-[#101C29]">
+          <div className="mb-4 flex flex-col gap-3 xl:flex-row xl:items-center xl:justify-between">
+            <div className="min-w-0"><h2 className="break-all text-lg font-semibold text-[var(--foreground)] fullscreen:text-white">{file?.name || 'Plano arquitectónico'}</h2><p className="text-sm text-[var(--muted)]">Visor Autodesk · DWG</p></div>
+            <div className="flex flex-wrap gap-2">
+              <button type="button" disabled={!file || busy} onClick={()=>void openPlan()} className="inline-flex min-h-10 items-center gap-2 rounded-xl bg-[#7BAEE3] px-3 py-2 text-sm font-semibold text-slate-950 hover:bg-[#6c9ed2] disabled:cursor-not-allowed disabled:opacity-50">{busy?'Preparando...':'Visualizar plano'}</button>
+              <a href="https://web.autocad.com/" target="_blank" rel="noopener noreferrer" className="inline-flex min-h-10 items-center gap-2 rounded-xl border border-[var(--border)] bg-[var(--surface-soft)] px-3 py-2 text-sm font-semibold text-[var(--foreground)]"><ExternalLink size={15}/> AutoCAD</a>
+              <button type="button" disabled={!file} onClick={downloadOriginal} className="inline-flex min-h-10 items-center gap-2 rounded-xl border border-[var(--border)] bg-[var(--surface-soft)] px-3 py-2 text-sm font-semibold text-[var(--foreground)] disabled:opacity-50"><Download size={15}/> Descargar DWG</button>
+              <button type="button" onClick={()=>void expandViewer()} className="inline-flex min-h-10 items-center gap-2 rounded-xl border border-[var(--border)] bg-[var(--surface-soft)] px-3 py-2 text-sm font-semibold text-[var(--foreground)]"><Maximize2 size={15}/> Pantalla completa</button>
+            </div>
+          </div>
+          <div className="min-h-[320px] overflow-hidden rounded-2xl border border-[#294255] bg-[#101C29] p-3 sm:p-4">
+            <div className="mb-2 flex items-center justify-between gap-2 text-[10px] font-semibold uppercase tracking-[0.18em] text-[#AFC6D8]"><span>Vista superior · Autodesk Viewer</span><span>{urn && status==='success'?'Plano cargado':'NEDVI CAD'}</span></div>
+            {urn && status==='success' ? <AutodeskCadViewer urn={urn}/> :
+              <div className="flex min-h-[370px] flex-col items-center justify-center gap-3 rounded-xl border border-dashed border-[#294255] text-center text-[#B9CFE0]" style={{backgroundImage:'linear-gradient(#29425544 1px,transparent 1px),linear-gradient(90deg,#29425544 1px,transparent 1px)',backgroundSize:'24px 24px'}}>
+                <DraftingCompass size={42} strokeWidth={1.2} className="text-[#80CFF5]"/>
+                <p className="max-w-sm px-5 font-semibold">{status==='failed'?'No se pudo preparar el plano':urn?status:'Selecciona un DWG para ver el plano real'}</p>
+                <p className="max-w-md px-5 text-sm text-[#B9CFE0]">{urn?'El visor aparecerá cuando Autodesk termine de procesar el archivo.':'No se muestra una maqueta ficticia: aquí aparecerá la geometría del archivo que selecciones.'}</p>
+              </div>}
+          </div>
+          {message?<p role="status" className="mt-4 text-sm text-[var(--muted)]">{message}</p>:null}
+          <p className="mt-3 text-xs text-[var(--muted)]">«Abrir AutoCAD» abre AutoCAD Web, pero no transfiere automáticamente el archivo: deberás abrir o cargar allí el DWG original. La vista en NEDVI es de solo lectura.</p>
+        </section>
+      </div>
     </main>
   </AppShell>
 }
