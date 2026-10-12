@@ -187,14 +187,14 @@ export function CustomerTable({
                   <div className="flex items-center gap-2">
                     <Link
                       href={`/crm/${customer.id}`}
-                      className="nedvi-customer-action nedvi-customer-action-blue inline-flex items-center gap-1.5 rounded-lg border px-2.5 py-2 text-[11px] font-bold transition"
+                      className="nedvi-customer-action nedvi-customer-action-blue inline-flex items-center gap-1.5 rounded-lg border px-3 py-2 text-xs font-bold shadow-sm transition"
                       title="Ver cliente"
                     >
                       <Eye size={13} /> Ver
                     </Link>
                     <Link
                       href={`/crm/${customer.id}/edit`}
-                      className="nedvi-customer-action nedvi-customer-action-blue inline-flex items-center gap-1.5 rounded-lg border px-2.5 py-2 text-[11px] font-bold transition"
+                      className="nedvi-customer-action nedvi-customer-action-blue inline-flex items-center gap-1.5 rounded-lg border px-3 py-2 text-xs font-bold shadow-sm transition"
                       title="Editar cliente"
                     >
                       <Edit3 size={13} /> Editar
