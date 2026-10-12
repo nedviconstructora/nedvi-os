@@ -266,25 +266,25 @@ export default function OpportunitiesPage() {
         </div>
 
         <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-          <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm dark:border-slate-800 dark:bg-slate-900">
+          <div className="rounded-2xl border border-[var(--border)] bg-[var(--surface)] p-5 text-[var(--foreground)] shadow-sm">
             <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Oportunidades abiertas</p>
             <p className="mt-3 text-3xl font-bold">{openOpportunities.length}</p>
           </div>
-          <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm dark:border-slate-800 dark:bg-slate-900">
+          <div className="rounded-2xl border border-[var(--border)] bg-[var(--surface)] p-5 text-[var(--foreground)] shadow-sm">
             <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Pipeline MXN</p>
             <p className="mt-3 text-2xl font-bold">{money(pipelineMXN, 'MXN')}</p>
           </div>
-          <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm dark:border-slate-800 dark:bg-slate-900">
+          <div className="rounded-2xl border border-[var(--border)] bg-[var(--surface)] p-5 text-[var(--foreground)] shadow-sm">
             <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Pipeline USD</p>
             <p className="mt-3 text-2xl font-bold">{money(pipelineUSD, 'USD')}</p>
           </div>
-          <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm dark:border-slate-800 dark:bg-slate-900">
+          <div className="rounded-2xl border border-[var(--border)] bg-[var(--surface)] p-5 text-[var(--foreground)] shadow-sm">
             <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Conversión</p>
             <p className="mt-3 text-3xl font-bold">{conversion}%</p>
           </div>
         </div>
 
-        <div className="grid gap-3 rounded-2xl border border-slate-200 bg-white p-4 shadow-sm dark:border-slate-800 dark:bg-slate-900 md:grid-cols-[1fr_220px_auto]">
+        <div className="grid gap-3 rounded-2xl border border-[var(--border)] bg-[var(--surface)] p-4 text-[var(--foreground)] shadow-sm md:grid-cols-[1fr_220px_auto]">
           <input
             value={search}
             onChange={(event) => setSearch(event.target.value)}
@@ -306,10 +306,10 @@ export default function OpportunitiesPage() {
         </div>
 
         {view === 'table' ? (
-          <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm dark:border-slate-800 dark:bg-slate-900">
+          <div className="overflow-hidden rounded-2xl border border-[var(--border)] bg-[var(--surface)] text-[var(--foreground)] shadow-sm">
             <div className="overflow-x-auto">
               <table className="min-w-full text-sm">
-                <thead className="bg-slate-100 text-left text-xs uppercase text-slate-500 dark:bg-slate-800 dark:text-slate-400">
+                <thead className="bg-[var(--surface-soft)] text-left text-xs uppercase text-[var(--muted)]">
                   <tr>
                     <th className="px-4 py-3">Oportunidad</th>
                     <th className="px-4 py-3">Cliente</th>
@@ -348,11 +348,11 @@ export default function OpportunitiesPage() {
               {stages.map((stageItem) => {
                 const columnItems = filtered.filter((item) => item.stage === stageItem)
                 return (
-                  <section key={stageItem} className="rounded-2xl border border-slate-200 bg-slate-50 p-3 dark:border-slate-800 dark:bg-slate-950/50">
-                    <div className="mb-3 flex items-center justify-between"><h2 className="text-sm font-semibold">{stageItem}</h2><span className="rounded-full bg-slate-200 px-2 py-0.5 text-xs dark:bg-slate-800">{columnItems.length}</span></div>
+                  <section key={stageItem} className="rounded-2xl border border-[var(--border)] bg-[var(--surface-soft)] p-3">
+                    <div className="mb-3 flex items-center justify-between"><h2 className="text-sm font-semibold">{stageItem}</h2><span className="rounded-full bg-[var(--surface)] px-2 py-0.5 text-xs">{columnItems.length}</span></div>
                     <div className="space-y-3">
                       {columnItems.map((item) => (
-                        <article key={item.id} className="rounded-xl border border-slate-200 bg-white p-3 shadow-sm dark:border-slate-800 dark:bg-slate-900">
+                        <article key={item.id} className="rounded-xl border border-[var(--border)] bg-[var(--surface)] p-3 text-[var(--foreground)] shadow-sm">
                           <button type="button" onClick={() => openEdit(item)} className="w-full text-left"><p className="font-semibold">{item.name}</p><p className="mt-1 text-xs text-slate-500">{item.client}</p><p className="mt-3 text-sm font-bold">{money(item.value, item.currency)}</p><p className="mt-1 text-xs text-slate-500">Probabilidad {item.probability}%</p></button>
                         </article>
                       ))}
@@ -367,7 +367,7 @@ export default function OpportunitiesPage() {
 
         {open && (
           <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
-            <div className="max-h-[92vh] w-full max-w-4xl overflow-y-auto rounded-2xl bg-white p-6 shadow-2xl dark:bg-slate-900">
+            <div className="max-h-[92vh] w-full max-w-4xl overflow-y-auto rounded-2xl bg-[var(--surface)] p-6 text-[var(--foreground)] shadow-2xl">
               <div className="mb-5 flex items-start justify-between gap-4">
                 <div><h2 className="text-xl font-bold">{editingId ? 'Editar oportunidad' : 'Nueva oportunidad'}</h2><p className="mt-1 text-xs text-slate-500">Registra el seguimiento comercial del prospecto.</p></div>
                 <button type="button" onClick={closeForm} className="text-sm text-slate-500">Cerrar</button>
