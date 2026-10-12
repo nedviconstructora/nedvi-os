@@ -194,7 +194,7 @@ async function parseXlsx(buffer: ArrayBuffer): Promise<CellValue[][]> {
   }
 
   const sheets = Array.from(workbook.getElementsByTagNameNS('*', 'sheet'))
-  const firstSheet = sheets.find((sheet) => normalizeText(sheet.getAttribute('name')) === 'presupuesto') ?? sheets[0]
+  const firstSheet = sheets.find((sheet) => normalizeText(sheet.getAttribute('name')) === 'importar nedvi os') ?? sheets.find((sheet) => normalizeText(sheet.getAttribute('name')) === 'presupuesto') ?? sheets[0]
   if (!firstSheet) throw new Error('El archivo Excel no contiene hojas.')
 
   const relationshipId =
