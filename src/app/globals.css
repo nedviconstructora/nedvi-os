@@ -721,3 +721,30 @@ textarea {
   color: #fca5a5;
 }
 .theme-dark .nedvi-quote-action-red:hover { background-color: rgba(239, 68, 68, .18); }
+
+
+/* CRM customer actions: strong contrast in both application themes. */
+.theme-light .nedvi-customer-action-blue {
+  background-color: #e4f0ff;
+  border-color: #3980c5;
+  color: #154e88;
+}
+.theme-light .nedvi-customer-action-blue:hover { background-color: #cce3ff; }
+.theme-light .nedvi-customer-action-red {
+  background-color: #fff0f0;
+  border-color: #dc535a;
+  color: #a21d2c;
+}
+.theme-light .nedvi-customer-action-red:hover { background-color: #ffe0e2; }
+.theme-dark .nedvi-customer-action-blue {
+  background-color: rgba(123, 174, 227, .13);
+  border-color: rgba(123, 174, 227, .48);
+  color: #b9e2ff;
+}
+.theme-dark .nedvi-customer-action-blue:hover { background-color: rgba(123, 174, 227, .25); }
+.theme-dark .nedvi-customer-action-red {
+  background-color: rgba(239, 68, 68, .08);
+  border-color: rgba(248, 113, 113, .45);
+  color: #fca5a5;
+}
+.theme-dark .nedvi-customer-action-red:hover { background-color: rgba(239, 68, 68, .18); }
