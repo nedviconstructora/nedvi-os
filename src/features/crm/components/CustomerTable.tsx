@@ -187,14 +187,14 @@ export function CustomerTable({
                   <div className="flex items-center gap-2">
                     <Link
                       href={`/crm/${customer.id}`}
-                      className="inline-flex items-center gap-1.5 rounded-lg border border-[#7BAEE3]/45 bg-[#7BAEE3]/10 px-2.5 py-2 text-[11px] font-semibold text-[#235C9D] transition hover:bg-[#7BAEE3]/20 hover:text-[#174878] dark:border-[#7BAEE3]/35 dark:text-[#A8D8FF] dark:hover:text-white"
+                      className="nedvi-customer-action nedvi-customer-action-blue inline-flex items-center gap-1.5 rounded-lg border px-2.5 py-2 text-[11px] font-bold transition"
                       title="Ver cliente"
                     >
                       <Eye size={13} /> Ver
                     </Link>
                     <Link
                       href={`/crm/${customer.id}/edit`}
-                      className="inline-flex items-center gap-1.5 rounded-lg border border-[#7BAEE3]/45 bg-[#7BAEE3]/10 px-2.5 py-2 text-[11px] font-semibold text-[#235C9D] transition hover:bg-[#7BAEE3]/20 hover:text-[#174878] dark:border-[#7BAEE3]/35 dark:text-[#A8D8FF] dark:hover:text-white"
+                      className="nedvi-customer-action nedvi-customer-action-blue inline-flex items-center gap-1.5 rounded-lg border px-2.5 py-2 text-[11px] font-bold transition"
                       title="Editar cliente"
                     >
                       <Edit3 size={13} /> Editar
@@ -202,7 +202,7 @@ export function CustomerTable({
                     <button
                       type="button"
                       onClick={() => onDelete(customer)}
-                      className="inline-flex items-center gap-1.5 rounded-lg border border-red-400/40 px-2.5 py-2 text-[11px] font-semibold text-red-600 transition hover:bg-red-400/10 hover:text-red-700 dark:text-red-300 dark:hover:text-red-200"
+                      className="nedvi-customer-action nedvi-customer-action-red inline-flex items-center gap-1.5 rounded-lg border px-2.5 py-2 text-[11px] font-bold transition"
                       title="Eliminar cliente"
                     >
                       <Trash2 size={13} /> Eliminar
