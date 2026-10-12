@@ -193,14 +193,15 @@ async function parseXlsx(buffer: ArrayBuffer): Promise<CellValue[][]> {
     throw new Error('No pudimos encontrar las hojas del archivo XLSX.')
   }
 
-  const firstSheet = workbook.getElementsByTagName('sheet')[0]
+  const sheets = Array.from(workbook.getElementsByTagNameNS('*', 'sheet'))
+  const firstSheet = sheets.find((sheet) => normalizeText(sheet.getAttribute('name')) === 'presupuesto') ?? sheets[0]
   if (!firstSheet) throw new Error('El archivo Excel no contiene hojas.')
 
   const relationshipId =
     firstSheet.getAttribute('r:id') ||
     firstSheet.getAttributeNS('http://schemas.openxmlformats.org/officeDocument/2006/relationships', 'id')
 
-  const relationship = Array.from(rels.getElementsByTagName('Relationship')).find(
+  const relationship = Array.from(rels.getElementsByTagNameNS('*', 'Relationship')).find(
     (item) => item.getAttribute('Id') === relationshipId,
   )
 
@@ -216,8 +217,8 @@ async function parseXlsx(buffer: ArrayBuffer): Promise<CellValue[][]> {
 
   const sharedDoc = xmlFromBytes(files.get('xl/sharedStrings.xml'))
   const sharedStrings = sharedDoc
-    ? Array.from(sharedDoc.getElementsByTagName('si')).map((item) =>
-        Array.from(item.getElementsByTagName('t'))
+    ? Array.from(sharedDoc.getElementsByTagNameNS('*', 'si')).map((item) =>
+        Array.from(item.getElementsByTagNameNS('*', 't'))
           .map((node) => node.textContent ?? '')
           .join(''),
       )
@@ -225,21 +226,21 @@ async function parseXlsx(buffer: ArrayBuffer): Promise<CellValue[][]> {
 
   const rows: CellValue[][] = []
 
-  for (const rowNode of Array.from(sheet.getElementsByTagName('row'))) {
+  for (const rowNode of Array.from(sheet.getElementsByTagNameNS('*', 'row'))) {
     const row: CellValue[] = []
 
-    for (const cell of Array.from(rowNode.getElementsByTagName('c'))) {
+    for (const cell of Array.from(rowNode.getElementsByTagNameNS('*', 'c'))) {
       const reference = cell.getAttribute('r') ?? 'A1'
       const column = cellColumnIndex(reference)
       const type = cell.getAttribute('t')
-      const rawValue = cell.getElementsByTagName('v')[0]?.textContent ?? ''
+      const rawValue = cell.getElementsByTagNameNS('*', 'v')[0]?.textContent ?? ''
 
       let value: CellValue = rawValue
 
       if (type === 's') {
         value = sharedStrings[Number(rawValue)] ?? ''
       } else if (type === 'inlineStr') {
-        value = Array.from(cell.getElementsByTagName('t'))
+        value = Array.from(cell.getElementsByTagNameNS('*', 't'))
           .map((node) => node.textContent ?? '')
           .join('')
       } else if (type === 'b') {
