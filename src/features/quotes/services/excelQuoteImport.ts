@@ -51,6 +51,8 @@ function unitFromValue(value: unknown) {
   if (['m3', 'mt3', 'm³', 'metrocubico', 'metroscubicos'].includes(normalized)) return 'Metros Cúbicos'
   if (['ml', 'm', 'metrolineal', 'metroslineales'].includes(normalized)) return 'Metros Lineales'
   if (['l', 'lt', 'lts', 'litro', 'litros'].includes(normalized)) return 'Litros'
+  if (['kg', 'kgs', 'kilogramo', 'kilogramos'].includes(normalized)) return 'Kilogramos'
+  if (['juego', 'juegos', 'jgo', 'jgos'].includes(normalized)) return 'Juegos'
   if (['lote', 'lotes'].includes(normalized)) return 'Lotes'
   if (['salida', 'salidas'].includes(normalized)) return 'Salidas'
   if (['conjunto', 'conjuntos'].includes(normalized)) return 'Conjuntos'
