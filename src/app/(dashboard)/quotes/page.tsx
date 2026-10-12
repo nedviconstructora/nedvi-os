@@ -796,27 +796,27 @@ export default function QuotesPage() {
           <button onClick={openNew} className="rounded-xl bg-[#7BAEE3] px-5 py-3 font-semibold text-slate-950 transition hover:brightness-95">+ Nueva cotización</button>
         </div>
 
-        <div className="grid gap-3 rounded-2xl border border-slate-700 bg-[#101b2e] p-4 text-slate-100 shadow-sm md:grid-cols-[1fr_220px]">
-          <input value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Buscar por folio, cliente, proyecto o responsable..." className="w-full rounded-xl border border-slate-600 bg-[#142238] px-4 py-3 text-white placeholder:text-slate-400 outline-none focus:border-[#7BAEE3]" />
-          <select value={statusFilter} onChange={(event) => setStatusFilter(event.target.value as 'Todas' | QuoteStatus)} className="rounded-xl border border-slate-600 bg-[#142238] px-4 py-3 text-white outline-none focus:border-[#7BAEE3]">
+        <div className="grid gap-3 rounded-2xl border border-slate-200 bg-white p-4 text-slate-900 shadow-sm dark:border-slate-700 dark:bg-[#101b2e] dark:text-slate-100 md:grid-cols-[1fr_220px]">
+          <input value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Buscar por folio, cliente, proyecto o responsable..." className="w-full rounded-xl border border-slate-300 bg-white px-4 py-3 text-slate-900 placeholder:text-slate-500 dark:border-slate-600 dark:bg-[#142238] dark:text-white dark:placeholder:text-slate-400 outline-none focus:border-[#7BAEE3]" />
+          <select value={statusFilter} onChange={(event) => setStatusFilter(event.target.value as 'Todas' | QuoteStatus)} className="rounded-xl border border-slate-300 bg-white px-4 py-3 text-slate-900 outline-none dark:border-slate-600 dark:bg-[#142238] dark:text-white focus:border-[#7BAEE3]">
             <option>Todas</option><option>Borrador</option><option>Enviada</option><option>Aprobada</option><option>Rechazada</option><option>Vencida</option>
           </select>
         </div>
 
-        <div className="overflow-hidden rounded-2xl border border-slate-700 bg-[#101b2e] text-slate-100 shadow-sm">
+        <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white text-slate-900 shadow-sm dark:border-slate-700 dark:bg-[#101b2e] dark:text-slate-100">
           <div className="overflow-x-auto">
             <table className="min-w-full text-sm">
-              <thead className="bg-[#1e2c42] text-left text-xs uppercase text-slate-300">
+              <thead className="bg-slate-100 text-left text-xs uppercase text-slate-600 dark:bg-[#1e2c42] dark:text-slate-300">
                 <tr><th className="px-4 py-3">Folio</th><th className="px-4 py-3">Cliente</th><th className="px-4 py-3">Proyecto</th><th className="px-4 py-3">Total</th><th className="px-4 py-3">Estado</th><th className="px-4 py-3">Acciones</th></tr>
               </thead>
-              <tbody className="divide-y divide-slate-700/70">
+              <tbody className="divide-y divide-slate-200 dark:divide-slate-700/70">
                 {filtered.length === 0 ? (
                   <tr><td colSpan={6} className="px-4 py-12 text-center text-slate-500">Todavía no hay cotizaciones.</td></tr>
                 ) : filtered.map((quote) => (
-                  <tr key={quote.id} className="align-top text-slate-100 hover:bg-white/[0.05]">
-                    <td className="px-4 py-4 font-semibold text-[#7DC6FF]">{quote.folio}</td>
+                  <tr key={quote.id} className="align-top text-slate-900 hover:bg-slate-50 dark:text-slate-100 dark:hover:bg-white/[0.05]">
+                    <td className="px-4 py-4 font-semibold text-[#246AA6] dark:text-[#7DC6FF]">{quote.folio}</td>
                     <td className="px-4 py-4"><div>{quote.client}</div>{quote.customerInfo?.contact ? <div className="mt-1 text-xs text-slate-500">{quote.customerInfo.contact}</div> : null}</td>
-                    <td className="px-4 py-4"><div className="font-medium">{quote.project}</div><div className="mt-1 text-xs text-slate-300">{quote.owner || 'Sin responsable'}</div></td>
+                    <td className="px-4 py-4"><div className="font-medium">{quote.project}</div><div className="mt-1 text-xs text-slate-500 dark:text-slate-300">{quote.owner || 'Sin responsable'}</div></td>
                     <td className="px-4 py-4 font-semibold">{money(quote.total, quote.currency)}</td>
                     <td className="px-4 py-4">
                       <select value={quote.status} onChange={(event) => changeStatus(quote.id, event.target.value as QuoteStatus)} className={`rounded-full border-0 px-3 py-1.5 text-xs font-semibold outline-none ${statusClass(quote.status)}`}>
@@ -825,11 +825,11 @@ export default function QuotesPage() {
                     </td>
                     <td className="px-4 py-4">
                       <div className="flex max-w-[360px] flex-wrap gap-2">
-                        <button onClick={() => openEdit(quote)} className="rounded-lg border border-[#7BAEE3]/45 bg-[#7BAEE3]/10 px-3 py-1.5 text-xs font-semibold text-[#B9E2FF] transition hover:bg-[#7BAEE3]/20">Editar</button>
-                        <button onClick={() => duplicateQuote(quote)} className="rounded-lg border border-[#7BAEE3]/45 bg-[#7BAEE3]/10 px-3 py-1.5 text-xs font-semibold text-[#B9E2FF] transition hover:bg-[#7BAEE3]/20">Duplicar</button>
-                        <button onClick={() => printPdf(quote)} className="rounded-lg border border-[#7BAEE3]/45 bg-[#7BAEE3]/10 px-3 py-1.5 text-xs font-semibold text-[#B9E2FF] transition hover:bg-[#7BAEE3]/20">PDF</button>
-                        <button onClick={() => convertToProject(quote)} disabled={quote.convertedToProject} className="rounded-lg border border-emerald-500/45 bg-emerald-500/10 px-3 py-1.5 text-xs font-semibold text-emerald-300 disabled:cursor-not-allowed disabled:opacity-65">{quote.convertedToProject ? 'Proyecto creado' : 'Crear proyecto'}</button>
-                        <button onClick={() => deleteQuote(quote)} className="rounded-lg border border-red-500/40 px-3 py-1.5 text-xs font-semibold text-red-300 hover:bg-red-500/10">Eliminar</button>
+                        <button onClick={() => openEdit(quote)} className="rounded-lg border border-[#7BAEE3]/45 bg-[#7BAEE3]/10 px-3 py-1.5 text-xs font-semibold text-[#235C9D] dark:text-[#B9E2FF] transition hover:bg-[#7BAEE3]/20">Editar</button>
+                        <button onClick={() => duplicateQuote(quote)} className="rounded-lg border border-[#7BAEE3]/45 bg-[#7BAEE3]/10 px-3 py-1.5 text-xs font-semibold text-[#235C9D] dark:text-[#B9E2FF] transition hover:bg-[#7BAEE3]/20">Duplicar</button>
+                        <button onClick={() => printPdf(quote)} className="rounded-lg border border-[#7BAEE3]/45 bg-[#7BAEE3]/10 px-3 py-1.5 text-xs font-semibold text-[#235C9D] dark:text-[#B9E2FF] transition hover:bg-[#7BAEE3]/20">PDF</button>
+                        <button onClick={() => convertToProject(quote)} disabled={quote.convertedToProject} className="rounded-lg border border-emerald-500/45 bg-emerald-500/10 px-3 py-1.5 text-xs font-semibold text-emerald-700 dark:text-emerald-300 disabled:cursor-not-allowed disabled:opacity-65">{quote.convertedToProject ? 'Proyecto creado' : 'Crear proyecto'}</button>
+                        <button onClick={() => deleteQuote(quote)} className="rounded-lg border border-red-500/40 px-3 py-1.5 text-xs font-semibold text-red-600 dark:text-red-300 hover:bg-red-500/10">Eliminar</button>
                       </div>
                     </td>
                   </tr>
@@ -854,7 +854,7 @@ export default function QuotesPage() {
                 <div className="grid gap-4 md:grid-cols-2">
                   <label className="space-y-2">
                     <span className="text-sm font-semibold">Cliente *</span>
-                    <select value={clientName} onChange={(event) => handleClientChange(event.target.value)} required className="w-full rounded-xl border border-slate-600 bg-[#142238] px-4 py-3 text-white placeholder:text-slate-400 outline-none focus:border-[#7BAEE3]">
+                    <select value={clientName} onChange={(event) => handleClientChange(event.target.value)} required className="w-full rounded-xl border border-slate-300 bg-white px-4 py-3 text-slate-900 placeholder:text-slate-500 dark:border-slate-600 dark:bg-[#142238] dark:text-white dark:placeholder:text-slate-400 outline-none focus:border-[#7BAEE3]">
                       <option value="">Seleccionar cliente</option>
                       {customers.map((customer) => <option key={customer.id} value={customer.company}>{customer.company} — {customer.contact}</option>)}
                     </select>
