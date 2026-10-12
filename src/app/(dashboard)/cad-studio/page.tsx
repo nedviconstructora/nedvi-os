@@ -173,13 +173,13 @@ export default function CadStudioPage() {
               <button type="button" onClick={()=>void expandViewer()} className="inline-flex min-h-10 items-center gap-2 rounded-xl border border-[var(--border)] bg-[var(--surface-soft)] px-3 py-2 text-sm font-semibold text-[var(--foreground)]"><Maximize2 size={15}/> Pantalla completa</button>
             </div>
           </div>
-          <div className="min-h-[320px] overflow-hidden rounded-2xl border border-[#294255] bg-[#101C29] p-3 sm:p-4">
-            <div className="mb-2 flex items-center justify-between gap-2 text-[10px] font-semibold uppercase tracking-[0.18em] text-[#AFC6D8]"><span>Vista superior · Autodesk Viewer</span><span>{urn && status==='success'?'Plano cargado':'NEDVI CAD'}</span></div>
+          <div className="min-h-[320px] overflow-hidden rounded-2xl border border-[var(--border)] bg-[var(--surface-soft)] p-3 sm:p-4">
+            <div className="mb-2 flex items-center justify-between gap-2 text-[10px] font-semibold uppercase tracking-[0.18em] text-[var(--muted)]"><span>Vista superior · Autodesk Viewer</span><span>{urn && status==='success'?'Plano cargado':'NEDVI CAD'}</span></div>
             {urn && status==='success' ? <AutodeskCadViewer urn={urn}/> :
-              <div className="flex min-h-[370px] flex-col items-center justify-center gap-3 rounded-xl border border-dashed border-[#294255] text-center text-[#B9CFE0]" style={{backgroundImage:'linear-gradient(#29425544 1px,transparent 1px),linear-gradient(90deg,#29425544 1px,transparent 1px)',backgroundSize:'24px 24px'}}>
+              <div className="flex min-h-[370px] flex-col items-center justify-center gap-3 rounded-xl border border-dashed border-[var(--border)] text-center text-[var(--foreground)]" style={{backgroundImage:'linear-gradient(var(--border) 1px,transparent 1px),linear-gradient(90deg,var(--border) 1px,transparent 1px)',backgroundSize:'24px 24px'}}>
                 <DraftingCompass size={42} strokeWidth={1.2} className="text-[#80CFF5]"/>
                 <p className="max-w-sm px-5 font-semibold">{status==='failed'?'No se pudo preparar el plano':urn?status:'Selecciona un DWG para ver el plano real'}</p>
-                <p className="max-w-md px-5 text-sm text-[#B9CFE0]">{urn?'El visor aparecerá cuando Autodesk termine de procesar el archivo.':'No se muestra una maqueta ficticia: aquí aparecerá la geometría del archivo que selecciones.'}</p>
+                <p className="max-w-md px-5 text-sm text-[var(--muted)]">{urn?'El visor aparecerá cuando Autodesk termine de procesar el archivo.':'No se muestra una maqueta ficticia: aquí aparecerá la geometría del archivo que selecciones.'}</p>
               </div>}
           </div>
           {message?<p role="status" className="mt-4 text-sm text-[var(--muted)]">{message}</p>:null}
