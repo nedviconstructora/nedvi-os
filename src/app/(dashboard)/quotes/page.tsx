@@ -796,24 +796,24 @@ export default function QuotesPage() {
           <button onClick={openNew} className="rounded-xl bg-[#7BAEE3] px-5 py-3 font-semibold text-slate-950 transition hover:brightness-95">+ Nueva cotización</button>
         </div>
 
-        <div className="grid gap-3 rounded-2xl border border-slate-200 bg-white p-4 text-slate-900 shadow-sm dark:border-slate-700 dark:bg-[#101b2e] dark:text-slate-100 md:grid-cols-[1fr_220px]">
-          <input value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Buscar por folio, cliente, proyecto o responsable..." className="w-full rounded-xl border border-slate-300 bg-white px-4 py-3 text-slate-900 placeholder:text-slate-500 dark:border-slate-600 dark:bg-[#142238] dark:text-white dark:placeholder:text-slate-400 outline-none focus:border-[#7BAEE3]" />
-          <select value={statusFilter} onChange={(event) => setStatusFilter(event.target.value as 'Todas' | QuoteStatus)} className="rounded-xl border border-slate-300 bg-white px-4 py-3 text-slate-900 outline-none dark:border-slate-600 dark:bg-[#142238] dark:text-white focus:border-[#7BAEE3]">
+        <div className="grid gap-3 rounded-2xl border border-[var(--border)] bg-[var(--surface)] p-4 text-[var(--foreground)] shadow-sm md:grid-cols-[1fr_220px]">
+          <input value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Buscar por folio, cliente, proyecto o responsable..." className="w-full rounded-xl border border-[var(--border)] bg-[var(--surface-soft)] px-4 py-3 text-[var(--foreground)] placeholder:text-[var(--muted)] outline-none focus:border-[#7BAEE3]" />
+          <select value={statusFilter} onChange={(event) => setStatusFilter(event.target.value as 'Todas' | QuoteStatus)} className="rounded-xl border border-[var(--border)] bg-[var(--surface-soft)] px-4 py-3 text-[var(--foreground)] outline-none focus:border-[#7BAEE3]">
             <option>Todas</option><option>Borrador</option><option>Enviada</option><option>Aprobada</option><option>Rechazada</option><option>Vencida</option>
           </select>
         </div>
 
-        <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white text-slate-900 shadow-sm dark:border-slate-700 dark:bg-[#101b2e] dark:text-slate-100">
+        <div className="overflow-hidden rounded-2xl border border-[var(--border)] bg-[var(--surface)] text-[var(--foreground)] shadow-sm">
           <div className="overflow-x-auto">
             <table className="min-w-full text-sm">
-              <thead className="bg-slate-100 text-left text-xs uppercase text-slate-600 dark:bg-[#1e2c42] dark:text-slate-300">
+              <thead className="bg-[var(--surface-soft)] text-left text-xs uppercase text-[var(--muted)]">
                 <tr><th className="px-4 py-3">Folio</th><th className="px-4 py-3">Cliente</th><th className="px-4 py-3">Proyecto</th><th className="px-4 py-3">Total</th><th className="px-4 py-3">Estado</th><th className="px-4 py-3">Acciones</th></tr>
               </thead>
               <tbody className="divide-y divide-slate-200 dark:divide-slate-700/70">
                 {filtered.length === 0 ? (
                   <tr><td colSpan={6} className="px-4 py-12 text-center text-slate-500">Todavía no hay cotizaciones.</td></tr>
                 ) : filtered.map((quote) => (
-                  <tr key={quote.id} className="align-top text-slate-900 hover:bg-slate-50 dark:text-slate-100 dark:hover:bg-white/[0.05]">
+                  <tr key={quote.id} className="align-top text-[var(--foreground)] hover:bg-[var(--surface-soft)]">
                     <td className="px-4 py-4 font-semibold text-[#246AA6] dark:text-[#7DC6FF]">{quote.folio}</td>
                     <td className="px-4 py-4"><div>{quote.client}</div>{quote.customerInfo?.contact ? <div className="mt-1 text-xs text-slate-500">{quote.customerInfo.contact}</div> : null}</td>
                     <td className="px-4 py-4"><div className="font-medium">{quote.project}</div><div className="mt-1 text-xs text-slate-500 dark:text-slate-300">{quote.owner || 'Sin responsable'}</div></td>
