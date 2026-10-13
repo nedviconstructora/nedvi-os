@@ -741,15 +741,28 @@ export default function UsersAndPermissionsPage() {
             ))}
 
             <div className="border-t border-[var(--border)] bg-[#5496CC]/10 px-5 py-3 text-sm font-bold text-[var(--foreground)]">Clientes · {clientUsers.length} cuentas</div>
-            {clientUsers.map(user => <div key={user.id} className="flex flex-wrap items-center justify-between gap-3 border-b border-[var(--border)] p-5">
-              <div><p className="text-sm font-semibold text-[var(--foreground)]">{user.name}</p><p className="text-xs text-[var(--muted)]">{user.email} · {user.customerFolio || 'Sin folio'}</p></div>
-              <div className="flex items-center gap-2">
-                <span className="rounded-lg bg-[#5496CC]/10 px-3 py-1 text-xs font-semibold text-[#5496CC]">Cliente · {user.status}</span>
-                <button type="button" disabled={!isAdmin || !user.customerId} onClick={() => openEditClient(user)} className="inline-flex items-center gap-1.5 rounded-lg border border-[#5496CC]/25 px-2.5 py-1.5 text-xs font-semibold text-[#5496CC] disabled:opacity-40"><UserRoundCog size={13}/>Editar</button>
-                <button type="button" disabled={!isAdmin} onClick={() => openPasswordModal(user)} className="inline-flex items-center gap-1.5 rounded-lg border border-[#5496CC]/25 bg-[#5496CC]/5 px-2.5 py-1.5 text-xs font-semibold text-[#5496CC] transition hover:bg-[#5496CC]/10 disabled:opacity-40"><KeyRound size={13}/>Contraseña</button>
-                <button type="button" disabled={!isAdmin} onClick={() => setDeleteUser(user)} className="inline-flex items-center gap-1.5 rounded-lg border border-red-500/25 bg-red-500/5 px-2.5 py-1.5 text-xs font-semibold text-red-500 transition hover:bg-red-500/10 disabled:opacity-40"><Trash2 size={13}/>Eliminar</button>
+            {clientUsers.map((user) => (
+              <div key={user.id} className="grid gap-4 border-b border-[var(--border)] p-5 md:grid-cols-[minmax(220px,1.2fr)_minmax(150px,0.7fr)_minmax(180px,1fr)_minmax(230px,auto)] md:items-center">
+                <div className="flex items-center gap-3">
+                  <span className="flex h-10 w-10 items-center justify-center rounded-full bg-[var(--surface-soft)] text-xs font-bold text-[var(--foreground)]">{initials(user.name)}</span>
+                  <div className="min-w-0">
+                    <p className="truncate text-sm font-semibold text-[var(--foreground)]">{user.name}</p>
+                    <p className="truncate text-xs text-[var(--muted)]">{user.email || 'Sin correo'}</p>
+                  </div>
+                </div>
+                <span className="inline-flex w-fit rounded-full bg-[#5496CC]/10 px-2.5 py-1 text-xs font-semibold text-[#5496CC]">Cliente</span>
+                <div>
+                  <p className="text-xs text-[var(--muted)]">Portal del cliente · {user.customerFolio || 'Sin folio'}</p>
+                  <p className="mt-1 text-[11px] text-[var(--muted)]">Contraseña: {user.passwordUpdatedAt ? `actualizada ${formatDate(user.passwordUpdatedAt)}` : 'sin configurar'}</p>
+                </div>
+                <div className="flex flex-wrap items-center gap-2">
+                  <button type="button" onClick={() => toggleUserStatus(user.id)} disabled={!isAdmin} className={`inline-flex rounded-full px-2.5 py-1 text-xs font-semibold transition ${user.status === 'Activo' ? 'bg-emerald-500/10 text-emerald-600 hover:bg-emerald-500/20' : 'bg-slate-500/10 text-slate-500 hover:bg-slate-500/20'}`}>{user.status}</button>
+                  <button type="button" disabled={!isAdmin || !user.customerId} onClick={() => openEditClient(user)} className="inline-flex items-center gap-1.5 rounded-lg border border-[#5496CC]/25 px-2.5 py-1.5 text-xs font-semibold text-[#5496CC] disabled:opacity-40"><UserRoundCog size={13}/>Editar</button>
+                  <button type="button" disabled={!isAdmin} onClick={() => openPasswordModal(user)} className="inline-flex items-center gap-1.5 rounded-lg border border-[#5496CC]/25 bg-[#5496CC]/5 px-2.5 py-1.5 text-xs font-semibold text-[#5496CC] transition hover:bg-[#5496CC]/10 disabled:opacity-40"><KeyRound size={13}/>Contraseña</button>
+                  <button type="button" disabled={!isAdmin} onClick={() => setDeleteUser(user)} className="inline-flex items-center gap-1.5 rounded-lg border border-red-500/25 bg-red-500/5 px-2.5 py-1.5 text-xs font-semibold text-red-500 transition hover:bg-red-500/10 disabled:opacity-40"><Trash2 size={13}/>Eliminar</button>
+                </div>
               </div>
-            </div>)}
+            ))}
             {!visibleUsers.length && search ? <div className="p-8 text-center text-sm text-[var(--muted)]">No se encontraron usuarios.</div> : null}
           </div>
         </section>
