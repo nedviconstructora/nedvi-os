@@ -1,6 +1,8 @@
 'use client'
 
 import Link from 'next/link'
+import { useEffect, useState } from 'react'
+import { createClient } from '@/lib/supabase/client'
 import {
   ArrowUpRight,
   BriefcaseBusiness,
@@ -19,65 +21,126 @@ import { Card, CardHeader } from '@/components/ui/Card'
 import {
   activities,
   alerts,
-  dashboardStats,
   emails,
-  projectStatuses,
   revenueData,
 } from '@/data/dashboardData'
 
-export function DashboardStats() {
-  const monthlyProfit =
-    dashboardStats.monthlyIncome - dashboardStats.monthlyExpenses
+type Overview = {
+  clients: number
+  projects: number
+  pendingQuotes: number
+  statuses: { label: string; count: number; color: string }[]
+}
 
+function useDashboardOverview() {
+  const [overview, setOverview] = useState<Overview | null>(null)
+  const [error, setError] = useState(false)
+
+  useEffect(() => {
+    let alive = true
+    const supabase = createClient()
+    async function refresh() {
+      const [customers, projects, quotes] = await Promise.all([
+        supabase.from('customers').select('status'),
+        supabase.from('projects').select('status'),
+        supabase.from('quotes').select('status'),
+      ])
+      if (!alive) return
+      if (customers.error || projects.error || quotes.error) {
+        console.error('Error cargando resumen del Dashboard', customers.error, projects.error, quotes.error)
+        setError(true)
+        return
+      }
+      const customerRows = customers.data ?? []
+      const projectRows = projects.data ?? []
+      const quoteRows = quotes.data ?? []
+      const activeClients = customerRows.filter(row => !['inactivo', 'inactive', 'archivado', 'archived', 'eliminado', 'deleted'].includes(String(row.status ?? '').toLowerCase().trim())).length
+      const activeProjects = projectRows.filter(row => !['completado', 'completed', 'finalizado', 'cancelado', 'cancelled', 'archivado', 'archived'].includes(String(row.status ?? '').toLowerCase().trim())).length
+      const pendingQuotes = quoteRows.filter(row => ['pendiente', 'pending', 'en revisión', 'en revision', 'under review'].includes(String(row.status ?? '').toLowerCase().trim())).length
+      const colors = ['#1F6FEB', '#10B981', '#F59E0B', '#8B5CF6', '#64748B']
+      const byStatus = new Map<string, number>()
+      for (const row of projectRows) {
+        const label = String(row.status ?? 'Sin estado').trim() || 'Sin estado'
+        byStatus.set(label, (byStatus.get(label) ?? 0) + 1)
+      }
+      setOverview({
+        clients: activeClients,
+        projects: activeProjects,
+        pendingQuotes,
+        statuses: Array.from(byStatus, ([label, count], index) => ({ label, count, color: colors[index % colors.length] })),
+      })
+      setError(false)
+    }
+    void refresh()
+    const subscription = supabase.channel('dashboard-overview-sync')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'customers' }, () => { void refresh() })
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'projects' }, () => { void refresh() })
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'quotes' }, () => { void refresh() })
+      .subscribe()
+    const onFocus = () => { void refresh() }
+    window.addEventListener('focus', onFocus)
+    return () => {
+      alive = false
+      window.removeEventListener('focus', onFocus)
+      void supabase.removeChannel(subscription)
+    }
+  }, [])
+
+  return { overview, error }
+}
+
+export function DashboardStats() {
+  const { overview, error } = useDashboardOverview()
+  const statusText = error ? 'Error al cargar' : overview ? 'Datos actuales' : 'Cargando'
   return (
     <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-6">
       <StatCard
         label="Proyectos activos"
-        value={dashboardStats.activeProjects.toString()}
-        change="12.5%"
-        detail="vs. mes anterior"
+        value={error ? '—' : overview?.projects.toString() ?? '…'}
+        change="—"
+        detail={statusText}
         icon={BriefcaseBusiness}
       />
 
       <StatCard
         label="Clientes activos"
-        value={dashboardStats.activeClients.toString()}
-        change="8.7%"
-        detail="vs. mes anterior"
+        value={error ? '—' : overview?.clients.toString() ?? '…'}
+        change="—"
+        detail={statusText}
         icon={UsersRound}
       />
 
       <StatCard
         label="Cotizaciones pendientes"
-        value={dashboardStats.pendingQuotes.toString()}
-        change="4.2%"
-        detail="vs. mes anterior"
+        value={error ? '—' : overview?.pendingQuotes.toString() ?? '…'}
+        change="—"
+        detail={statusText}
         icon={FilePlus2}
         positive={false}
       />
 
       <StatCard
         label="Ingresos del mes"
-        value={`$${dashboardStats.monthlyIncome.toLocaleString('es-MX')}`}
-        change="16.4%"
-        detail="vs. mes anterior"
+        value={`$${0}`}
+        change="—"
+        detail={statusText}
         icon={CircleDollarSign}
       />
 
       <StatCard
         label="Gastos del mes"
-        value={`$${dashboardStats.monthlyExpenses.toLocaleString('es-MX')}`}
-        change="6.8%"
-        detail="vs. mes anterior"
+        value={`$${0}`}
+        change="—"
+        detail={statusText}
         icon={CircleDollarSign}
         positive={false}
       />
 
       <StatCard
         label="Utilidad del mes"
-        value={`$${monthlyProfit.toLocaleString('es-MX')}`}
-        change="21.3%"
-        detail="vs. mes anterior"
+        value={`$${0}`}
+        change="—"
+        detail={statusText}
         icon={CircleDollarSign}
       />
     </div>
@@ -156,6 +219,8 @@ export function RevenueChart() {
 }
 
 export function ProjectsStatusChart() {
+  const { overview, error } = useDashboardOverview()
+  const projectStatuses = overview?.statuses ?? []
   const totalProjects = projectStatuses.reduce(
     (total, status) => total + status.count,
     0
@@ -179,7 +244,7 @@ export function ProjectsStatusChart() {
   return (
     <ChartCard
       title="Proyectos por estado"
-      description={`Distribución de los ${totalProjects} proyectos`}
+      description={error ? 'No se pudieron cargar los proyectos' : overview ? `Distribución de los ${totalProjects} proyectos` : 'Cargando proyectos…'}
       className="min-h-[360px]"
     >
       <div className="flex flex-col items-center gap-7 sm:flex-row sm:justify-center sm:gap-8">
@@ -218,7 +283,7 @@ export function ProjectsStatusChart() {
         <span className="text-[#646873]">Ritmo de ejecución</span>
         <span className="flex items-center gap-1 font-semibold text-emerald-400">
           <ArrowUpRight size={14} />
-          9.3%
+          {overview ? 'Datos actuales' : error ? 'Error al cargar' : 'Cargando…'}
         </span>
       </div>
     </ChartCard>
