@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { Download, RefreshCw, WifiOff, X } from 'lucide-react'
 
 type InstallPromptEvent = Event & {
@@ -13,6 +13,7 @@ export function PwaManager({ initialVersion }: { initialVersion: string }) {
   const [online, setOnline] = useState(true)
   const [dismissed, setDismissed] = useState(false)
   const [updateAvailable, setUpdateAvailable] = useState(false)
+  const editingRef = useRef(false)
 
   useEffect(() => {
     setOnline(navigator.onLine)
@@ -49,28 +50,69 @@ export function PwaManager({ initialVersion }: { initialVersion: string }) {
     if (initialVersion === 'development') return
 
     let cancelled = false
+    let pendingVersion = ''
+    let reloadScheduled = false
     const checkVersion = async () => {
       if (!navigator.onLine || document.visibilityState === 'hidden') return
       try {
-        const response = await fetch('/api/app-version', { cache: 'no-store' })
+        const response = await fetch(`/api/app-version?check=${Date.now()}`, {
+          cache: 'no-store',
+          headers: { 'Cache-Control': 'no-cache' },
+        })
         if (!response.ok) return
         const data = (await response.json()) as { version?: string }
-        if (!cancelled && data.version && data.version !== 'development' && data.version !== initialVersion) {
-          setUpdateAvailable(true)
-        }
+        if (cancelled || !data.version || data.version === 'development' || data.version === initialVersion) return
+        pendingVersion = data.version
+        setUpdateAvailable(true)
+        attemptUpdate()
       } catch {
         // Keep the current app usable when connectivity is interrupted.
       }
     }
 
-    void checkVersion()
-    const interval = window.setInterval(() => void checkVersion(), 60_000)
-    const onVisibility = () => { if (document.visibilityState === 'visible') void checkVersion() }
+    const editingNow = () => {
+      const element = document.activeElement
+      if (!(element instanceof HTMLElement)) return false
+      return element.matches('input, textarea, select, [contenteditable="true"]')
+    }
+
+    const attemptUpdate = () => {
+      if (!pendingVersion || cancelled || reloadScheduled || !navigator.onLine || document.visibilityState !== 'visible') return
+      // Never interrupt a form after the user has started editing it.
+      if (editingRef.current || editingNow()) return
+      const guard = 'nedvi-auto-update-' + pendingVersion
+      if (sessionStorage.getItem(guard)) return
+      sessionStorage.setItem(guard, '1')
+      reloadScheduled = true
+      window.location.reload()
+    }
+
+    const onEdit = (event: Event) => {
+      const target = event.target
+      if (target instanceof HTMLElement && target.closest('form, [contenteditable="true"]')) editingRef.current = true
+    }
+    const onVisibility = () => {
+      if (document.visibilityState === 'visible') {
+        void checkVersion()
+        attemptUpdate()
+      }
+    }
+    const onFocus = () => void checkVersion()
+    document.addEventListener('input', onEdit, true)
+    document.addEventListener('change', onEdit, true)
     document.addEventListener('visibilitychange', onVisibility)
+    window.addEventListener('focus', onFocus)
+    window.addEventListener('online', onFocus)
+    const interval = window.setInterval(() => void checkVersion(), 60_000)
+    void checkVersion()
     return () => {
       cancelled = true
       window.clearInterval(interval)
+      document.removeEventListener('input', onEdit, true)
+      document.removeEventListener('change', onEdit, true)
       document.removeEventListener('visibilitychange', onVisibility)
+      window.removeEventListener('focus', onFocus)
+      window.removeEventListener('online', onFocus)
     }
   }, [initialVersion])
 
