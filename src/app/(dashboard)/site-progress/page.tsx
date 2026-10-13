@@ -348,6 +348,21 @@ export default function SiteProgressPage() {
     writeProgressRecords(next)
   }
 
+  function removeProjectProgress(project: OperationProject) {
+    const related = records.filter((record) => record.quoteId === project.id)
+    if (!related.length) return
+    if (!window.confirm(`¿Eliminar los ${related.length} registro(s) de avance de "${project.project}"? Esta acción no elimina el proyecto y no se puede deshacer.`)) return
+    const next = records.filter((record) => record.quoteId !== project.id)
+    try {
+      writeProgressRecords(next)
+      setRecords(next)
+      if (viewingQuoteId === project.id) setViewingQuoteId('')
+    } catch (error) {
+      console.error('Error eliminando avances del proyecto:', error)
+      window.alert('No se pudieron eliminar los avances. Inténtalo nuevamente.')
+    }
+  }
+
   return (
     <AppShell>
       <div className="mx-auto w-full max-w-[1700px] space-y-6">
@@ -407,6 +422,9 @@ export default function SiteProgressPage() {
                     <div className="flex flex-wrap gap-2">
                       {projectRecords.length ? (
                         <button type="button" onClick={() => setViewingQuoteId(project.id)} className="inline-flex items-center gap-2 rounded-lg border border-[#5496CC]/40 px-3 py-2 text-xs font-semibold text-[#5496CC] hover:bg-[#5496CC]/10"><Eye size={14} /> Ver historial</button>
+                      ) : null}
+                      {projectRecords.length > 0 ? (
+                        <button type="button" onClick={() => removeProjectProgress(project)} className="inline-flex items-center gap-2 rounded-lg border border-red-500/30 px-3 py-2 text-xs font-semibold text-red-500 hover:bg-red-500/10"><Trash2 size={14} /> Eliminar avances</button>
                       ) : null}
                       <button type="button" onClick={() => openNew(project)} className="inline-flex items-center gap-2 rounded-lg bg-[#5496CC] px-3 py-2 text-xs font-semibold text-white"><Plus size={14} /> {latest ? 'Actualizar avance' : 'Registrar avance'}</button>
                     </div>
