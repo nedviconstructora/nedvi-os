@@ -43,7 +43,21 @@ export async function DELETE(_request: Request, context: { params: Promise<{ id:
     }
     return NextResponse.json({deleted,accountsDeleted:removableIds.length-accountErrors.length,accountCleanupPending:accountErrors.length,warning:accountErrors.length?'Se eliminaron los registros del cliente, pero quedaron accesos que requieren revisión.':null})
   } catch (error) {
-    console.error('Error eliminando cliente integralmente:',error)
-    return NextResponse.json({error:'No se pudo completar la eliminación integral. Los registros principales se eliminan mediante una transacción.'},{status:500})
+    console.error('Error eliminando cliente integralmente:', error)
+    const details = error && typeof error === 'object'
+      ? (error as { code?: string; message?: string; details?: string; hint?: string })
+      : {}
+    const code = details.code || 'SERVER_ERROR'
+    const safeMessage = code === '42501'
+      ? 'Supabase rechazó los permisos para eliminar. Revisa el rol administrativo y la función de eliminación.'
+      : code === '23503'
+      ? 'Existen registros vinculados que impiden completar el borrado. Revisa las relaciones de la base de datos.'
+      : code === 'PGRST202' || code === '42883'
+      ? 'La función de eliminación no está disponible en Supabase. Revisa la migración nedvi_delete_customer_bundle.'
+      : 'No se pudo completar la eliminación integral.'
+    return NextResponse.json(
+      { error: safeMessage, errorCode: code, diagnostic: details.message?.slice(0, 250) || null },
+      { status: 500 },
+    )
   }
 }
