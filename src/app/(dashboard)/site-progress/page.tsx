@@ -1,10 +1,9 @@
 'use client'
 
 import { FormEvent, useEffect, useMemo, useState } from 'react'
-import { BarChart3, Eye, Plus, Search, Trash2, X } from 'lucide-react'
+import { BarChart3, Eye, Pencil, Plus, Search, Trash2, X } from 'lucide-react'
 import { AppShell } from '@/components/layout/AppShell'
 import {
-  Pencil,
   PROGRESS_STORAGE_KEY,
   type OperationProject,
   type ProgressItem,
