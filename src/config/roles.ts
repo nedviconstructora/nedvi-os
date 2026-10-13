@@ -77,6 +77,7 @@ const ROUTE_PERMISSIONS: Array<{ prefix: string; permission: ModulePermission }>
   { prefix: '/suppliers', permission: 'purchasing' },
   { prefix: '/site-progress', permission: 'operations' },
   { prefix: '/daily-reports', permission: 'operations' },
+  { prefix: '/inspections', permission: 'operations' },
   { prefix: '/attendance', permission: 'operations' },
   { prefix: '/crews', permission: 'operations' },
   { prefix: '/agenda', permission: 'agenda' },
