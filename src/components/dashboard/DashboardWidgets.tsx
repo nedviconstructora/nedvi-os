@@ -1,6 +1,10 @@
 'use client'
 
 import Link from 'next/link'
+import { useCallback, useEffect, useState } from 'react'
+import { getCustomersFromSupabase } from '@/features/crm/services/customerSupabase'
+import { readProjectsFromSupabase } from '@/features/projects/services/projectSupabaseService'
+import { createClient } from '@/lib/supabase/client'
 import {
   ArrowUpRight,
   BriefcaseBusiness,
@@ -21,37 +25,89 @@ import {
   alerts,
   dashboardStats,
   emails,
-  projectStatuses,
   revenueData,
 } from '@/data/dashboardData'
 
+type LiveOverview = {
+  clients: number
+  projects: number
+  pendingQuotes: number | null
+  projectStatuses: { label: string; count: number; color: string }[]
+}
+function useLiveOverview() {
+  const [data, setData] = useState<LiveOverview | null>(null)
+  const [error, setError] = useState(false)
+  const refresh = useCallback(async () => {
+    try {
+      // Reutiliza las consultas ya utilizadas en Clientes y Proyectos.
+      const [clients, projects] = await Promise.all([
+        getCustomersFromSupabase(),
+        readProjectsFromSupabase(),
+      ])
+      let pendingQuotes: number | null = null
+      try {
+        const { data: quotes, error: quoteError } = await createClient().from('quotes').select('status')
+        if (quoteError) throw quoteError
+        pendingQuotes = (quotes ?? []).filter(q => ['pendiente', 'pending', 'en revisión', 'en revision'].includes(String(q.status ?? '').toLowerCase().trim())).length
+      } catch (quoteError) {
+        console.warn('Cotizaciones no disponibles para Dashboard', quoteError)
+      }
+      const statusCounts = new Map<string, number>()
+      for (const project of projects) {
+        const label = String(project.status || 'Sin estado')
+        statusCounts.set(label, (statusCounts.get(label) ?? 0) + 1)
+      }
+      const colors = ['#1F6FEB', '#10B981', '#F59E0B', '#8B5CF6', '#64748B']
+      setData({
+        clients: clients.length,
+        projects: projects.filter(p => !['Completed', 'Cancelled', 'Archived'].includes(p.status)).length,
+        pendingQuotes,
+        projectStatuses: Array.from(statusCounts.entries()).map(([label, count], index) => ({ label, count, color: colors[index % colors.length] })),
+      })
+      setError(false)
+    } catch (reason) {
+      console.error('No se pudo cargar el resumen real de NEDVI OS', reason)
+      setError(true)
+    }
+  }, [])
+  useEffect(() => {
+    void refresh()
+    const handleFocus = () => { void refresh() }
+    window.addEventListener('focus', handleFocus)
+    return () => window.removeEventListener('focus', handleFocus)
+  }, [refresh])
+  return { data, error }
+}
+
 export function DashboardStats() {
+  const { data, error } = useLiveOverview()
+  const detail = error ? 'No se pudo consultar' : data ? 'Datos actuales' : 'Cargando…'
   const monthlyProfit =
     dashboardStats.monthlyIncome - dashboardStats.monthlyExpenses
 
   return (
     <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-6">
       <StatCard
-        label="Proyectos activos"
-        value={dashboardStats.activeProjects.toString()}
-        change="12.5%"
-        detail="vs. mes anterior"
+        label="Proyectos vigentes"
+        value={error ? '—' : data ? String(data.projects) : '…'}
+        change="—"
+        detail={detail}
         icon={BriefcaseBusiness}
       />
 
       <StatCard
-        label="Clientes activos"
-        value={dashboardStats.activeClients.toString()}
-        change="8.7%"
-        detail="vs. mes anterior"
+        label="Clientes registrados"
+        value={error ? '—' : data ? String(data.clients) : '…'}
+        change="—"
+        detail={detail}
         icon={UsersRound}
       />
 
       <StatCard
         label="Cotizaciones pendientes"
-        value={dashboardStats.pendingQuotes.toString()}
-        change="4.2%"
-        detail="vs. mes anterior"
+        value={error ? '—' : data?.pendingQuotes == null ? '…' : String(data.pendingQuotes)}
+        change="—"
+        detail={detail}
         icon={FilePlus2}
         positive={false}
       />
@@ -59,16 +115,16 @@ export function DashboardStats() {
       <StatCard
         label="Ingresos del mes"
         value={`$${dashboardStats.monthlyIncome.toLocaleString('es-MX')}`}
-        change="16.4%"
-        detail="vs. mes anterior"
+        change="—"
+        detail="Sin datos contables conectados"
         icon={CircleDollarSign}
       />
 
       <StatCard
         label="Gastos del mes"
         value={`$${dashboardStats.monthlyExpenses.toLocaleString('es-MX')}`}
-        change="6.8%"
-        detail="vs. mes anterior"
+        change="—"
+        detail="Sin datos contables conectados"
         icon={CircleDollarSign}
         positive={false}
       />
@@ -76,8 +132,8 @@ export function DashboardStats() {
       <StatCard
         label="Utilidad del mes"
         value={`$${monthlyProfit.toLocaleString('es-MX')}`}
-        change="21.3%"
-        detail="vs. mes anterior"
+        change="—"
+        detail="Sin datos contables conectados"
         icon={CircleDollarSign}
       />
     </div>
@@ -156,6 +212,8 @@ export function RevenueChart() {
 }
 
 export function ProjectsStatusChart() {
+  const { data, error } = useLiveOverview()
+  const projectStatuses = data?.projectStatuses ?? []
   const totalProjects = projectStatuses.reduce(
     (total, status) => total + status.count,
     0
@@ -179,7 +237,7 @@ export function ProjectsStatusChart() {
   return (
     <ChartCard
       title="Proyectos por estado"
-      description={`Distribución de los ${totalProjects} proyectos`}
+      description={error ? 'Error al consultar proyectos' : data ? `Distribución de los ${totalProjects} proyectos` : 'Cargando proyectos…'}
       className="min-h-[360px]"
     >
       <div className="flex flex-col items-center gap-7 sm:flex-row sm:justify-center sm:gap-8">
@@ -218,7 +276,7 @@ export function ProjectsStatusChart() {
         <span className="text-[#646873]">Ritmo de ejecución</span>
         <span className="flex items-center gap-1 font-semibold text-emerald-400">
           <ArrowUpRight size={14} />
-          9.3%
+          Datos actuales
         </span>
       </div>
     </ChartCard>
