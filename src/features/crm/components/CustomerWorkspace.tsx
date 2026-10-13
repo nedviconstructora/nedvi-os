@@ -57,7 +57,7 @@ export function CustomerWorkspace() {
   }, [loadCustomers])
 
   async function handleDelete(customer: Customer) {
-    const confirmed = window.confirm(`¿Eliminar a ${customer.company}? Esta acción quitará el cliente de Supabase.`)
+    const confirmed = window.confirm(`ELIMINACIÓN DEFINITIVA\n\nCliente: ${customer.company}\n\nSe eliminarán también sus proyectos, cotizaciones y registros dependientes de Supabase, y se intentará eliminar los accesos exclusivos del cliente. Los datos guardados localmente en otros dispositivos no se pueden borrar desde aquí.\n\n¿Confirmas esta eliminación irreversible?`)
     if (!confirmed) return
 
     try {
