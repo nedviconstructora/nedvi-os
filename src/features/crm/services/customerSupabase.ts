@@ -227,17 +227,14 @@ export async function updateCustomerInSupabase(
 }
 
 export async function deleteCustomerFromSupabase(id: string): Promise<void> {
-  const response = await supabaseRequest(
-    `/rest/v1/customers?id=eq.${encodeURIComponent(id)}`,
-    {
-      method: 'DELETE',
-      headers: {
-        Prefer: 'return=minimal',
-      },
-    },
-  )
-
+  const response = await fetch(`/api/crm/customers/${encodeURIComponent(id)}`, {
+    method: 'DELETE',
+    cache: 'no-store',
+  })
   if (!response.ok) {
-    throw await readError(response, 'No se pudo eliminar el cliente de Supabase.')
+    const result = await response.json().catch(() => null) as { error?: string } | null
+    throw new Error(result?.error || 'No se pudo eliminar integralmente el cliente.')
   }
+  const result = await response.json() as { warning?: string | null }
+  if (result.warning) window.alert(result.warning)
 }
