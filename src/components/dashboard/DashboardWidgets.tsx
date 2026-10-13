@@ -38,8 +38,16 @@ function useDashboardOverview() {
 
   useEffect(() => {
     let alive = true
-    const supabase = createClient()
+    let supabase: ReturnType<typeof createClient>
+    try {
+      supabase = createClient()
+    } catch (cause) {
+      console.error('Dashboard: no fue posible iniciar Supabase', cause)
+      setError(true)
+      return
+    }
     async function refresh() {
+      try {
       const [customers, projects, quotes] = await Promise.all([
         supabase.from('customers').select('status'),
         supabase.from('projects').select('status'),
@@ -70,6 +78,12 @@ function useDashboardOverview() {
         statuses: Array.from(byStatus, ([label, count], index) => ({ label, count, color: colors[index % colors.length] })),
       })
       setError(false)
+      } catch (cause) {
+        if (alive) {
+          console.error('Dashboard: error inesperado al consultar datos', cause)
+          setError(true)
+        }
+      }
     }
     void refresh()
     const subscription = supabase.channel('dashboard-overview-sync')
