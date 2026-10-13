@@ -3,6 +3,7 @@
 import { ChangeEvent, FormEvent, useEffect, useMemo, useState } from 'react'
 import {
   Eye,
+  Pencil,
   FileImage,
   FileText,
   ImagePlus,
@@ -147,6 +148,7 @@ export default function DailyReportsPage() {
   const [search, setSearch] = useState('')
   const [open, setOpen] = useState(false)
   const [viewingQuoteId, setViewingQuoteId] = useState<string | null>(null)
+  const [editingReportId, setEditingReportId] = useState<string | null>(null)
   const [quoteId, setQuoteId] = useState('')
   const [projectName, setProjectName] = useState('')
   const [clientInvoice, setClientInvoice] = useState('')
@@ -275,6 +277,7 @@ export default function DailyReportsPage() {
   }, [viewingQuoteId, projectById, reports])
 
   function resetForm() {
+    setEditingReportId(null)
     setQuoteId('')
     setProjectName('')
     setClientInvoice('')
@@ -290,6 +293,25 @@ export default function DailyReportsPage() {
     setLongitude(undefined)
     setLocationAccuracy(undefined)
     setLocating(false)
+  }
+
+  function openEdit(report: DailyReport) {
+    setEditingReportId(report.id)
+    setQuoteId(report.quoteId)
+    setProjectName(report.projectName)
+    setClientInvoice(report.clientInvoice)
+    setDate(report.date)
+    setWeather(report.weather)
+    setWorkers(String(report.workers))
+    setSummary(report.summary)
+    setBlockers(report.blockers)
+    setAuthor(report.author)
+    setImages(report.images ?? [])
+    setLatitude(report.latitude)
+    setLongitude(report.longitude)
+    setLocationAccuracy(report.locationAccuracy)
+    setViewingQuoteId(null)
+    setOpen(true)
   }
 
   function handleProjectChange(value: string) {
@@ -367,7 +389,7 @@ export default function DailyReportsPage() {
     if (!project || !summary.trim()) return
 
     const report: DailyReport = {
-      id: crypto.randomUUID(),
+      id: editingReportId ?? crypto.randomUUID(),
       quoteId: project.id,
       folio: project.folio,
       date,
@@ -384,7 +406,7 @@ export default function DailyReportsPage() {
       images,
     }
 
-    const next = [report, ...reports]
+    const next = editingReportId ? reports.map((item) => item.id === editingReportId ? report : item) : [report, ...reports]
 
     try {
       writeDailyReports(next)
@@ -680,7 +702,7 @@ export default function DailyReportsPage() {
             <h1 className="mt-2 text-3xl font-bold text-[var(--foreground)]">Reportes diarios</h1>
             <p className="mt-2 text-sm text-[var(--muted)]">Bitácora diaria con información del cliente, avance real por concepto y evidencia fotográfica.</p>
           </div>
-          <button onClick={() => setOpen(true)} className="inline-flex h-11 items-center gap-2 rounded-xl bg-[#5496CC] px-4 text-sm font-semibold text-white"><Plus size={16} /> Nuevo reporte</button>
+          <button onClick={() => { resetForm(); setOpen(true) }} className="inline-flex h-11 items-center gap-2 rounded-xl bg-[#5496CC] px-4 text-sm font-semibold text-white"><Plus size={16} /> Nuevo reporte</button>
         </header>
 
         <div className="grid gap-4 sm:grid-cols-3">
@@ -782,6 +804,7 @@ export default function DailyReportsPage() {
                         </div>
                         <div className="flex flex-wrap gap-2">
                           <button type="button" onClick={() => printPdf(report)} className="inline-flex items-center gap-2 rounded-lg border border-[#5496CC]/40 px-3 py-2 text-xs font-semibold text-[#5496CC] hover:bg-[#5496CC]/10"><Printer size={15} /> PDF</button>
+                          <button type="button" onClick={() => openEdit(report)} className="inline-flex items-center gap-2 rounded-lg border border-[#5496CC]/30 px-3 py-2 text-xs font-semibold text-[#5496CC] hover:bg-[#5496CC]/10"><Pencil size={15} /> Editar</button>
                           <button type="button" onClick={() => remove(report.id)} className="inline-flex items-center gap-2 rounded-lg border border-red-500/20 px-3 py-2 text-xs font-semibold text-red-500 hover:bg-red-500/10"><Trash2 size={15} /> Eliminar</button>
                         </div>
                       </div>
@@ -848,7 +871,7 @@ export default function DailyReportsPage() {
             <div className="mb-5 flex items-center justify-between">
               <div>
                 <p className="text-xs font-semibold uppercase tracking-wide text-[#5496CC]">Bitácora de obra</p>
-                <h2 className="text-xl font-bold">Nuevo reporte diario</h2>
+                <h2 className="text-xl font-bold">{editingReportId ? 'Editar reporte diario' : 'Nuevo reporte diario'}</h2>
               </div>
               <button type="button" onClick={() => { setOpen(false); resetForm() }}><X size={18} /></button>
             </div>
@@ -974,7 +997,7 @@ export default function DailyReportsPage() {
 
               <div className="flex justify-end gap-3">
                 <button type="button" onClick={() => { setOpen(false); resetForm() }} className="rounded-xl border border-[var(--border)] px-5 py-3 font-semibold">Cancelar</button>
-                <button type="submit" disabled={processingImages} className="rounded-xl bg-[#5496CC] px-5 py-3 font-semibold text-white disabled:cursor-not-allowed disabled:opacity-60">Guardar reporte</button>
+                <button type="submit" disabled={processingImages} className="rounded-xl bg-[#5496CC] px-5 py-3 font-semibold text-white disabled:cursor-not-allowed disabled:opacity-60">{editingReportId ? 'Guardar cambios' : 'Guardar reporte'}</button>
               </div>
             </form>
           </div>
