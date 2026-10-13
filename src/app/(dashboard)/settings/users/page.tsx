@@ -745,7 +745,9 @@ export default function UsersAndPermissionsPage() {
               <div><p className="text-sm font-semibold text-[var(--foreground)]">{user.name}</p><p className="text-xs text-[var(--muted)]">{user.email} · {user.customerFolio || 'Sin folio'}</p></div>
               <div className="flex items-center gap-2">
                 <span className="rounded-lg bg-[#5496CC]/10 px-3 py-1 text-xs font-semibold text-[#5496CC]">Cliente · {user.status}</span>
-                <button type="button" disabled={!isAdmin || !user.customerId} onClick={() => openEditClient(user)} className="inline-flex items-center gap-1.5 rounded-lg border border-[#5496CC]/30 px-3 py-1.5 text-xs font-semibold text-[#5496CC] disabled:opacity-40"><UserRoundCog size={14}/>Editar cliente</button>
+                <button type="button" disabled={!isAdmin || !user.customerId} onClick={() => openEditClient(user)} className="inline-flex items-center gap-1.5 rounded-lg border border-[#5496CC]/25 px-2.5 py-1.5 text-xs font-semibold text-[#5496CC] disabled:opacity-40"><UserRoundCog size={13}/>Editar</button>
+                <button type="button" disabled={!isAdmin} onClick={() => openPasswordModal(user)} className="inline-flex items-center gap-1.5 rounded-lg border border-[#5496CC]/25 bg-[#5496CC]/5 px-2.5 py-1.5 text-xs font-semibold text-[#5496CC] transition hover:bg-[#5496CC]/10 disabled:opacity-40"><KeyRound size={13}/>Contraseña</button>
+                <button type="button" disabled={!isAdmin} onClick={() => setDeleteUser(user)} className="inline-flex items-center gap-1.5 rounded-lg border border-red-500/25 bg-red-500/5 px-2.5 py-1.5 text-xs font-semibold text-red-500 transition hover:bg-red-500/10 disabled:opacity-40"><Trash2 size={13}/>Eliminar</button>
               </div>
             </div>)}
             {!visibleUsers.length && search ? <div className="p-8 text-center text-sm text-[var(--muted)]">No se encontraron usuarios.</div> : null}
