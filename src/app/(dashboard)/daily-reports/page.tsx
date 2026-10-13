@@ -763,9 +763,21 @@ export default function DailyReportsPage() {
                         <td className="px-5 py-4 text-[var(--foreground)]">{imageCount} imagen{imageCount === 1 ? '' : 'es'}</td>
                         <td className="px-5 py-4 text-[var(--foreground)]">{project.owner || 'Sin responsable'}</td>
                         <td className="px-5 py-4 text-right">
-                          <button type="button" onClick={() => setViewingQuoteId(project.id)} className="inline-flex items-center gap-2 rounded-lg border border-[#5496CC]/40 px-3 py-2 text-xs font-semibold text-[#5496CC] transition hover:bg-[#5496CC]/10">
-                            <Eye size={15} /> Ver reportes
-                          </button>
+                          <div className="flex flex-wrap items-center justify-end gap-2">
+                            <button type="button" onClick={() => setViewingQuoteId(project.id)} className="inline-flex items-center gap-2 rounded-lg border border-[#5496CC]/40 px-3 py-2 text-xs font-semibold text-[#5496CC] transition hover:bg-[#5496CC]/10">
+                              <Eye size={15} /> Ver reportes
+                            </button>
+                            {latest ? (
+                              <>
+                                <button type="button" onClick={() => openEdit(latest)} title="Editar el último reporte" className="inline-flex items-center gap-2 rounded-lg border border-[#5496CC]/30 px-3 py-2 text-xs font-semibold text-[#5496CC] hover:bg-[#5496CC]/10">
+                                  <Pencil size={15} /> Editar
+                                </button>
+                                <button type="button" onClick={() => remove(latest.id)} title="Eliminar el último reporte" className="inline-flex items-center gap-2 rounded-lg border border-red-500/25 px-3 py-2 text-xs font-semibold text-red-500 hover:bg-red-500/10">
+                                  <Trash2 size={15} /> Eliminar
+                                </button>
+                              </>
+                            ) : null}
+                          </div>
                         </td>
                       </tr>
                     )
