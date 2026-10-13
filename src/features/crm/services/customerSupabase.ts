@@ -232,8 +232,8 @@ export async function deleteCustomerFromSupabase(id: string): Promise<void> {
     cache: 'no-store',
   })
   if (!response.ok) {
-    const result = await response.json().catch(() => null) as { error?: string } | null
-    throw new Error(result?.error || 'No se pudo eliminar integralmente el cliente.')
+    const result = await response.json().catch(() => null) as { error?: string; errorCode?: string; diagnostic?: string } | null
+    throw new Error([result?.error || 'No se pudo eliminar integralmente el cliente.', result?.errorCode ? `Código: ${result.errorCode}` : null, result?.diagnostic].filter(Boolean).join(' · '))
   }
   const result = await response.json() as { warning?: string | null }
   if (result.warning) window.alert(result.warning)
