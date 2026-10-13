@@ -13,6 +13,8 @@ import {
   writeProgressRecords,
 } from '@/features/operations/services/operationsStorage'
 
+const HIDDEN_PROGRESS_PROJECTS_KEY = 'nedvi_site_progress_hidden_projects'
+
 const UM_OPTIONS = [
   'Kilómetros',
   'Metros Cuadrados',
@@ -116,6 +118,7 @@ function hasStandardUm(value: string) {
 
 export default function SiteProgressPage() {
   const [projects, setProjects] = useState<OperationProject[]>([])
+  const [hiddenProjectIds, setHiddenProjectIds] = useState<string[]>([])
   const [records, setRecords] = useState<ProgressRecord[]>([])
   const [search, setSearch] = useState('')
   const [open, setOpen] = useState(false)
@@ -127,6 +130,12 @@ export default function SiteProgressPage() {
   const [items, setItems] = useState<DraftProgressItem[]>([newDraftItem()])
 
   function loadData() {
+    let hiddenIds: string[] = []
+    try {
+      const parsed: unknown = JSON.parse(window.localStorage.getItem(HIDDEN_PROGRESS_PROJECTS_KEY) || '[]')
+      if (Array.isArray(parsed)) hiddenIds = parsed.filter((id): id is string => typeof id === 'string')
+    } catch { /* Preserve visible entries if local storage is invalid. */ }
+    setHiddenProjectIds(hiddenIds)
     const currentProjects = readOperationProjects()
     const validIds = new Set(currentProjects.map((project) => project.id))
     const currentRecords = readProgressRecords().filter((record) => validIds.has(record.quoteId))
@@ -139,7 +148,7 @@ export default function SiteProgressPage() {
     loadData()
 
     const handleStorage = (event: StorageEvent) => {
-      if (event.key === 'nedvi_quotes' || event.key === PROGRESS_STORAGE_KEY) loadData()
+      if (event.key === 'nedvi_quotes' || event.key === PROGRESS_STORAGE_KEY || event.key === HIDDEN_PROGRESS_PROJECTS_KEY) loadData()
     }
 
     window.addEventListener('storage', handleStorage)
@@ -151,10 +160,12 @@ export default function SiteProgressPage() {
     }
   }, [])
 
+  const visibleProjects = useMemo(() => projects.filter((project) => !hiddenProjectIds.includes(project.id)), [projects, hiddenProjectIds])
+
   const recordsByProject = useMemo(() => {
     const map = new Map<string, ProgressRecord[]>()
 
-    for (const project of projects) {
+    for (const project of visibleProjects) {
       map.set(
         project.id,
         records
@@ -164,7 +175,7 @@ export default function SiteProgressPage() {
     }
 
     return map
-  }, [projects, records])
+  }, [visibleProjects, records])
 
   const latestByProject = useMemo(() => {
     const map = new Map<string, ProgressRecord>()
@@ -176,9 +187,9 @@ export default function SiteProgressPage() {
 
   const filtered = useMemo(() => {
     const query = search.trim().toLowerCase()
-    if (!query) return projects
+    if (!query) return visibleProjects
 
-    return projects.filter((project) => {
+    return visibleProjects.filter((project) => {
       const projectRecords = recordsByProject.get(project.id) ?? []
       const searchable = [
         project.folio,
@@ -197,12 +208,12 @@ export default function SiteProgressPage() {
 
       return searchable.includes(query)
     })
-  }, [projects, recordsByProject, search])
+  }, [visibleProjects, recordsByProject, search])
 
-  const average = projects.length
+  const average = visibleProjects.length
     ? Math.round(
-        (projects.reduce((sum, project) => sum + (latestByProject.get(project.id)?.percent ?? 0), 0) /
-          projects.length) * 100,
+        (visibleProjects.reduce((sum, project) => sum + (latestByProject.get(project.id)?.percent ?? 0), 0) /
+          visibleProjects.length) * 100,
       ) / 100
     : 0
 
@@ -363,6 +374,28 @@ export default function SiteProgressPage() {
     }
   }
 
+  function hideLegacyProgressProject(project: OperationProject) {
+    const related = records.filter((record) => record.quoteId === project.id)
+    const confirmed = window.confirm(
+      `¿Quitar "${project.project}" de Avances de obra?\\n\\n` +
+      `Se ocultará de esta pantalla y se eliminarán sus ${related.length} registros locales de avance. ` +
+      'No se eliminarán el cliente, la cotización ni el proyecto de otros módulos. Esta limpieza afecta solo a este navegador.'
+    )
+    if (!confirmed) return
+    try {
+      const nextRecords = records.filter((record) => record.quoteId !== project.id)
+      const nextIds = Array.from(new Set([...hiddenProjectIds, project.id]))
+      window.localStorage.setItem(HIDDEN_PROGRESS_PROJECTS_KEY, JSON.stringify(nextIds))
+      writeProgressRecords(nextRecords)
+      setHiddenProjectIds(nextIds)
+      setRecords(nextRecords)
+      if (viewingQuoteId === project.id) setViewingQuoteId('')
+    } catch (error) {
+      console.error('No se pudo quitar el proyecto de Avances de obra:', error)
+      window.alert('No se pudo completar la limpieza de esta pantalla.')
+    }
+  }
+
   return (
     <AppShell>
       <div className="mx-auto w-full max-w-[1700px] space-y-6">
@@ -378,9 +411,9 @@ export default function SiteProgressPage() {
         </header>
 
         <div className="grid gap-4 sm:grid-cols-3">
-          <Metric label="Proyectos" value={projects.length.toString()} />
+          <Metric label="Proyectos" value={visibleProjects.length.toString()} />
           <Metric label="Avance promedio" value={`${average}%`} />
-          <Metric label="Registros de avance" value={records.length.toString()} />
+          <Metric label="Registros de avance" value={records.filter((record) => visibleProjects.some((project) => project.id === record.quoteId)).length.toString()} />
         </div>
 
         <div className="rounded-2xl border border-[var(--border)] bg-[var(--surface)] p-4">
@@ -426,6 +459,7 @@ export default function SiteProgressPage() {
                       {projectRecords.length > 0 ? (
                         <button type="button" onClick={() => removeProjectProgress(project)} className="inline-flex items-center gap-2 rounded-lg border border-red-500/30 px-3 py-2 text-xs font-semibold text-red-500 hover:bg-red-500/10"><Trash2 size={14} /> Eliminar avances</button>
                       ) : null}
+                      <button type="button" onClick={() => hideLegacyProgressProject(project)} className="inline-flex items-center gap-2 rounded-lg border border-red-500/30 px-3 py-2 text-xs font-semibold text-red-500 hover:bg-red-500/10"><Trash2 size={14} /> Quitar de avances</button>
                       <button type="button" onClick={() => openNew(project)} className="inline-flex items-center gap-2 rounded-lg bg-[#5496CC] px-3 py-2 text-xs font-semibold text-white"><Plus size={14} /> {latest ? 'Actualizar avance' : 'Registrar avance'}</button>
                     </div>
                   </div>
