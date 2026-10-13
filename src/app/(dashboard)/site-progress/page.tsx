@@ -4,6 +4,7 @@ import { FormEvent, useEffect, useMemo, useState } from 'react'
 import { BarChart3, Eye, Plus, Search, Trash2, X } from 'lucide-react'
 import { AppShell } from '@/components/layout/AppShell'
 import {
+  Pencil,
   PROGRESS_STORAGE_KEY,
   type OperationProject,
   type ProgressItem,
@@ -120,6 +121,7 @@ export default function SiteProgressPage() {
   const [search, setSearch] = useState('')
   const [open, setOpen] = useState(false)
   const [viewingQuoteId, setViewingQuoteId] = useState('')
+  const [editingRecordId, setEditingRecordId] = useState<string | null>(null)
   const [quoteId, setQuoteId] = useState('')
   const [date, setDate] = useState(today())
   const [notes, setNotes] = useState('')
@@ -235,6 +237,7 @@ export default function SiteProgressPage() {
   }, [items])
 
   function openNew(project?: OperationProject) {
+    setEditingRecordId(null)
     const selectedProjectId = project?.id ?? ''
     const latest = latestByProject.get(selectedProjectId)
 
@@ -242,6 +245,25 @@ export default function SiteProgressPage() {
     setDate(today())
     setNotes('')
     setItems(latest?.items.length ? latest.items.map(draftFromPrevious) : [newDraftItem()])
+    setOpen(true)
+  }
+
+  function openEdit(record: ProgressRecord) {
+    setEditingRecordId(record.id)
+    setQuoteId(record.quoteId)
+    setDate(record.date)
+    setNotes(record.notes)
+    setItems(record.items.length ? record.items.map((item) => ({
+      id: item.id || crypto.randomUUID(),
+      concept: item.concept,
+      unit: item.unit || 'Piezas',
+      po: String(item.po),
+      quantity: String(item.quantity),
+      accumulatedPrevious: String(item.accumulatedPrevious),
+      previousExecution: String(item.previousExecution),
+      executed: String(item.executed),
+    })) : [newDraftItem()])
+    setViewingQuoteId('')
     setOpen(true)
   }
 
@@ -303,7 +325,7 @@ export default function SiteProgressPage() {
     const percent = progressPercent(totalAccumulated, totalContract)
 
     const record: ProgressRecord = {
-      id: crypto.randomUUID(),
+      id: editingRecordId ?? crypto.randomUUID(),
       quoteId: project.id,
       folio: project.folio,
       date,
@@ -313,10 +335,11 @@ export default function SiteProgressPage() {
       items: savedItems,
     }
 
-    const next = [record, ...records]
+    const next = editingRecordId ? records.map((item) => item.id === editingRecordId ? record : item) : [record, ...records]
     writeProgressRecords(next)
     setRecords(readProgressRecords())
     setOpen(false)
+    setEditingRecordId(null)
   }
 
   function remove(recordId: string) {
@@ -424,7 +447,10 @@ export default function SiteProgressPage() {
                 <section key={record.id} className="overflow-hidden rounded-2xl border border-[var(--border)]">
                   <div className="flex flex-col gap-3 bg-[var(--surface-soft)] px-4 py-4 sm:flex-row sm:items-center sm:justify-between">
                     <div className="flex flex-wrap items-center gap-3"><span className="rounded-full bg-[#5496CC]/10 px-3 py-1 text-xs font-bold text-[#5496CC]">{record.percent}%</span><span className="text-sm font-semibold">{formatDate(record.date)}</span>{index === 0 ? <span className="rounded-full bg-emerald-500/10 px-2.5 py-1 text-[10px] font-bold uppercase text-emerald-500">Actual</span> : null}</div>
-                    <button type="button" onClick={() => remove(record.id)} className="self-start rounded-lg p-2 text-red-500 hover:bg-red-500/10"><Trash2 size={16} /></button>
+                    <div className="flex items-center gap-2">
+                      <button type="button" onClick={() => openEdit(record)} className="inline-flex items-center gap-1.5 rounded-lg border border-[#5496CC]/30 px-3 py-2 text-xs font-semibold text-[#5496CC] hover:bg-[#5496CC]/10"><Pencil size={15}/> Editar</button>
+                      <button type="button" onClick={() => remove(record.id)} className="inline-flex items-center gap-1.5 rounded-lg border border-red-500/25 px-3 py-2 text-xs font-semibold text-red-500 hover:bg-red-500/10"><Trash2 size={15}/> Eliminar</button>
+                    </div>
                   </div>
                   <ProgressTable rows={record.items} emptyMessage={`Registro anterior sin tabla de conceptos. Avance registrado: ${record.percent}%.`} />
                   {record.notes ? <div className="border-t border-[var(--border)] px-5 py-4"><p className="text-xs font-semibold uppercase tracking-wide text-[var(--muted)]">Observaciones</p><p className="mt-2 whitespace-pre-wrap text-sm">{record.notes}</p></div> : null}
@@ -439,8 +465,8 @@ export default function SiteProgressPage() {
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4">
           <div className="max-h-[94vh] w-full max-w-[1550px] overflow-y-auto rounded-2xl bg-[var(--surface)] shadow-2xl">
             <div className="sticky top-0 z-20 flex items-start justify-between border-b border-[var(--border)] bg-[var(--surface)] p-5">
-              <div><p className="text-xs font-semibold uppercase tracking-wide text-[#5496CC]">Operaciones / Obra</p><h2 className="mt-1 text-xl font-bold">Registrar avance por conceptos</h2></div>
-              <button type="button" onClick={() => setOpen(false)}><X size={18} /></button>
+              <div><p className="text-xs font-semibold uppercase tracking-wide text-[#5496CC]">Operaciones / Obra</p><h2 className="mt-1 text-xl font-bold">{editingRecordId ? "Editar avance por conceptos" : "Registrar avance por conceptos"}</h2></div>
+              <button type="button" onClick={() => { setOpen(false); setEditingRecordId(null) }}><X size={18} /></button>
             </div>
 
             <form onSubmit={save} className="space-y-5 p-5">
@@ -499,7 +525,7 @@ export default function SiteProgressPage() {
 
               <label className="block space-y-2"><span className="text-sm font-semibold">Observaciones</span><textarea rows={3} value={notes} onChange={(event) => setNotes(event.target.value)} className="w-full rounded-xl border border-[var(--border)] bg-transparent px-4 py-3" /></label>
 
-              <div className="flex justify-end gap-3"><button type="button" onClick={() => setOpen(false)} className="rounded-xl border border-[var(--border)] px-5 py-3 font-semibold">Cancelar</button><button type="submit" className="rounded-xl bg-[#5496CC] px-5 py-3 font-semibold text-white">Guardar avance</button></div>
+              <div className="flex justify-end gap-3"><button type="button" onClick={() => { setOpen(false); setEditingRecordId(null) }} className="rounded-xl border border-[var(--border)] px-5 py-3 font-semibold">Cancelar</button><button type="submit" className="rounded-xl bg-[#5496CC] px-5 py-3 font-semibold text-white">{editingRecordId ? "Guardar cambios" : "Guardar avance"}</button></div>
             </form>
           </div>
         </div>
