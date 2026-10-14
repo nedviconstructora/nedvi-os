@@ -44,6 +44,7 @@ const PERMISSION_LABELS: Record<ModulePermission, string> = {
   purchasing: 'Compras y Suministros',
   operations: 'Operaciones / Obra',
   agenda: 'Agenda',
+  'time-clock': 'Checador',
   'human-resources': 'Recursos Humanos',
   finance: 'Finanzas',
   indicators: 'Indicadores',
