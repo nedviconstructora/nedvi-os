@@ -52,7 +52,7 @@ export default function TimeClockPage() {
   const nextType = hasEntry ? 'salida' : 'entrada'
   const fmt = (date:string) => new Intl.DateTimeFormat('es-MX',{dateStyle:'medium',timeStyle:'short'}).format(new Date(date))
   const duration = useMemo(() => {
-    if (!hasEntry || !now) return null
+    if (!hasEntry || !now || !current) return null
     const minutes = Math.max(0,Math.floor((now.getTime()-new Date(current.at).getTime())/60000))
     return `${Math.floor(minutes/60)} h ${minutes%60} min`
   },[hasEntry,current,now])
