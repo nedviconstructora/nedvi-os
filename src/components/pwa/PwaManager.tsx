@@ -63,6 +63,10 @@ export function PwaManager({ initialVersion }: { initialVersion: string }) {
         const data = (await response.json()) as { version?: string }
         if (cancelled || !data.version || data.version === 'development' || data.version === initialVersion) return
         pendingVersion = data.version
+        // Ask the installed PWA to look for the latest service worker as well.
+        if ('serviceWorker' in navigator) {
+          void navigator.serviceWorker.getRegistration().then((registration) => registration?.update()).catch(() => {})
+        }
         setUpdateAvailable(true)
         attemptUpdate()
       } catch {
@@ -98,10 +102,13 @@ export function PwaManager({ initialVersion }: { initialVersion: string }) {
       }
     }
     const onFocus = () => void checkVersion()
+    // Windows PWA may be suspended rather than closed; check again on restore.
+    const onPageShow = () => void checkVersion()
     document.addEventListener('input', onEdit, true)
     document.addEventListener('change', onEdit, true)
     document.addEventListener('visibilitychange', onVisibility)
     window.addEventListener('focus', onFocus)
+    window.addEventListener('pageshow', onPageShow)
     window.addEventListener('online', onFocus)
     const interval = window.setInterval(() => void checkVersion(), 60_000)
     void checkVersion()
@@ -112,6 +119,7 @@ export function PwaManager({ initialVersion }: { initialVersion: string }) {
       document.removeEventListener('change', onEdit, true)
       document.removeEventListener('visibilitychange', onVisibility)
       window.removeEventListener('focus', onFocus)
+      window.removeEventListener('pageshow', onPageShow)
       window.removeEventListener('online', onFocus)
     }
   }, [initialVersion])
