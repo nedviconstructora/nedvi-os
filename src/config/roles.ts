@@ -48,7 +48,7 @@ export const ROLE_PERMISSIONS: Record<AppRole, readonly ModulePermission[]> = {
     'indicators',
     'coral',
   ],
-  Contabilidad: ['dashboard', 'time-clock'],
+  Contabilidad: ['time-clock'],
   Cliente: ['client-portal'],
 }
 
