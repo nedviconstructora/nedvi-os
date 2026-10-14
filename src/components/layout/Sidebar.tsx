@@ -225,7 +225,7 @@ export function Sidebar({
           </Link>
         ) : null}
 
-        {user.role === 'Administración' ? (
+        {user.role === 'Administración' && Date.now() < new Date('2026-10-16T00:00:00-07:00').getTime() ? (
           <Link href="/presentacion" onClick={onCloseMobile} title={collapsed ? 'Modo Presentación' : undefined} className={`${primaryItemClasses(isPathActive('/presentacion'))} mt-2 border-[#7BAEE3]/40 bg-[#2b6ba5]/40`}>
             <Presentation size={18} strokeWidth={1.8} className="shrink-0" />
             <span className={`${collapsed ? 'lg:hidden' : ''} whitespace-nowrap`}>Modo Presentación</span>
