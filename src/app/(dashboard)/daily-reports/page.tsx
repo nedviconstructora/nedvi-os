@@ -17,6 +17,7 @@ import {
   X,
 } from 'lucide-react'
 import { AppShell } from '@/components/layout/AppShell'
+import { readAccessSession } from '@/features/access/services/accessStorage'
 import {
   DAILY_REPORTS_STORAGE_KEY,
   PROGRESS_STORAGE_KEY,
@@ -33,13 +34,6 @@ import {
 
 const MAX_REPORT_IMAGES = 30
 
-const REPORT_AUTHORS = [
-  'Nestor Ortiz',
-  'Cristian Medina',
-  'Victor Muciño',
-  'Edgardo Fierro',
-  'Pedro Garcia',
-] as const
 
 function today() {
   return new Date().toISOString().slice(0, 10)
@@ -157,7 +151,7 @@ export default function DailyReportsPage() {
   const [workers, setWorkers] = useState('')
   const [summary, setSummary] = useState('')
   const [blockers, setBlockers] = useState('')
-  const [author, setAuthor] = useState('Pedro Garcia')
+  const [author, setAuthor] = useState('')
   const [images, setImages] = useState<DailyReportImage[]>([])
   const [processingImages, setProcessingImages] = useState(false)
   const [latitude, setLatitude] = useState<number | undefined>()
@@ -178,6 +172,7 @@ export default function DailyReportsPage() {
   }
 
   useEffect(() => {
+    setAuthor(readAccessSession()?.name?.trim() ?? '')
     loadData()
 
     const handleStorage = (event: StorageEvent) => {
@@ -286,7 +281,7 @@ export default function DailyReportsPage() {
     setWorkers('')
     setSummary('')
     setBlockers('')
-    setAuthor('Pedro Garcia')
+    setAuthor(readAccessSession()?.name?.trim() ?? '')
     setImages([])
     setProcessingImages(false)
     setLatitude(undefined)
@@ -305,7 +300,7 @@ export default function DailyReportsPage() {
     setWorkers(String(report.workers))
     setSummary(report.summary)
     setBlockers(report.blockers)
-    setAuthor(report.author)
+    setAuthor(readAccessSession()?.name?.trim() ?? '')
     setImages(report.images ?? [])
     setLatitude(report.latitude)
     setLongitude(report.longitude)
@@ -387,6 +382,8 @@ export default function DailyReportsPage() {
     event.preventDefault()
     const project = projects.find((item) => item.id === quoteId)
     if (!project || !summary.trim()) return
+    const sessionAuthor = readAccessSession()?.name?.trim()
+    if (!sessionAuthor) { window.alert('No se pudo identificar el usuario activo. Inicia sesión de nuevo.'); return }
 
     const report: DailyReport = {
       id: editingReportId ?? crypto.randomUUID(),
@@ -399,7 +396,7 @@ export default function DailyReportsPage() {
       workers: Number(workers || 0),
       summary: summary.trim(),
       blockers: blockers.trim(),
-      author: author.trim(),
+      author: sessionAuthor,
       latitude,
       longitude,
       locationAccuracy,
@@ -939,15 +936,13 @@ export default function DailyReportsPage() {
                 <label className="space-y-2"><span className="text-sm font-semibold">Personal en obra</span><input type="number" min="0" value={workers} onChange={(event) => setWorkers(event.target.value)} className="w-full rounded-xl border border-[var(--border)] bg-transparent px-4 py-3" /></label>
                 <label className="space-y-2">
                   <span className="text-sm font-semibold">Elaboró</span>
-                  <select
+                  <input
                     value={author}
-                    onChange={(event) => setAuthor(event.target.value)}
-                    className="w-full rounded-xl border border-[var(--border)] bg-transparent px-4 py-3"
-                  >
-                    {REPORT_AUTHORS.map((name) => (
-                      <option key={name} value={name}>{name}</option>
-                    ))}
-                  </select>
+                    readOnly
+                    aria-label="Elaboró (usuario que inició sesión)"
+                    className="w-full rounded-xl border border-[var(--border)] bg-[var(--surface-soft)] px-4 py-3 text-[var(--foreground)]"
+                    placeholder="Usuario de la sesión"
+                  />
                 </label>
               </div>
 
