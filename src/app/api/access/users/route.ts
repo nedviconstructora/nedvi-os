@@ -26,6 +26,7 @@ const DEFAULT_PERMISSIONS: Record<string, ModulePermission[]> = {
     'purchasing',
     'operations',
     'agenda',
+    'time-clock',
     'indicators',
     'coral',
   ],
