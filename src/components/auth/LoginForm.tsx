@@ -11,7 +11,7 @@ import {
 import type { AppRole, ModulePermission } from '@/config/roles'
 import { createClient } from '@/lib/supabase/client'
 
-type NedviRole = 'administracion' | 'obra' | 'cliente'
+type NedviRole = 'administracion' | 'obra' | 'contabilidad' | 'cliente'
 
 type Profile = {
   id: string
@@ -41,6 +41,7 @@ const VALID_PERMISSIONS: ModulePermission[] = [
 function toAppRole(role: NedviRole): AppRole {
   if (role === 'administracion') return 'Administración'
   if (role === 'obra') return 'Supervisor'
+  if (role === 'contabilidad') return 'Contabilidad'
   return 'Cliente'
 }
 
@@ -119,7 +120,7 @@ export function LoginForm() {
       const customPermissions = readCustomPermissions(data.user.user_metadata?.permissions)
       const basePermissions = profilePermissions ?? customPermissions ?? defaultPermissionsForRole(appRole)
       const permissions =
-        appRole === 'Cliente'
+        appRole === 'Contabilidad' ? defaultPermissionsForRole('Contabilidad') : appRole === 'Cliente'
           ? Array.from(new Set<ModulePermission>([...basePermissions, 'client-portal']))
           : basePermissions
 
