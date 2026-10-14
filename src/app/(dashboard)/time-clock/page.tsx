@@ -44,7 +44,7 @@ export default function TimeClockPage() {
     void refresh()
     const interval = window.setInterval(() => {setNow(new Date());void refresh()},30000)
     setNow(new Date())
-    setDateFilter(new Intl.DateTimeFormat('en-CA',{timeZone:'America/Tijuana',year:'numeric',month:'2-digit',day:'2-digit'}).format(new Date()))
+    setDateFilter(new Intl.DateTimeFormat('sv-SE',{timeZone:'America/Tijuana',year:'numeric',month:'2-digit',day:'2-digit'}).format(new Date()))
     return () => window.clearInterval(interval)
   },[refresh])
 
