@@ -3,7 +3,7 @@ import { createClient as createAdminClient } from '@supabase/supabase-js'
 import { createClient as createServerClient } from '@/utils/supabase/server'
 
 const bucket = 'nedvi-time-clock'
-const roles = ['administracion','administrador','admin','obra','supervisor']
+const roles = ['administracion','administrador','admin','obra','supervisor','contabilidad']
 const admins = ['administracion','administrador','admin']
 
 async function getContext() {
@@ -19,6 +19,7 @@ async function getContext() {
     user, profile,
     admin: createAdminClient(url,key,{auth:{persistSession:false,autoRefreshToken:false}}),
     isAdmin: admins.includes(String(profile.role ?? '').toLowerCase().trim()),
+    isAccountant: String(profile.role ?? '').toLowerCase().trim() === 'contabilidad',
   }
 }
 
@@ -26,10 +27,11 @@ export async function GET() {
   try {
     const ctx = await getContext()
     if (!ctx) return NextResponse.json({error:'Sesión no autorizada.'},{status:401})
+    const canViewAll = ctx.isAdmin || ctx.isAccountant
     let query = ctx.admin.from('time_clock_entries')
       .select('id,user_id,employee_name,event_type,occurred_at,photo_path,latitude,longitude,location_accuracy_m')
-      .is('deleted_at',null).order('occurred_at',{ascending:false}).limit(150)
-    if (!ctx.isAdmin) query = query.eq('user_id',ctx.user.id)
+      .is('deleted_at',null).order('occurred_at',{ascending:false}).limit(3000)
+    if (!canViewAll) query = query.eq('user_id',ctx.user.id)
     const {data,error} = await query
     if (error) {
       console.error('Time clock DB read failed', {code:error.code,message:error.message})
@@ -45,7 +47,7 @@ export async function GET() {
       } catch (signError) { console.warn('Time clock photo URL failed',signError) }
       return {id:item.id,userId:item.user_id,name:item.employee_name,type:item.event_type,at:item.occurred_at,photoUrl,latitude:item.latitude,longitude:item.longitude,accuracy:item.location_accuracy_m}
     }))
-    return NextResponse.json({entries,me:ctx.user.id,canViewAll:ctx.isAdmin},{headers:{'Cache-Control':'no-store'}})
+    return NextResponse.json({entries,me:ctx.user.id,canViewAll,canDelete:ctx.isAdmin,canClock:!ctx.isAccountant},{headers:{'Cache-Control':'no-store'}})
   } catch (error) {
     console.error('Time clock list failed',error)
     return NextResponse.json({error:'No se pudo consultar el checador. Revisa la sesión o la configuración del servidor.',code:'HISTORY_ERROR'},{status:500})
@@ -56,6 +58,7 @@ export async function POST(request: Request) {
   try {
     const ctx = await getContext()
     if (!ctx) return NextResponse.json({error:'Sesión no autorizada.'},{status:401})
+    if (ctx.isAccountant) return NextResponse.json({error:'Contabilidad solo puede consultar registros.'},{status:403})
     const form = await request.formData()
     const type = form.get('type')
     const photo = form.get('photo')
