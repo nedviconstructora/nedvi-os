@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from 'react'
 import { AppShell } from '@/components/layout/AppShell'
-import { DraftingCompass, Upload, ExternalLink, Download, Maximize2, FileType2, Layers3 } from 'lucide-react'
+import { DraftingCompass, Upload, ExternalLink, Download, MonitorDown, Maximize2, FileType2, Layers3 } from 'lucide-react'
 
 function AutodeskCadViewer({urn}:{urn:string}) {
   const containerRef=useRef<HTMLDivElement>(null)
@@ -82,6 +82,15 @@ export default function CadStudioPage() {
     window.setTimeout(()=>URL.revokeObjectURL(url),1000)
   }
 
+  function openDesktopAutocad(){
+    if (!file) {
+      setMessage('Para abrir un plano en AutoCAD instalado, primero selecciona un archivo DWG o DXF en NEDVI CAD Studio. Después descárgalo y ábrelo desde Windows.')
+      return
+    }
+    downloadOriginal()
+    setMessage('Plano descargado. Abre el archivo desde Descargas de Windows: si tienes AutoCAD configurado como aplicación predeterminada para DWG/DXF, se abrirá en AutoCAD de escritorio. NEDVI OS no puede iniciar directamente el programa instalado desde el navegador.')
+  }
+
   async function expandViewer(){
     if(!viewerSectionRef.current)return
     try{await viewerSectionRef.current.requestFullscreen()}
@@ -134,9 +143,14 @@ export default function CadStudioPage() {
           <h1 className="mt-2 text-2xl font-bold text-[var(--foreground)] sm:text-3xl">Visualización y gestión de planos</h1>
           <p className="mt-2 max-w-2xl text-sm text-[var(--muted)]">Consulta archivos DWG con Autodesk sin alterar su original. Cuando necesites editar, continúa en AutoCAD Web.</p>
         </div>
-        <a href="https://web.autocad.com/" target="_blank" rel="noopener noreferrer" className="inline-flex shrink-0 items-center justify-center gap-2 rounded-xl border border-[var(--border)] bg-[var(--surface-soft)] px-4 py-3 text-sm font-semibold text-[var(--foreground)] hover:opacity-80">
-          <ExternalLink size={17}/> Abrir AutoCAD Web
-        </a>
+        <div className="flex flex-wrap items-center gap-2">
+          <a href="https://web.autocad.com/" target="_blank" rel="noopener noreferrer" className="inline-flex shrink-0 items-center justify-center gap-2 rounded-xl border border-[var(--border)] bg-[var(--surface-soft)] px-4 py-3 text-sm font-semibold text-[var(--foreground)] hover:opacity-80">
+            <ExternalLink size={17}/> AutoCAD Web
+          </a>
+          <button type="button" onClick={openDesktopAutocad} className="inline-flex shrink-0 items-center justify-center gap-2 rounded-xl bg-[#5496CC] px-4 py-3 text-sm font-semibold text-white hover:brightness-95">
+            <MonitorDown size={17}/> AutoCAD de escritorio
+          </button>
+        </div>
       </header>
 
       <div className="grid min-w-0 gap-5 lg:grid-cols-[290px_minmax(0,1fr)]">
@@ -168,7 +182,8 @@ export default function CadStudioPage() {
             <div className="min-w-0"><h2 className="break-all text-lg font-semibold text-[var(--foreground)] fullscreen:text-white">{file?.name || 'Plano arquitectónico'}</h2><p className="text-sm text-[var(--muted)]">Visor Autodesk · DWG</p></div>
             <div className="flex flex-wrap gap-2">
               <button type="button" disabled={!file || busy} onClick={()=>void openPlan()} className="inline-flex min-h-10 items-center gap-2 rounded-xl bg-[#7BAEE3] px-3 py-2 text-sm font-semibold text-slate-950 hover:bg-[#6c9ed2] disabled:cursor-not-allowed disabled:opacity-50">{busy?'Preparando...':'Visualizar plano'}</button>
-              <a href="https://web.autocad.com/" target="_blank" rel="noopener noreferrer" className="inline-flex min-h-10 items-center gap-2 rounded-xl border border-[var(--border)] bg-[var(--surface-soft)] px-3 py-2 text-sm font-semibold text-[var(--foreground)]"><ExternalLink size={15}/> AutoCAD</a>
+              <a href="https://web.autocad.com/" target="_blank" rel="noopener noreferrer" className="inline-flex min-h-10 items-center gap-2 rounded-xl border border-[var(--border)] bg-[var(--surface-soft)] px-3 py-2 text-sm font-semibold text-[var(--foreground)]"><ExternalLink size={15}/> AutoCAD Web</a>
+              <button type="button" onClick={openDesktopAutocad} className="inline-flex min-h-10 items-center gap-2 rounded-xl border border-[var(--border)] bg-[var(--surface-soft)] px-3 py-2 text-sm font-semibold text-[var(--foreground)]"><MonitorDown size={15}/> AutoCAD de escritorio</button>
               <button type="button" disabled={!file} onClick={downloadOriginal} className="inline-flex min-h-10 items-center gap-2 rounded-xl border border-[var(--border)] bg-[var(--surface-soft)] px-3 py-2 text-sm font-semibold text-[var(--foreground)] disabled:opacity-50"><Download size={15}/> Descargar DWG</button>
               <button type="button" onClick={()=>void expandViewer()} className="inline-flex min-h-10 items-center gap-2 rounded-xl border border-[var(--border)] bg-[var(--surface-soft)] px-3 py-2 text-sm font-semibold text-[var(--foreground)]"><Maximize2 size={15}/> Pantalla completa</button>
             </div>
@@ -183,7 +198,7 @@ export default function CadStudioPage() {
               </div>}
           </div>
           {message?<p role="status" className="mt-4 text-sm text-[var(--muted)]">{message}</p>:null}
-          <p className="mt-3 text-xs text-[var(--muted)]">«Abrir AutoCAD» abre AutoCAD Web, pero no transfiere automáticamente el archivo: deberás abrir o cargar allí el DWG original. La vista en NEDVI es de solo lectura.</p>
+          <p className="mt-3 text-xs text-[var(--muted)]">AutoCAD Web abre el editor en el navegador. AutoCAD de escritorio descarga el plano seleccionado para abrirlo desde Windows con AutoCAD instalado y asociado a los archivos DWG/DXF. La vista en NEDVI es de solo lectura.</p>
         </section>
       </div>
     </main>
