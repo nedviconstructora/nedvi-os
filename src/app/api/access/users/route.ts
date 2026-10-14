@@ -11,6 +11,7 @@ const DEFAULT_PERMISSIONS: Record<string, ModulePermission[]> = {
     'purchasing',
     'operations',
     'agenda',
+    'time-clock',
     'human-resources',
     'finance',
     'indicators',
@@ -28,7 +29,7 @@ const DEFAULT_PERMISSIONS: Record<string, ModulePermission[]> = {
     'indicators',
     'coral',
   ],
-  contabilidad: ['dashboard','agenda'],
+  contabilidad: ['dashboard','time-clock'],
   cliente: ['client-portal'],
 }
 
