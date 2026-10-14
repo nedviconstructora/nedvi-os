@@ -183,7 +183,7 @@ export function LoginForm() {
         projectIds,
       })
 
-      router.push(appRole === 'Cliente' ? '/client' : '/dashboard')
+      router.push(appRole === 'Cliente' ? '/client' : appRole === 'Contabilidad' ? '/time-clock' : '/dashboard')
       router.refresh()
     } catch (loginError) {
       console.error(loginError)
