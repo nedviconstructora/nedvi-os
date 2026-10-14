@@ -110,7 +110,7 @@ export async function POST(request: Request) {
       .from('profiles').select('role').eq('id',targetUser.id).maybeSingle()
     if (targetProfileError) throw targetProfileError
     if (normalizeRole(targetProfile?.role) === 'contabilidad' &&
-        (permissions.length !== 2 || !permissions.includes('dashboard') || !permissions.includes('time-clock'))) {
+        (permissions.length !== 1 || !permissions.includes('time-clock'))) {
       return NextResponse.json({error:'Contabilidad solo puede consultar Dashboard y Checador.'},{status:403})
     }
 
