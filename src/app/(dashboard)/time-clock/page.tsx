@@ -1,16 +1,19 @@
 'use client'
 
 import { ChangeEvent, useCallback, useEffect, useMemo, useState } from 'react'
-import { Camera, Clock3, LogIn, LogOut, RefreshCw, ShieldCheck, Trash2, MapPin } from 'lucide-react'
+import { Camera, Clock3, LogIn, LogOut, RefreshCw, ShieldCheck, Trash2, MapPin, FileSpreadsheet } from 'lucide-react'
 import { AppShell } from '@/components/layout/AppShell'
 
 type ClockEntry = { id:string; userId:string; name:string; type:'entrada'|'salida'; at:string; photoUrl:string|null; latitude:number|null; longitude:number|null; accuracy:number|null }
-type Payload = {entries:ClockEntry[]; me:string; canViewAll:boolean; error?:string}
+type Payload = {entries:ClockEntry[]; me:string; canViewAll:boolean; canDelete:boolean; canClock:boolean; error?:string}
 
 export default function TimeClockPage() {
   const [entries,setEntries] = useState<ClockEntry[]>([])
   const [me,setMe] = useState('')
   const [canViewAll,setCanViewAll] = useState(false)
+  const [canDelete,setCanDelete] = useState(false)
+  const [canClock,setCanClock] = useState(true)
+  const [dateFilter,setDateFilter] = useState('')
   const [loading,setLoading] = useState(true)
   const [busy,setBusy] = useState(false)
   const [locationBusy,setLocationBusy] = useState(false)
@@ -28,6 +31,8 @@ export default function TimeClockPage() {
       setEntries(body.entries)
       setMe(body.me)
       setCanViewAll(body.canViewAll)
+      setCanDelete(body.canDelete)
+      setCanClock(body.canClock)
       setError('')
     } catch (err) { setError(err instanceof Error ? err.message : 'Error al cargar asistencias.') }
     finally {setLoading(false)}
@@ -37,6 +42,7 @@ export default function TimeClockPage() {
     void refresh()
     const interval = window.setInterval(() => {setNow(new Date());void refresh()},30000)
     setNow(new Date())
+    setDateFilter(new Intl.DateTimeFormat('en-CA',{timeZone:'America/Tijuana',year:'numeric',month:'2-digit',day:'2-digit'}).format(new Date()))
     return () => window.clearInterval(interval)
   },[refresh])
 
@@ -71,7 +77,7 @@ export default function TimeClockPage() {
   }
 
   async function deleteEntry(id:string) {
-    if (!canViewAll || busy) return
+    if (!canDelete || busy) return
     const reason = window.prompt('Motivo de la anulación (mínimo 8 caracteres):')
     if (reason === null) return
     if (reason.trim().length < 8) { setError('Escribe un motivo de al menos 8 caracteres.'); return }
@@ -99,7 +105,7 @@ export default function TimeClockPage() {
   }
 
   async function register() {
-    if (!photo || busy || loading) return
+    if (!canClock || !photo || busy || loading) return
     setBusy(true);setError('');setNotice('')
     try {
       const position = await locate()
@@ -166,7 +172,7 @@ export default function TimeClockPage() {
                 <div className="min-w-0"><p className="truncate text-sm font-semibold">{item.name}</p><p className="text-xs text-[var(--muted)]">{item.type==='entrada'?'Entrada':'Salida'} · {fmt(item.at)}</p>{item.latitude != null && item.longitude != null && <a className="inline-flex items-center gap-1 text-xs text-[#5496CC] underline" href={`https://www.google.com/maps?q=${item.latitude},${item.longitude}`} target="_blank" rel="noreferrer"><MapPin size={13}/>Ver ubicación GPS (±{Math.round(item.accuracy ?? 0)} m)</a>}</div>
                 <div className="flex shrink-0 items-center gap-2">
                   {item.photoUrl ? <a href={item.photoUrl} target="_blank" rel="noreferrer" className="text-sm font-semibold text-[#5496CC] underline">Ver foto</a> : <span className="text-xs text-[var(--muted)]">Sin foto</span>}
-                  {canViewAll && entries.find(x => x.userId === item.userId)?.id === item.id && <button type="button" disabled={busy} onClick={() => void deleteEntry(item.id)} aria-label="Anular registro" title="Anular checada (Administración)" className="rounded-lg border border-red-400/30 p-2 text-red-500 hover:bg-red-500/10 disabled:opacity-40"><Trash2 size={16}/></button>}
+                  {canDelete && entries.find(x => x.userId === item.userId)?.id === item.id && <button type="button" disabled={busy} onClick={() => void deleteEntry(item.id)} aria-label="Anular registro" title="Anular checada (Administración)" className="rounded-lg border border-red-400/30 p-2 text-red-500 hover:bg-red-500/10 disabled:opacity-40"><Trash2 size={16}/></button>}
                 </div>
               </div>)}
             </div>
