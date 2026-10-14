@@ -61,6 +61,7 @@ const EXECUTION_OPTIONS: ExecutionTime[] = ['Jornada normal', 'Fin de semana', '
 const ESTIMATED_TIME_UNITS: EstimatedTimeUnit[] = ['Horas', 'Días', 'Semanas', 'Meses']
 const MAX_FILES = 30
 const MAX_FILE_BYTES = 1_250_000
+const MAX_ORIGINAL_IMAGE_BYTES = 20_000_000
 const MAX_TOTAL_BYTES = 4_000_000
 
 function today() {
@@ -182,6 +183,43 @@ function dataUrlFromFile(file: File) {
     reader.onerror = () => reject(reader.error)
     reader.readAsDataURL(file)
   })
+}
+
+async function prepareSurveyAttachment(file: File): Promise<SurveyAttachment> {
+  const isImage = file.type.startsWith('image/')
+  if (file.size > (isImage ? MAX_ORIGINAL_IMAGE_BYTES : MAX_FILE_BYTES)) {
+    throw new Error(`${file.name} excede el límite de ${fileSize(isImage ? MAX_ORIGINAL_IMAGE_BYTES : MAX_FILE_BYTES)}.`)
+  }
+
+  // Guardamos una versión optimizada: los originales grandes no caben en localStorage.
+  if (isImage && /image\/(jpeg|png|webp)/.test(file.type)) {
+    const objectUrl = URL.createObjectURL(file)
+    try {
+      const image = new Image()
+      image.src = objectUrl
+      await image.decode()
+      const scale = Math.min(1, 1600 / Math.max(image.naturalWidth, image.naturalHeight))
+      const canvas = document.createElement('canvas')
+      canvas.width = Math.max(1, Math.round(image.naturalWidth * scale))
+      canvas.height = Math.max(1, Math.round(image.naturalHeight * scale))
+      const context = canvas.getContext('2d')
+      if (!context) throw new Error('No se pudo optimizar la imagen.')
+      context.drawImage(image, 0, 0, canvas.width, canvas.height)
+      let quality = 0.8
+      let blob: Blob | null = null
+      do {
+        blob = await new Promise<Blob | null>((resolve) => canvas.toBlob(resolve, 'image/jpeg', quality))
+        quality -= 0.12
+      } while (blob && blob.size > 650_000 && quality >= 0.38)
+      if (!blob || blob.size > MAX_FILE_BYTES) throw new Error(`No se pudo reducir ${file.name} lo suficiente. Prueba una imagen de menor resolución.`)
+      const optimized = new File([blob], file.name.replace(/\.[^.]+$/, '') + '.jpg', { type: 'image/jpeg' })
+      return { id: crypto.randomUUID(), name: optimized.name, type: optimized.type, size: optimized.size, dataUrl: await dataUrlFromFile(optimized) }
+    } finally {
+      URL.revokeObjectURL(objectUrl)
+    }
+  }
+
+  return { id: crypto.randomUUID(), name: file.name, type: file.type || 'application/octet-stream', size: file.size, dataUrl: await dataUrlFromFile(file) }
 }
 
 export default function SiteSurveysPage() {
@@ -315,32 +353,17 @@ export default function SiteSurveysPage() {
       return
     }
 
-    const tooLarge = selected.find((file) => file.size > MAX_FILE_BYTES)
-    if (tooLarge) {
-      window.alert(`${tooLarge.name} excede el límite de ${fileSize(MAX_FILE_BYTES)} por archivo.`)
-      return
-    }
-
-    const currentBytes = form.attachments.reduce((sum, file) => sum + file.size, 0)
-    const newBytes = selected.reduce((sum, file) => sum + file.size, 0)
-    if (currentBytes + newBytes > MAX_TOTAL_BYTES) {
-      window.alert(`Los archivos del levantamiento no pueden superar ${fileSize(MAX_TOTAL_BYTES)} en total.`)
-      return
-    }
-
     try {
-      const attachments = await Promise.all(
-        selected.map(async (file) => ({
-          id: crypto.randomUUID(),
-          name: file.name,
-          type: file.type || 'application/octet-stream',
-          size: file.size,
-          dataUrl: await dataUrlFromFile(file),
-        })),
-      )
+      const attachments = await Promise.all(selected.map(prepareSurveyAttachment))
+      const currentBytes = form.attachments.reduce((sum, file) => sum + file.size, 0)
+      const newBytes = attachments.reduce((sum, file) => sum + file.size, 0)
+      if (currentBytes + newBytes > MAX_TOTAL_BYTES) {
+        window.alert(`Los archivos optimizados del levantamiento no pueden superar ${fileSize(MAX_TOTAL_BYTES)} en total. Elimina algunos adjuntos antes de continuar.`)
+        return
+      }
       setForm((current) => ({ ...current, attachments: [...current.attachments, ...attachments] }))
-    } catch {
-      window.alert('No se pudo leer uno de los archivos seleccionados.')
+    } catch (error) {
+      window.alert(error instanceof Error ? error.message : 'No se pudo leer uno de los archivos seleccionados.')
     }
   }
 
