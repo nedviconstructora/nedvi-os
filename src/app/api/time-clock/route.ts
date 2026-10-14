@@ -28,7 +28,7 @@ export async function GET() {
     if (!ctx) return NextResponse.json({error:'Sesión no autorizada.'},{status:401})
     let query = ctx.admin.from('time_clock_entries')
       .select('id,user_id,employee_name,event_type,occurred_at,photo_path')
-      .order('occurred_at',{ascending:false}).limit(150)
+      .is('deleted_at',null).order('occurred_at',{ascending:false}).limit(150)
     if (!ctx.isAdmin) query = query.eq('user_id',ctx.user.id)
     const {data,error} = await query
     if (error) {
@@ -80,5 +80,29 @@ export async function POST(request: Request) {
   } catch (error) {
     console.error('Time clock registration failed',error)
     return NextResponse.json({error:'No se pudo registrar la asistencia.'},{status:500})
+  }
+}
+
+export async function DELETE(request: Request) {
+  try {
+    const ctx = await getContext()
+    if (!ctx) return NextResponse.json({error:'Sesión no autorizada.'},{status:401})
+    if (!ctx.isAdmin) return NextResponse.json({error:'Solo Administración puede anular registros de asistencia.'},{status:403})
+    const body = await request.json().catch(() => null) as {id?:string;reason?:string}|null
+    if (!body?.id || !/^[0-9a-f-]{36}$/i.test(body.id))
+      return NextResponse.json({error:'Identificador de registro inválido.'},{status:400})
+    const reason = body.reason?.trim() ?? ''
+    if (reason.length < 8 || reason.length > 500)
+      return NextResponse.json({error:'Escribe un motivo de al menos 8 caracteres para anular el registro.'},{status:400})
+    const {error} = await ctx.admin.rpc('nedvi_clock_void_entry',{
+      p_entry_id:body.id,
+      p_admin_id:ctx.user.id,
+      p_reason:reason,
+    })
+    if (error) return NextResponse.json({error:error.message},{status:409})
+    return NextResponse.json({ok:true})
+  } catch (error) {
+    console.error('Time clock void failed',error)
+    return NextResponse.json({error:'No se pudo anular la asistencia.'},{status:500})
   }
 }

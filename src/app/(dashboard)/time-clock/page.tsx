@@ -1,7 +1,7 @@
 'use client'
 
 import { ChangeEvent, useCallback, useEffect, useMemo, useState } from 'react'
-import { Camera, Clock3, LogIn, LogOut, RefreshCw, ShieldCheck, UploadCloud } from 'lucide-react'
+import { Camera, Clock3, LogIn, LogOut, RefreshCw, ShieldCheck, Trash2, UploadCloud } from 'lucide-react'
 import { AppShell } from '@/components/layout/AppShell'
 
 type ClockEntry = { id:string; userId:string; name:string; type:'entrada'|'salida'; at:string; photoUrl:string|null }
@@ -69,6 +69,23 @@ export default function TimeClockPage() {
     setPhoto(file)
   }
 
+  async function deleteEntry(id:string) {
+    if (!canViewAll || busy) return
+    const reason = window.prompt('Motivo de la anulación (mínimo 8 caracteres):')
+    if (reason === null) return
+    if (reason.trim().length < 8) { setError('Escribe un motivo de al menos 8 caracteres.'); return }
+    if (!window.confirm('¿Anular esta checada? Solo puede anularse la última checada de cada persona. La acción quedará auditada.')) return
+    setBusy(true);setError('');setNotice('')
+    try {
+      const res = await fetch('/api/time-clock',{method:'DELETE',headers:{'Content-Type':'application/json'},body:JSON.stringify({id,reason:reason.trim()})})
+      const data = await res.json() as {error?:string}
+      if (!res.ok) throw new Error(data.error || 'No se pudo anular el registro.')
+      setNotice('Registro anulado. La auditoría se conserva en Supabase.')
+      await refresh()
+    } catch (err) {setError(err instanceof Error ? err.message : 'No se pudo anular.')}
+    finally {setBusy(false)}
+  }
+
   async function register() {
     if (!photo || busy || loading) return
     setBusy(true);setError('');setNotice('')
@@ -114,10 +131,11 @@ export default function TimeClockPage() {
                 <label className="inline-flex cursor-pointer items-center gap-2 rounded-xl border border-[var(--border)] px-4 py-3 text-sm font-semibold"><UploadCloud size={17}/>Subir foto<input className="sr-only" type="file" accept="image/jpeg,image/png,image/webp" onChange={choosePhoto}/></label>
               </div>
               {preview && <img src={preview} alt="Vista previa de la evidencia" className="max-h-56 w-full rounded-xl border border-[var(--border)] object-contain" />}
-              <button type="button" disabled={!photo || loading || busy} onClick={() => void register()} className="flex w-full items-center justify-center gap-2 rounded-xl bg-[#317FC1] px-4 py-3 font-bold text-white disabled:cursor-not-allowed disabled:opacity-50">
-                {nextType==='salida' ? <LogOut size={19}/> : <LogIn size={19}/>}
-                {busy ? 'Guardando...' : nextType === 'salida' ? 'Confirmar salida' : 'Registrar entrada'}
-              </button>
+              <div className="grid grid-cols-2 gap-3">
+                <button type="button" disabled={!photo || hasEntry || loading || busy} onClick={() => void register()} className="flex items-center justify-center gap-2 rounded-xl bg-[#317FC1] px-3 py-3 font-bold text-white disabled:cursor-not-allowed disabled:opacity-40"><LogIn size={19}/>{busy && !hasEntry ? 'Guardando...' : 'Checar entrada'}</button>
+                <button type="button" disabled={!photo || !hasEntry || loading || busy} onClick={() => void register()} className="flex items-center justify-center gap-2 rounded-xl bg-emerald-600 px-3 py-3 font-bold text-white disabled:cursor-not-allowed disabled:opacity-40"><LogOut size={19}/>{busy && hasEntry ? 'Guardando...' : 'Checar salida'}</button>
+              </div>
+              <p className="text-xs text-[var(--muted)]">{hasEntry ? 'Tu entrada está activa. Adjunta una foto para habilitar Checar salida.' : 'Adjunta una fotografía para habilitar Checar entrada. Primero debe registrarse una entrada para poder salir.'}</p>
               <p className="flex items-start gap-2 text-xs text-[var(--muted)]"><ShieldCheck size={16} className="shrink-0"/>La hora la asigna el servidor. Los trabajadores no pueden editar registros. Solo Administración puede consultar todas las asistencias.</p>
               {error && <p role="alert" className="rounded-xl bg-red-500/10 p-3 text-sm text-red-500">{error}</p>}
               {notice && <p role="status" className="rounded-xl bg-emerald-500/10 p-3 text-sm text-emerald-600">{notice}</p>}
@@ -130,7 +148,10 @@ export default function TimeClockPage() {
               {!entries.length && <p className="rounded-xl border border-[var(--border)] p-4 text-sm text-[var(--muted)]">Todavía no existen registros.</p>}
               {entries.map(item => <div key={item.id} className="flex items-center justify-between gap-3 rounded-xl border border-[var(--border)] p-3">
                 <div className="min-w-0"><p className="truncate text-sm font-semibold">{item.name}</p><p className="text-xs text-[var(--muted)]">{item.type==='entrada'?'Entrada':'Salida'} · {fmt(item.at)}</p></div>
-                {item.photoUrl ? <a href={item.photoUrl} target="_blank" rel="noreferrer" className="text-sm font-semibold text-[#5496CC] underline">Ver foto</a> : <span className="text-xs text-[var(--muted)]">Sin vista previa</span>}
+                <div className="flex shrink-0 items-center gap-2">
+                  {item.photoUrl ? <a href={item.photoUrl} target="_blank" rel="noreferrer" className="text-sm font-semibold text-[#5496CC] underline">Ver foto</a> : <span className="text-xs text-[var(--muted)]">Sin foto</span>}
+                  {canViewAll && entries.find(x => x.userId === item.userId)?.id === item.id && <button type="button" disabled={busy} onClick={() => void deleteEntry(item.id)} aria-label="Anular registro" title="Anular checada (Administración)" className="rounded-lg border border-red-400/30 p-2 text-red-500 hover:bg-red-500/10 disabled:opacity-40"><Trash2 size={16}/></button>}
+                </div>
               </div>)}
             </div>
           </section>
