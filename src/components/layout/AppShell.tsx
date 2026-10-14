@@ -213,7 +213,8 @@ export function AppShell({ children }: AppShellProps) {
       <style jsx global>{`
         /* El main crea un contexto de apilamiento: elevarlo al abrir diálogos
            evita que el encabezado z-60 tape la barra de cerrar del modal. */
-        main.nedvi-main-content:has([role="dialog"][aria-modal="true"]) {
+        main.nedvi-main-content:has([role="dialog"][aria-modal="true"]),
+        main.nedvi-main-content:has(.fixed.inset-0) {
           z-index: 80;
         }
       `}</style>
