@@ -31,15 +31,24 @@ export async function GET() {
       .order('occurred_at',{ascending:false}).limit(150)
     if (!ctx.isAdmin) query = query.eq('user_id',ctx.user.id)
     const {data,error} = await query
-    if (error) throw error
+    if (error) {
+      console.error('Time clock DB read failed', {code:error.code,message:error.message})
+      return NextResponse.json({error:'No se pudieron consultar las asistencias en Supabase.',code:error.code || 'DB_READ_ERROR'},{status:500})
+    }
     const entries = await Promise.all((data ?? []).map(async (item) => {
-      const {data: link} = await ctx.admin.storage.from(bucket).createSignedUrl(item.photo_path,300)
-      return {id:item.id,userId:item.user_id,name:item.employee_name,type:item.event_type,at:item.occurred_at,photoUrl:link?.signedUrl ?? null}
+      // A temporary photo-signing failure must not hide successful attendance events.
+      let photoUrl: string | null = null
+      try {
+        const {data: link,error: signError} = await ctx.admin.storage.from(bucket).createSignedUrl(item.photo_path,300)
+        if (signError) console.warn('Time clock photo URL could not be signed',signError.message)
+        photoUrl = link?.signedUrl ?? null
+      } catch (signError) { console.warn('Time clock photo URL failed',signError) }
+      return {id:item.id,userId:item.user_id,name:item.employee_name,type:item.event_type,at:item.occurred_at,photoUrl}
     }))
     return NextResponse.json({entries,me:ctx.user.id,canViewAll:ctx.isAdmin},{headers:{'Cache-Control':'no-store'}})
   } catch (error) {
     console.error('Time clock list failed',error)
-    return NextResponse.json({error:'No se pudo consultar el checador.'},{status:500})
+    return NextResponse.json({error:'No se pudo consultar el checador. Revisa la sesión o la configuración del servidor.',code:'HISTORY_ERROR'},{status:500})
   }
 }
 
