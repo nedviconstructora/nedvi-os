@@ -30,7 +30,7 @@ const DEFAULT_PERMISSIONS: Record<string, ModulePermission[]> = {
     'indicators',
     'coral',
   ],
-  contabilidad: ['dashboard','time-clock'],
+  contabilidad: ['time-clock'],
   cliente: ['client-portal'],
 }
 
