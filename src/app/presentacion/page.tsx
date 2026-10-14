@@ -6,6 +6,7 @@ import { ArrowLeft, Maximize, Play, Volume2 } from 'lucide-react'
 import { readAccessSession } from '@/features/access/services/accessStorage'
 
 const videoSource = process.env.NEXT_PUBLIC_PRESENTATION_VIDEO_URL || '/videos/nedvi-os-presentacion.mp4'
+const PRESENTATION_END = new Date('2026-10-16T00:00:00-07:00').getTime()
 
 export default function PresentationPage() {
   const router = useRouter()
@@ -16,14 +17,26 @@ export default function PresentationPage() {
   const [started, setStarted] = useState(false)
   const [finished, setFinished] = useState(false)
   const [error, setError] = useState('')
+  const [localVideo, setLocalVideo] = useState<string | null>(null)
 
   useEffect(() => {
     const session = readAccessSession()
     if (!session) { router.replace('/login'); return }
-    if (session.role !== 'Administración') { router.replace('/dashboard'); return }
+    if (session.role !== 'Administración' || Date.now() >= PRESENTATION_END) { router.replace('/dashboard'); return }
     setAuthorized(true)
     return () => { if (redirectTimer.current) clearTimeout(redirectTimer.current) }
   }, [router])
+
+  function chooseVideo(file?: File) {
+    if (!file) return
+    if (file.type !== 'video/mp4' && !file.name.toLowerCase().endsWith('.mp4')) {
+      setError('Selecciona un archivo de video MP4.')
+      return
+    }
+    if (localVideo) URL.revokeObjectURL(localVideo)
+    setLocalVideo(URL.createObjectURL(file))
+    setError('')
+  }
 
   async function start() {
     if (!videoRef.current) return
@@ -54,7 +67,7 @@ export default function PresentationPage() {
       <video
         ref={videoRef}
         className={`absolute inset-0 h-full w-full object-contain transition-opacity duration-700 ${started && !finished ? 'opacity-100' : 'opacity-0'}`}
-        src={videoSource}
+        src={localVideo || videoSource}
         playsInline
         preload="metadata"
         onEnded={finish}
@@ -65,6 +78,8 @@ export default function PresentationPage() {
         <img src="/icon.png" alt="NEDVI OS" className="h-24 w-24 object-contain" />
         <h1 className="text-4xl font-bold tracking-tight">NEDVI <span className="text-[#7BAEE3]">OS</span></h1>
         <p className="text-lg text-blue-100">Todo tu negocio. Un solo sistema.</p>
+        <label className="cursor-pointer rounded-xl border border-blue-300/40 px-5 py-3 text-sm text-blue-100 hover:bg-white/10">Seleccionar el MP4 de la presentación<input type="file" accept="video/mp4,.mp4" className="sr-only" onChange={(e) => chooseVideo(e.target.files?.[0])}/></label>
+        {localVideo && <p className="text-sm text-green-200">Video cargado desde tu computadora. No se subirá a internet.</p>}
         <button type="button" onClick={start} className="flex items-center gap-3 rounded-xl bg-[#277be7] px-7 py-4 font-semibold hover:bg-[#388ded]"><Play size={22} /> Iniciar presentación</button>
         <p className="flex items-center gap-2 text-sm text-blue-200"><Volume2 size={16} /><Maximize size={16}/> Video con audio y pantalla completa</p>
         {error && <p role="alert" className="text-sm text-red-200">{error}</p>}
