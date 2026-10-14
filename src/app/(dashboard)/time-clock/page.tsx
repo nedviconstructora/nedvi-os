@@ -1,8 +1,9 @@
 'use client'
 
 import { ChangeEvent, useCallback, useEffect, useMemo, useState } from 'react'
-import { Camera, Clock3, LogIn, LogOut, RefreshCw, ShieldCheck, Trash2, MapPin, FileSpreadsheet } from 'lucide-react'
+import { Camera, Clock3, LogIn, LogOut, RefreshCw, ShieldCheck, Trash2, MapPin, FileSpreadsheet, CalendarDays } from 'lucide-react'
 import { AppShell } from '@/components/layout/AppShell'
+import { downloadClockWorkbook } from '@/features/time-clock/services/exportXlsx'
 
 type ClockEntry = { id:string; userId:string; name:string; type:'entrada'|'salida'; at:string; photoUrl:string|null; latitude:number|null; longitude:number|null; accuracy:number|null }
 type Payload = {entries:ClockEntry[]; me:string; canViewAll:boolean; canDelete:boolean; canClock:boolean; error?:string}
@@ -14,6 +15,7 @@ export default function TimeClockPage() {
   const [canDelete,setCanDelete] = useState(false)
   const [canClock,setCanClock] = useState(true)
   const [dateFilter,setDateFilter] = useState('')
+  const [allDates,setAllDates] = useState(false)
   const [loading,setLoading] = useState(true)
   const [busy,setBusy] = useState(false)
   const [locationBusy,setLocationBusy] = useState(false)
@@ -58,6 +60,41 @@ export default function TimeClockPage() {
   const hasEntry = current?.type === 'entrada'
   const nextType = hasEntry ? 'salida' : 'entrada'
   const fmt = (date:string) => new Intl.DateTimeFormat('es-MX',{dateStyle:'medium',timeStyle:'short'}).format(new Date(date))
+  const dayOf = (value:string) => new Intl.DateTimeFormat('sv-SE',{timeZone:'America/Tijuana',year:'numeric',month:'2-digit',day:'2-digit'}).format(new Date(value))
+  const visibleEntries=useMemo(()=>allDates ? entries : entries.filter(item=>dayOf(item.at)===dateFilter),[entries,dateFilter,allDates])
+  const dailyRows=useMemo(()=>{
+    const groups=new Map<string,{date:string;userId:string;name:string;start:string;end:string;totalMinutes:number;open:string|null}>()
+    for(const entry of [...visibleEntries].sort((a,b)=>a.at.localeCompare(b.at))){
+      const date=dayOf(entry.at)
+      const key=entry.userId+'|'+date
+      const group=groups.get(key)??{date,userId:entry.userId,name:entry.name,start:'',end:'',totalMinutes:0,open:null}
+      if(entry.type==='entrada'){
+        if(!group.start) group.start=entry.at
+        group.open=entry.at
+      } else {
+        group.end=entry.at
+        if(group.open) {
+          group.totalMinutes+=Math.max(0,Math.round((new Date(entry.at).getTime()-new Date(group.open).getTime())/60000))
+          group.open=null
+        }
+      }
+      groups.set(key,group)
+    }
+    return [...groups.values()].sort((a,b)=>b.date.localeCompare(a.date)||a.name.localeCompare(b.name))
+  },[visibleEntries])
+  function exportExcel(){
+    const localTime=(iso:string)=>iso?new Intl.DateTimeFormat('es-MX',{timeZone:'America/Tijuana',hour:'2-digit',minute:'2-digit',hour12:false}).format(new Date(iso)):''
+    const summary=[
+      ['Fecha','Empleado','Entrada','Salida','Horas completadas','Estado'],
+      ...dailyRows.map(r=>[r.date,r.name,localTime(r.start),localTime(r.end),(r.totalMinutes/60).toFixed(2),r.open?'Entrada sin salida':'Completo']),
+    ]
+    const events=[
+      ['Fecha','Empleado','Tipo','Hora local','Hora oficial UTC','Latitud GPS','Longitud GPS','Precisión (m)','Evidencia fotográfica'],
+      ...visibleEntries.map(e=>[dayOf(e.at),e.name,e.type,localTime(e.at),e.at,String(e.latitude??''),String(e.longitude??''),String(e.accuracy??''),e.photoUrl||'Fotografía resguardada en Supabase']),
+    ]
+    downloadClockWorkbook([{name:'Resumen diario',rows:summary},{name:'Eventos',rows:events}], 'NEDVI_Checador_'+(allDates?'historial':dateFilter)+'.xlsx')
+  }
+
   const duration = useMemo(() => {
     if (!hasEntry || !now || !current) return null
     const minutes = Math.max(0,Math.floor((now.getTime()-new Date(current.at).getTime())/60000))
