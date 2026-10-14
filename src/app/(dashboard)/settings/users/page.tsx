@@ -933,6 +933,13 @@ export default function UsersAndPermissionsPage() {
               </label>
 
               <label className="block">
+                <span className="text-xs font-semibold text-[var(--muted)]">Tipo de cuenta</span>
+                <select value={createRole} onChange={(event) => setCreateRole(event.target.value as 'Supervisor' | 'Contabilidad')} className="mt-2 h-11 w-full rounded-xl border border-[var(--border)] bg-[var(--surface)] px-3 text-sm text-[var(--foreground)]">
+                  <option value="Supervisor">Supervisor de obra</option>
+                  <option value="Contabilidad">Contabilidad · solo lectura de checadas</option>
+                </select>
+              </label>
+              <label className="block">
                 <span className="text-xs font-semibold text-[var(--muted)]">Puesto</span>
                 <textarea
                   rows={1}
