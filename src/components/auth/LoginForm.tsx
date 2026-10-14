@@ -30,6 +30,7 @@ const VALID_PERMISSIONS: ModulePermission[] = [
   'purchasing',
   'operations',
   'agenda',
+  'time-clock',
   'human-resources',
   'finance',
   'indicators',
