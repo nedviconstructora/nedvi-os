@@ -86,7 +86,6 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'La lista de permisos no es válida.' }, { status: 400 })
     }
 
-    const {data: targetProfile} = await getAdminClient().from('profiles').select('role').eq('id',body.userId ?? '00000000-0000-0000-0000-000000000000').maybeSingle()
     const permissions = body.permissions.filter((permission): permission is ModulePermission =>
       ALLOWED_PERMISSIONS.includes(permission as ModulePermission),
     )
