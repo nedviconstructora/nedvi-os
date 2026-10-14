@@ -118,7 +118,7 @@ export function readAccessSession(): AccessSession | null {
     if ((session.role === 'Administración' || session.role === 'Supervisor') && session.permissions?.includes('agenda') && !session.permissions.includes('time-clock')) {
       session.permissions = [...session.permissions, 'time-clock']
     }
-    if (session.role === 'Contabilidad') session.permissions = ['dashboard', 'time-clock']
+    if (session.role === 'Contabilidad') session.permissions = ['time-clock']
     return session
   } catch {
     return null
