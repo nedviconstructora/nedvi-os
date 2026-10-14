@@ -1,10 +1,10 @@
 'use client'
 
 import { ChangeEvent, useCallback, useEffect, useMemo, useState } from 'react'
-import { Camera, Clock3, LogIn, LogOut, RefreshCw, ShieldCheck, Trash2, UploadCloud } from 'lucide-react'
+import { Camera, Clock3, LogIn, LogOut, RefreshCw, ShieldCheck, Trash2, MapPin } from 'lucide-react'
 import { AppShell } from '@/components/layout/AppShell'
 
-type ClockEntry = { id:string; userId:string; name:string; type:'entrada'|'salida'; at:string; photoUrl:string|null }
+type ClockEntry = { id:string; userId:string; name:string; type:'entrada'|'salida'; at:string; photoUrl:string|null; latitude:number|null; longitude:number|null; accuracy:number|null }
 type Payload = {entries:ClockEntry[]; me:string; canViewAll:boolean; error?:string}
 
 export default function TimeClockPage() {
@@ -13,6 +13,7 @@ export default function TimeClockPage() {
   const [canViewAll,setCanViewAll] = useState(false)
   const [loading,setLoading] = useState(true)
   const [busy,setBusy] = useState(false)
+  const [locationBusy,setLocationBusy] = useState(false)
   const [error,setError] = useState('')
   const [notice,setNotice] = useState('')
   const [photo,setPhoto] = useState<File|null>(null)
@@ -86,11 +87,26 @@ export default function TimeClockPage() {
     finally {setBusy(false)}
   }
 
+  async function locate(): Promise<GeolocationPosition> {
+    if (!navigator.geolocation) throw new Error('Este dispositivo no tiene acceso a ubicación GPS.')
+    setLocationBusy(true)
+    try {
+      return await new Promise<GeolocationPosition>((resolve,reject) =>
+        navigator.geolocation.getCurrentPosition(resolve,reject,{enableHighAccuracy:true,timeout:20000,maximumAge:0}))
+    } catch {
+      throw new Error('Permite el acceso a tu ubicación en el navegador para registrar entrada o salida.')
+    } finally {setLocationBusy(false)}
+  }
+
   async function register() {
-    if (!photo || busy || loading) return
+    if (!photo || busy || loading || error) return
     setBusy(true);setError('');setNotice('')
     try {
+      const position = await locate()
       const form = new FormData()
+      form.set('latitude',String(position.coords.latitude))
+      form.set('longitude',String(position.coords.longitude))
+      form.set('accuracy',String(position.coords.accuracy))
       form.set('type',nextType)
       form.set('photo',photo)
       const res = await fetch('/api/time-clock',{method:'POST',body:form})
@@ -127,15 +143,15 @@ export default function TimeClockPage() {
             <div className="space-y-3">
               <p className="text-sm font-semibold">Fotografía obligatoria para {nextType}</p>
               <div className="flex flex-wrap gap-2">
-                <label className="inline-flex cursor-pointer items-center gap-2 rounded-xl border border-[var(--border)] px-4 py-3 text-sm font-semibold"><Camera size={17}/>Tomar foto<input className="sr-only" type="file" accept="image/*" capture="environment" onChange={choosePhoto}/></label>
-                <label className="inline-flex cursor-pointer items-center gap-2 rounded-xl border border-[var(--border)] px-4 py-3 text-sm font-semibold"><UploadCloud size={17}/>Subir foto<input className="sr-only" type="file" accept="image/jpeg,image/png,image/webp" onChange={choosePhoto}/></label>
+                <label className="inline-flex cursor-pointer items-center gap-2 rounded-xl border border-[var(--border)] px-4 py-3 text-sm font-semibold"><Camera size={17}/>Tomar foto<input className="sr-only" type="file" accept="image/*" capture="user" onChange={choosePhoto}/></label>
               </div>
+              <p className="flex items-center gap-2 text-xs text-[var(--muted)]"><MapPin size={15}/>Al confirmar se solicitará tu ubicación GPS actual. Debes otorgar permiso al navegador.</p>
               {preview && <img src={preview} alt="Vista previa de la evidencia" className="max-h-56 w-full rounded-xl border border-[var(--border)] object-contain" />}
               <div className="grid grid-cols-2 gap-3">
-                <button type="button" disabled={!photo || hasEntry || loading || busy} onClick={() => void register()} className="flex items-center justify-center gap-2 rounded-xl bg-[#317FC1] px-3 py-3 font-bold text-white disabled:cursor-not-allowed disabled:opacity-40"><LogIn size={19}/>{busy && !hasEntry ? 'Guardando...' : 'Checar entrada'}</button>
-                <button type="button" disabled={!photo || !hasEntry || loading || busy} onClick={() => void register()} className="flex items-center justify-center gap-2 rounded-xl bg-emerald-600 px-3 py-3 font-bold text-white disabled:cursor-not-allowed disabled:opacity-40"><LogOut size={19}/>{busy && hasEntry ? 'Guardando...' : 'Checar salida'}</button>
+                <button type="button" disabled={!photo || hasEntry || loading || busy || locationBusy} onClick={() => void register()} className="flex items-center justify-center gap-2 rounded-xl bg-[#317FC1] px-3 py-3 font-bold text-white disabled:cursor-not-allowed disabled:opacity-40"><LogIn size={19}/>{busy && !hasEntry ? 'Guardando...' : 'Checar entrada'}</button>
+                <button type="button" disabled={!photo || !hasEntry || loading || busy || locationBusy} onClick={() => void register()} className="flex items-center justify-center gap-2 rounded-xl bg-emerald-600 px-3 py-3 font-bold text-white disabled:cursor-not-allowed disabled:opacity-40"><LogOut size={19}/>{busy && hasEntry ? 'Guardando...' : 'Checar salida'}</button>
               </div>
-              <p className="text-xs text-[var(--muted)]">{hasEntry ? 'Tu entrada está activa. Adjunta una foto para habilitar Checar salida.' : 'Adjunta una fotografía para habilitar Checar entrada. Primero debe registrarse una entrada para poder salir.'}</p>
+              <p className="text-xs text-[var(--muted)]">{locationBusy ? 'Obteniendo tu ubicación…' : hasEntry ? 'Tu entrada está activa. Adjunta una foto para habilitar Checar salida.' : 'Adjunta una fotografía para habilitar Checar entrada. Primero debe registrarse una entrada para poder salir.'}</p>
               <p className="flex items-start gap-2 text-xs text-[var(--muted)]"><ShieldCheck size={16} className="shrink-0"/>La hora la asigna el servidor. Los trabajadores no pueden editar registros. Solo Administración puede consultar todas las asistencias.</p>
               {error && <p role="alert" className="rounded-xl bg-red-500/10 p-3 text-sm text-red-500">{error}</p>}
               {notice && <p role="status" className="rounded-xl bg-emerald-500/10 p-3 text-sm text-emerald-600">{notice}</p>}
@@ -147,7 +163,7 @@ export default function TimeClockPage() {
             <div className="max-h-[480px] space-y-3 overflow-y-auto">
               {!entries.length && <p className="rounded-xl border border-[var(--border)] p-4 text-sm text-[var(--muted)]">Todavía no existen registros.</p>}
               {entries.map(item => <div key={item.id} className="flex items-center justify-between gap-3 rounded-xl border border-[var(--border)] p-3">
-                <div className="min-w-0"><p className="truncate text-sm font-semibold">{item.name}</p><p className="text-xs text-[var(--muted)]">{item.type==='entrada'?'Entrada':'Salida'} · {fmt(item.at)}</p></div>
+                <div className="min-w-0"><p className="truncate text-sm font-semibold">{item.name}</p><p className="text-xs text-[var(--muted)]">{item.type==='entrada'?'Entrada':'Salida'} · {fmt(item.at)}</p>{item.latitude != null && item.longitude != null && <a className="inline-flex items-center gap-1 text-xs text-[#5496CC] underline" href={`https://www.google.com/maps?q=${item.latitude},${item.longitude}`} target="_blank" rel="noreferrer"><MapPin size={13}/>Ver ubicación GPS (±{Math.round(item.accuracy ?? 0)} m)</a>}</div>
                 <div className="flex shrink-0 items-center gap-2">
                   {item.photoUrl ? <a href={item.photoUrl} target="_blank" rel="noreferrer" className="text-sm font-semibold text-[#5496CC] underline">Ver foto</a> : <span className="text-xs text-[var(--muted)]">Sin foto</span>}
                   {canViewAll && entries.find(x => x.userId === item.userId)?.id === item.id && <button type="button" disabled={busy} onClick={() => void deleteEntry(item.id)} aria-label="Anular registro" title="Anular checada (Administración)" className="rounded-lg border border-red-400/30 p-2 text-red-500 hover:bg-red-500/10 disabled:opacity-40"><Trash2 size={16}/></button>}
