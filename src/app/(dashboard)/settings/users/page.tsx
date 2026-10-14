@@ -53,7 +53,7 @@ const PERMISSION_LABELS: Record<ModulePermission, string> = {
 }
 
 const ALL_PERMISSIONS = Object.keys(PERMISSION_LABELS) as ModulePermission[]
-const ROLES: AppRole[] = ['Administración', 'Supervisor', 'Cliente']
+const ROLES: AppRole[] = ['Administración', 'Supervisor', 'Contabilidad', 'Cliente']
 
 type Tab = 'users' | 'requests' | 'passwords'
 
@@ -123,6 +123,7 @@ export default function UsersAndPermissionsPage() {
   const [createEmail, setCreateEmail] = useState('')
   const [createPhone, setCreatePhone] = useState('')
   const [createPosition, setCreatePosition] = useState('')
+  const [createRole, setCreateRole] = useState<'Supervisor' | 'Contabilidad'>('Supervisor')
   const [createPassword, setCreatePassword] = useState('')
   const [createConfirmPassword, setCreateConfirmPassword] = useState('')
   const [createShowPassword, setCreateShowPassword] = useState(false)
@@ -251,7 +252,7 @@ export default function UsersAndPermissionsPage() {
     setCreatingUser(true)
 
     try {
-      const permissions = defaultPermissionsForRole('Supervisor')
+      const permissions = defaultPermissionsForRole(createRole)
       const response = await fetch('/api/access/users', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -261,7 +262,7 @@ export default function UsersAndPermissionsPage() {
           email,
           phone: createPhone.trim(),
           position: createPosition.trim() || 'Equipo NEDVI',
-          role: 'Supervisor',
+          role: createRole,
           permissions,
           password,
         }),
