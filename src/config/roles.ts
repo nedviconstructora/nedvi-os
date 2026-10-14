@@ -7,6 +7,7 @@ export type ModulePermission =
   | 'purchasing'
   | 'operations'
   | 'agenda'
+  | 'time-clock'
   | 'human-resources'
   | 'finance'
   | 'indicators'
@@ -29,6 +30,7 @@ export const ROLE_PERMISSIONS: Record<AppRole, readonly ModulePermission[]> = {
     'purchasing',
     'operations',
     'agenda',
+    'time-clock',
     'human-resources',
     'finance',
     'indicators',
@@ -45,7 +47,7 @@ export const ROLE_PERMISSIONS: Record<AppRole, readonly ModulePermission[]> = {
     'indicators',
     'coral',
   ],
-  Contabilidad: ['dashboard', 'agenda'],
+  Contabilidad: ['dashboard', 'time-clock'],
   Cliente: ['client-portal'],
 }
 
@@ -84,7 +86,7 @@ const ROUTE_PERMISSIONS: Array<{ prefix: string; permission: ModulePermission }>
   { prefix: '/attendance', permission: 'operations' },
   { prefix: '/crews', permission: 'operations' },
   { prefix: '/agenda', permission: 'agenda' },
-  { prefix: '/time-clock', permission: 'agenda' },
+  { prefix: '/time-clock', permission: 'time-clock' },
   { prefix: '/personnel', permission: 'human-resources' },
   { prefix: '/hr-attendance', permission: 'human-resources' },
   { prefix: '/payroll', permission: 'human-resources' },
