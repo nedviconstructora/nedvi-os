@@ -839,9 +839,31 @@ export default function QuotesPage() {
           </div>
         </div>
 
+        <style jsx global>{`
+          .theme-light .nedvi-quote-modal { background: #ffffff !important; color: #10213b !important; }
+          .theme-light .nedvi-quote-modal label,
+          .theme-light .nedvi-quote-modal h2,
+          .theme-light .nedvi-quote-modal h3 { color: #10213b; }
+          .theme-light .nedvi-quote-modal input:not([type="file"]),
+          .theme-light .nedvi-quote-modal select,
+          .theme-light .nedvi-quote-modal textarea {
+            background: #ffffff !important;
+            color: #10213b !important;
+            border-color: #d4e1f0 !important;
+          }
+          .theme-light .nedvi-quote-modal input::placeholder,
+          .theme-light .nedvi-quote-modal textarea::placeholder { color: #75879e !important; }
+          .theme-light .nedvi-quote-modal option { background: #ffffff; color: #10213b; }
+          .theme-light .nedvi-quote-modal > div:first-child { background: #ffffff !important; }
+          .theme-light .nedvi-quote-modal button[aria-label="Cerrar cotización"] {
+            background: #ffffff;
+            color: #405571 !important;
+            border-color: #d4e1f0;
+          }
+        `}</style>
         {open && (
           <div role="dialog" aria-modal="true" aria-label="Cotización" className="fixed inset-0 z-[100] flex items-start justify-center overflow-y-auto overscroll-contain bg-black/50 p-2 sm:p-4">
-            <div className="max-h-[calc(100dvh-1rem)] min-h-0 w-full max-w-5xl overflow-y-auto overscroll-contain rounded-2xl bg-white p-4 shadow-2xl dark:bg-slate-900 sm:max-h-[calc(100dvh-2rem)] sm:p-6">
+            <div className="nedvi-quote-modal max-h-[calc(100dvh-1rem)] min-h-0 w-full max-w-5xl overflow-y-auto overscroll-contain rounded-2xl bg-white p-4 text-slate-900 shadow-2xl dark:bg-slate-900 dark:text-white sm:max-h-[calc(100dvh-2rem)] sm:p-6">
               <div className="sticky top-0 z-10 mb-5 flex items-start justify-between gap-4 border-b border-[var(--border)] bg-white py-3 dark:bg-slate-900">
                 <div>
                   <h2 className="text-xl font-bold">{editingId ? 'Editar cotización' : 'Nueva cotización'}</h2>
