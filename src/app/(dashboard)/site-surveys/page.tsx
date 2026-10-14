@@ -277,6 +277,18 @@ export default function SiteSurveysPage() {
     setOpen(true)
   }
 
+  useEffect(() => {
+    if (!open && !viewing && !previewFile) return
+    function handleEscape(event: KeyboardEvent) {
+      if (event.key !== 'Escape') return
+      if (previewFile) setPreviewFile(null)
+      else if (viewing) setViewing(null)
+      else if (open) closeForm()
+    }
+    window.addEventListener('keydown', handleEscape)
+    return () => window.removeEventListener('keydown', handleEscape)
+  }, [open, viewing, previewFile])
+
   function closeForm() {
     setOpen(false)
     setEditingId(null)
@@ -567,11 +579,11 @@ export default function SiteSurveysPage() {
       </div>
 
       {open ? (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4">
-          <div className="max-h-[94vh] w-full max-w-6xl overflow-y-auto rounded-2xl bg-[var(--surface)] shadow-2xl">
+        <div className="fixed inset-0 z-[100] flex items-start justify-center overflow-y-auto overscroll-contain bg-black/60 p-2 sm:p-4" role="dialog" aria-modal="true">
+          <div className="max-h-[calc(100dvh-1rem)] min-h-0 w-full max-w-6xl overflow-y-auto overscroll-contain sm:max-h-[calc(100dvh-2rem)] rounded-2xl bg-[var(--surface)] shadow-2xl">
             <div className="sticky top-0 z-20 flex items-start justify-between border-b border-[var(--border)] bg-[var(--surface)] p-5">
               <div><p className="text-xs font-semibold uppercase tracking-[0.14em] text-[#5496CC]">Comercial y Ventas</p><h2 className="mt-1 text-xl font-bold text-[var(--foreground)]">{editingId ? 'Editar levantamiento' : 'Nuevo levantamiento'}</h2></div>
-              <button type="button" onClick={closeForm} className="rounded-lg p-2 text-[var(--muted)] hover:bg-[var(--surface-soft)]"><X size={18} /></button>
+              <button type="button" onClick={closeForm} aria-label="Cerrar levantamiento" title="Cerrar" className="rounded-lg p-2 text-[var(--muted)] hover:bg-[var(--surface-soft)]"><X size={18} /></button>
             </div>
 
             <form onSubmit={saveSurvey} className="space-y-6 p-5">
@@ -649,9 +661,9 @@ export default function SiteSurveysPage() {
       ) : null}
 
       {viewing ? (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4">
-          <div className="max-h-[94vh] w-full max-w-5xl overflow-y-auto rounded-2xl bg-[var(--surface)] shadow-2xl">
-            <div className="sticky top-0 z-10 flex items-start justify-between border-b border-[var(--border)] bg-[var(--surface)] p-5"><div><p className="text-xs font-semibold uppercase tracking-[0.14em] text-[#5496CC]">Levantamiento · {formatDate(viewing.date)}</p><h2 className="mt-1 text-2xl font-bold text-[var(--foreground)]">{viewing.clientName}</h2><p className="mt-1 text-sm text-[var(--muted)]">{viewing.location || 'Sin ciudad / zona'}</p></div><button type="button" onClick={() => setViewing(null)} className="rounded-lg p-2 text-[var(--muted)] hover:bg-[var(--surface-soft)]"><X size={18} /></button></div>
+        <div className="fixed inset-0 z-[100] flex items-start justify-center overflow-y-auto overscroll-contain bg-black/60 p-2 sm:p-4" role="dialog" aria-modal="true">
+          <div className="max-h-[calc(100dvh-1rem)] min-h-0 w-full max-w-5xl overflow-y-auto overscroll-contain sm:max-h-[calc(100dvh-2rem)] rounded-2xl bg-[var(--surface)] shadow-2xl">
+            <div className="sticky top-0 z-10 flex items-start justify-between border-b border-[var(--border)] bg-[var(--surface)] p-5"><div><p className="text-xs font-semibold uppercase tracking-[0.14em] text-[#5496CC]">Levantamiento · {formatDate(viewing.date)}</p><h2 className="mt-1 text-2xl font-bold text-[var(--foreground)]">{viewing.clientName}</h2><p className="mt-1 text-sm text-[var(--muted)]">{viewing.location || 'Sin ciudad / zona'}</p></div><button type="button" onClick={() => setViewing(null)} aria-label="Cerrar detalles del levantamiento" title="Cerrar" className="rounded-lg p-2 text-[var(--muted)] hover:bg-[var(--surface-soft)]"><X size={18} /></button></div>
             <div className="space-y-5 p-5">
               <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4"><Info label="Fecha" value={formatDate(viewing.date)} /><Info label="Ciudad / Zona" value={viewing.location || 'Sin especificar'} /><Info label="Solicita" value={viewing.requestedBy || 'Sin especificar'} /><Info label="Realiza" value={viewing.performedBy || 'Sin especificar'} /></div>
               <section className="rounded-2xl border border-[var(--border)] p-5"><p className="text-xs font-semibold uppercase tracking-wide text-[var(--muted)]">Descripción</p><p className="mt-3 whitespace-pre-wrap text-sm leading-6 text-[var(--foreground)]">{viewing.description}</p></section>
@@ -665,8 +677,8 @@ export default function SiteSurveysPage() {
       ) : null}
 
       {previewFile ? (
-        <div className="fixed inset-0 z-[70] flex items-center justify-center bg-black/85 p-3 sm:p-6" role="dialog" aria-modal="true" aria-label={`Vista previa de ${previewFile.name}`}>
-          <div className="flex max-h-[96vh] w-full max-w-5xl flex-col overflow-hidden rounded-2xl bg-[var(--surface)] shadow-2xl">
+        <div className="fixed inset-0 z-[120] flex items-center justify-center bg-black/85 p-2 sm:p-4" role="dialog" aria-modal="true" aria-label={`Vista previa de ${previewFile.name}`}>
+          <div className="flex max-h-[calc(100dvh-1rem)] w-full max-w-5xl flex-col overflow-hidden rounded-2xl bg-[var(--surface)] shadow-2xl">
             <header className="flex items-center justify-between gap-3 border-b border-[var(--border)] p-4">
               <div className="min-w-0"><p className="truncate font-semibold text-[var(--foreground)]">{previewFile.name}</p><p className="text-xs text-[var(--muted)]">{fileSize(previewFile.size)}</p></div>
               <div className="flex shrink-0 gap-2"><button type="button" onClick={() => downloadAttachment(previewFile)} className="rounded-lg p-2 text-[#5496CC]" title="Descargar"><Download size={19}/></button><button type="button" onClick={() => setPreviewFile(null)} className="rounded-lg p-2 text-[var(--foreground)]" title="Cerrar"><X size={20}/></button></div>
