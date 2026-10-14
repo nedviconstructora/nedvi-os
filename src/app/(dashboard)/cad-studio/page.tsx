@@ -2,6 +2,8 @@
 
 import { useEffect, useRef, useState } from 'react'
 import { AppShell } from '@/components/layout/AppShell'
+import { CloudPlans } from '@/features/cad/components/CloudPlans'
+import { readProjectsFromSupabase } from '@/features/projects/services/projectSupabaseService'
 import { DraftingCompass, Upload, ExternalLink, Download, MonitorDown, Maximize2, FileType2, Layers3 } from 'lucide-react'
 
 function AutodeskCadViewer({urn}:{urn:string}) {
@@ -69,6 +71,9 @@ export default function CadStudioPage() {
   const [message,setMessage]=useState('')
   const [busy,setBusy]=useState(false)
   const viewerSectionRef=useRef<HTMLElement>(null)
+  const [projects,setProjects]=useState<Array<{id:string;name:string;folio?:string;client:string}>>([])
+  const [selectedProject,setSelectedProject]=useState('')
+  useEffect(()=>{void readProjectsFromSupabase().then(rows=>setProjects(rows.map(p=>({id:p.id,name:p.name,folio:p.folio,client:p.client})))).catch(()=>setMessage('No se pudo cargar el catálogo de proyectos.'))},[])
 
   function downloadOriginal(){
     if(!file)return
@@ -175,6 +180,13 @@ export default function CadStudioPage() {
             </div></div>
           </div> : <div className="mt-4 rounded-2xl border border-dashed border-[var(--border)] p-5 text-center text-sm text-[var(--muted)]">Aún no has seleccionado un plano.</div>}
           <p className="mt-4 text-xs leading-relaxed text-[var(--muted)]">Formatos del visor: DWG, hasta 20 MB. Para DXF utiliza la importación específica disponible en NEDVI OS. Los archivos seleccionados solo permanecen en esta sesión del navegador.</p>
+          <label className="mt-5 block text-sm font-semibold text-[var(--foreground)]">Proyecto asociado al plano
+            <select value={selectedProject} onChange={e=>setSelectedProject(e.target.value)} className="mt-2 w-full rounded-xl border border-[var(--border)] bg-[var(--background)] p-3 text-sm">
+              <option value="">Seleccionar proyecto</option>
+              {projects.map(project=><option key={project.id} value={project.id}>{project.folio || 'Sin folio'} · {project.client} · {project.name}</option>)}
+            </select>
+          </label>
+          {selectedProject?<CloudPlans projectId={selectedProject} file={file}/>:<p className="mt-3 text-xs text-[var(--muted)]">Selecciona un proyecto para guardar planos o consultar su biblioteca.</p>}
         </aside>
 
         <section ref={viewerSectionRef} className="min-w-0 overflow-auto rounded-3xl border border-[var(--border)] bg-[var(--surface)] p-4 shadow-sm sm:p-5 fullscreen:h-screen fullscreen:rounded-none fullscreen:bg-[#101C29]">
