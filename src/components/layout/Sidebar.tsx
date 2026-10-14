@@ -295,7 +295,7 @@ export function Sidebar({
           </Link>
         ) : null}
 
-        {canUse('agenda') ? (
+        {canUse('time-clock') ? (
           <Link href="/time-clock" title={collapsed ? 'Checador' : undefined} onClick={onCloseMobile} className={`${primaryItemClasses(isPathActive('/time-clock'))} mt-2`}>
             <Clock3 size={18} className="shrink-0 text-white"/>
             <span className={`whitespace-nowrap transition-opacity duration-200 ${collapsed ? 'lg:hidden' : 'opacity-100'}`}>Checador</span>
