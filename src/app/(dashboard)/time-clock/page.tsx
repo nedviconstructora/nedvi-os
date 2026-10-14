@@ -99,7 +99,7 @@ export default function TimeClockPage() {
   }
 
   async function register() {
-    if (!photo || busy || loading || error) return
+    if (!photo || busy || loading) return
     setBusy(true);setError('');setNotice('')
     try {
       const position = await locate()
