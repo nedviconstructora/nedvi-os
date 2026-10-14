@@ -1,4 +1,4 @@
-export type AppRole = 'Administración' | 'Supervisor' | 'Cliente'
+export type AppRole = 'Administración' | 'Supervisor' | 'Contabilidad' | 'Cliente'
 
 export type ModulePermission =
   | 'dashboard'
@@ -7,6 +7,7 @@ export type ModulePermission =
   | 'purchasing'
   | 'operations'
   | 'agenda'
+  | 'time-clock'
   | 'human-resources'
   | 'finance'
   | 'indicators'
@@ -17,6 +18,7 @@ export type ModulePermission =
 export const ROLE_LABELS: Record<AppRole, string> = {
   Administración: 'ADMIN',
   Supervisor: 'SUPERVISOR / OBRA',
+  Contabilidad: 'CONTABILIDAD',
   Cliente: 'CLIENTE',
 }
 
@@ -28,6 +30,7 @@ export const ROLE_PERMISSIONS: Record<AppRole, readonly ModulePermission[]> = {
     'purchasing',
     'operations',
     'agenda',
+    'time-clock',
     'human-resources',
     'finance',
     'indicators',
@@ -41,9 +44,11 @@ export const ROLE_PERMISSIONS: Record<AppRole, readonly ModulePermission[]> = {
     'purchasing',
     'operations',
     'agenda',
+    'time-clock',
     'indicators',
     'coral',
   ],
+  Contabilidad: ['time-clock'],
   Cliente: ['client-portal'],
 }
 
@@ -52,6 +57,7 @@ export const ROLE_DESCRIPTIONS: Record<AppRole, string> = {
     'Acceso total a NEDVI OS, incluidos usuarios y permisos, Recursos Humanos, nómina, finanzas y configuración administrativa.',
   Supervisor:
     'Acceso operativo amplio: clientes, oportunidades, levantamientos, cotizaciones, proyectos, documentos, compras, proveedores, obra, avances, reportes, asistencias, cuadrillas, agenda, indicadores y Coral AI. Sin acceso a Recursos Humanos, nómina, finanzas ni configuración de usuarios y permisos.',
+  Contabilidad: 'Acceso de solo lectura al historial del Checador y sus exportaciones. Sin permisos de edición.',
   Cliente:
     'Acceso exclusivo al Portal del Cliente para consultar únicamente sus proyectos y la información de avance autorizada por NEDVI.',
 }
@@ -81,7 +87,7 @@ const ROUTE_PERMISSIONS: Array<{ prefix: string; permission: ModulePermission }>
   { prefix: '/attendance', permission: 'operations' },
   { prefix: '/crews', permission: 'operations' },
   { prefix: '/agenda', permission: 'agenda' },
-  { prefix: '/time-clock', permission: 'agenda' },
+  { prefix: '/time-clock', permission: 'time-clock' },
   { prefix: '/personnel', permission: 'human-resources' },
   { prefix: '/hr-attendance', permission: 'human-resources' },
   { prefix: '/payroll', permission: 'human-resources' },

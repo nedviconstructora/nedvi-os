@@ -11,6 +11,7 @@ const DEFAULT_PERMISSIONS: Record<string, ModulePermission[]> = {
     'purchasing',
     'operations',
     'agenda',
+    'time-clock',
     'human-resources',
     'finance',
     'indicators',
@@ -25,9 +26,11 @@ const DEFAULT_PERMISSIONS: Record<string, ModulePermission[]> = {
     'purchasing',
     'operations',
     'agenda',
+    'time-clock',
     'indicators',
     'coral',
   ],
+  contabilidad: ['time-clock'],
   cliente: ['client-portal'],
 }
 
@@ -62,6 +65,7 @@ function databaseRole(value: unknown) {
     return 'administracion'
   }
   if (normalized === 'supervisor' || normalized === 'obra') return 'obra'
+  if (normalized === 'contabilidad') return 'contabilidad'
   return 'cliente'
 }
 
@@ -75,6 +79,7 @@ function temporaryPassword() {
 function roleLabel(role: string) {
   if (role === 'administracion') return 'Administración'
   if (role === 'obra') return 'Supervisor'
+  if (role === 'contabilidad') return 'Contabilidad'
   return 'Cliente'
 }
 
@@ -234,6 +239,7 @@ export async function POST(request: Request) {
     const permissions =
       role === 'administracion'
         ? DEFAULT_PERMISSIONS.administracion
+        : role === 'contabilidad' ? DEFAULT_PERMISSIONS.contabilidad
         : Array.isArray(body.permissions)
           ? body.permissions
           : DEFAULT_PERMISSIONS[role] ?? []
@@ -433,6 +439,7 @@ export async function PATCH(request: Request) {
       const permissions =
         role === 'administracion'
           ? DEFAULT_PERMISSIONS.administracion
+          : role === 'contabilidad' ? DEFAULT_PERMISSIONS.contabilidad
           : Array.isArray(body.permissions)
             ? body.permissions
             : DEFAULT_PERMISSIONS[role] ?? []

@@ -1,16 +1,21 @@
 'use client'
 
 import { ChangeEvent, useCallback, useEffect, useMemo, useState } from 'react'
-import { Camera, Clock3, LogIn, LogOut, RefreshCw, ShieldCheck, Trash2, MapPin } from 'lucide-react'
+import { Camera, Clock3, LogIn, LogOut, RefreshCw, ShieldCheck, Trash2, MapPin, FileSpreadsheet, CalendarDays } from 'lucide-react'
 import { AppShell } from '@/components/layout/AppShell'
+import { downloadClockWorkbook } from '@/features/time-clock/services/exportXlsx'
 
 type ClockEntry = { id:string; userId:string; name:string; type:'entrada'|'salida'; at:string; photoUrl:string|null; latitude:number|null; longitude:number|null; accuracy:number|null }
-type Payload = {entries:ClockEntry[]; me:string; canViewAll:boolean; error?:string}
+type Payload = {entries:ClockEntry[]; me:string; canViewAll:boolean; canDelete:boolean; canClock:boolean; error?:string}
 
 export default function TimeClockPage() {
   const [entries,setEntries] = useState<ClockEntry[]>([])
   const [me,setMe] = useState('')
   const [canViewAll,setCanViewAll] = useState(false)
+  const [canDelete,setCanDelete] = useState(false)
+  const [canClock,setCanClock] = useState(true)
+  const [dateFilter,setDateFilter] = useState('')
+  const [allDates,setAllDates] = useState(false)
   const [loading,setLoading] = useState(true)
   const [busy,setBusy] = useState(false)
   const [locationBusy,setLocationBusy] = useState(false)
@@ -28,6 +33,8 @@ export default function TimeClockPage() {
       setEntries(body.entries)
       setMe(body.me)
       setCanViewAll(body.canViewAll)
+      setCanDelete(body.canDelete)
+      setCanClock(body.canClock)
       setError('')
     } catch (err) { setError(err instanceof Error ? err.message : 'Error al cargar asistencias.') }
     finally {setLoading(false)}
@@ -37,6 +44,7 @@ export default function TimeClockPage() {
     void refresh()
     const interval = window.setInterval(() => {setNow(new Date());void refresh()},30000)
     setNow(new Date())
+    setDateFilter(new Intl.DateTimeFormat('sv-SE',{timeZone:'America/Tijuana',year:'numeric',month:'2-digit',day:'2-digit'}).format(new Date()))
     return () => window.clearInterval(interval)
   },[refresh])
 
@@ -52,6 +60,41 @@ export default function TimeClockPage() {
   const hasEntry = current?.type === 'entrada'
   const nextType = hasEntry ? 'salida' : 'entrada'
   const fmt = (date:string) => new Intl.DateTimeFormat('es-MX',{dateStyle:'medium',timeStyle:'short'}).format(new Date(date))
+  const dayOf = (value:string) => new Intl.DateTimeFormat('sv-SE',{timeZone:'America/Tijuana',year:'numeric',month:'2-digit',day:'2-digit'}).format(new Date(value))
+  const visibleEntries=useMemo(()=>allDates ? entries : entries.filter(item=>dayOf(item.at)===dateFilter),[entries,dateFilter,allDates])
+  const dailyRows=useMemo(()=>{
+    const groups=new Map<string,{date:string;userId:string;name:string;start:string;end:string;totalMinutes:number;open:string|null}>()
+    for(const entry of [...visibleEntries].sort((a,b)=>a.at.localeCompare(b.at))){
+      const date=dayOf(entry.at)
+      const key=entry.userId+'|'+date
+      const group=groups.get(key)??{date,userId:entry.userId,name:entry.name,start:'',end:'',totalMinutes:0,open:null}
+      if(entry.type==='entrada'){
+        if(!group.start) group.start=entry.at
+        group.open=entry.at
+      } else {
+        group.end=entry.at
+        if(group.open) {
+          group.totalMinutes+=Math.max(0,Math.round((new Date(entry.at).getTime()-new Date(group.open).getTime())/60000))
+          group.open=null
+        }
+      }
+      groups.set(key,group)
+    }
+    return [...groups.values()].sort((a,b)=>b.date.localeCompare(a.date)||a.name.localeCompare(b.name))
+  },[visibleEntries])
+  function exportExcel(){
+    const localTime=(iso:string)=>iso?new Intl.DateTimeFormat('es-MX',{timeZone:'America/Tijuana',hour:'2-digit',minute:'2-digit',hour12:false}).format(new Date(iso)):''
+    const summary=[
+      ['Fecha','Empleado','Entrada','Salida','Horas completadas','Estado'],
+      ...dailyRows.map(r=>[r.date,r.name,localTime(r.start),localTime(r.end),(r.totalMinutes/60).toFixed(2),r.open?'Entrada sin salida':'Completo']),
+    ]
+    const events=[
+      ['Fecha','Empleado','Tipo','Hora local','Hora oficial UTC','Latitud GPS','Longitud GPS','Precisión (m)','ID del registro (evidencia en Supabase)'],
+      ...visibleEntries.map(e=>[dayOf(e.at),e.name,e.type,localTime(e.at),e.at,String(e.latitude??''),String(e.longitude??''),String(e.accuracy??''),e.id]),
+    ]
+    downloadClockWorkbook([{name:'Resumen diario',rows:summary},{name:'Eventos',rows:events}], 'NEDVI_Checador_'+(allDates?'historial':dateFilter)+'.xlsx')
+  }
+
   const duration = useMemo(() => {
     if (!hasEntry || !now || !current) return null
     const minutes = Math.max(0,Math.floor((now.getTime()-new Date(current.at).getTime())/60000))
@@ -71,7 +114,7 @@ export default function TimeClockPage() {
   }
 
   async function deleteEntry(id:string) {
-    if (!canViewAll || busy) return
+    if (!canDelete || busy) return
     const reason = window.prompt('Motivo de la anulación (mínimo 8 caracteres):')
     if (reason === null) return
     if (reason.trim().length < 8) { setError('Escribe un motivo de al menos 8 caracteres.'); return }
@@ -99,7 +142,7 @@ export default function TimeClockPage() {
   }
 
   async function register() {
-    if (!photo || busy || loading) return
+    if (!canClock || !photo || busy || loading) return
     setBusy(true);setError('');setNotice('')
     try {
       const position = await locate()
@@ -131,7 +174,7 @@ export default function TimeClockPage() {
         </header>
 
         <div className="grid gap-5 lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)]">
-          <section className="space-y-4 rounded-2xl border border-[var(--border)] bg-[var(--surface)] p-5 shadow-sm">
+          {canClock && <section className="space-y-4 rounded-2xl border border-[var(--border)] bg-[var(--surface)] p-5 shadow-sm">
             <div className="flex items-center justify-between gap-2"><h2 className="text-xl font-semibold">Mi jornada</h2>
               <span className={`rounded-full px-3 py-1 text-xs font-bold ${hasEntry ? 'bg-emerald-500/15 text-emerald-600 dark:text-emerald-400' : 'bg-slate-500/10 text-[var(--muted)]'}`}>{loading ? 'Cargando' : hasEntry ? 'En turno' : 'Fuera de turno'}</span>
             </div>
@@ -152,21 +195,31 @@ export default function TimeClockPage() {
                 <button type="button" disabled={!photo || !hasEntry || loading || busy || locationBusy} onClick={() => void register()} className="flex items-center justify-center gap-2 rounded-xl bg-emerald-600 px-3 py-3 font-bold text-white disabled:cursor-not-allowed disabled:opacity-40"><LogOut size={19}/>{busy && hasEntry ? 'Guardando...' : 'Checar salida'}</button>
               </div>
               <p className="text-xs text-[var(--muted)]">{locationBusy ? 'Obteniendo tu ubicación…' : hasEntry ? 'Tu entrada está activa. Adjunta una foto para habilitar Checar salida.' : 'Adjunta una fotografía para habilitar Checar entrada. Primero debe registrarse una entrada para poder salir.'}</p>
-              <p className="flex items-start gap-2 text-xs text-[var(--muted)]"><ShieldCheck size={16} className="shrink-0"/>La hora la asigna el servidor. Los trabajadores no pueden editar registros. Solo Administración puede consultar todas las asistencias.</p>
+              <p className="flex items-start gap-2 text-xs text-[var(--muted)]"><ShieldCheck size={16} className="shrink-0"/>La hora la asigna el servidor. Los trabajadores no pueden editar registros. Administración y Contabilidad pueden consultar todas las asistencias. Solo Administración puede anular registros.</p>
               {error && <p role="alert" className="rounded-xl bg-red-500/10 p-3 text-sm text-red-500">{error}</p>}
               {notice && <p role="status" className="rounded-xl bg-emerald-500/10 p-3 text-sm text-emerald-600">{notice}</p>}
             </div>
-          </section>
+          </section>}
           <section className="space-y-4 rounded-2xl border border-[var(--border)] bg-[var(--surface)] p-5 shadow-sm">
             <div className="flex items-center gap-2"><Clock3 size={20} className="text-[#5496CC]"/><h2 className="text-xl font-semibold">{canViewAll ? 'Historial del personal' : 'Mis registros'}</h2></div>
-            <p className="text-sm text-[var(--muted)]">Registros recientes sincronizados con Supabase. Fotografía disponible mediante enlace privado temporal.</p>
+            <p className="text-sm text-[var(--muted)]">Historial diario almacenado en Supabase · horario de Tijuana. Las fotos permanecen privadas.</p>
+            <div className="flex flex-wrap items-end gap-2">
+              <label className="text-xs font-semibold text-[var(--muted)]"><span className="mb-1 flex items-center gap-1"><CalendarDays size={14}/>Fecha</span><input type="date" value={dateFilter} onChange={e=>{setDateFilter(e.target.value);setAllDates(false)}} className="block rounded-lg border border-[var(--border)] bg-[var(--background)] px-3 py-2 text-sm text-[var(--foreground)]"/></label>
+              <button type="button" onClick={()=>setAllDates(v=>!v)} className="rounded-lg border border-[var(--border)] px-3 py-2 text-sm">{allDates?'Ver solo fecha':'Ver historial'}</button>
+              {canViewAll && <button type="button" onClick={exportExcel} disabled={!visibleEntries.length} className="inline-flex items-center gap-2 rounded-lg bg-[#317FC1] px-3 py-2 text-sm font-semibold text-white disabled:opacity-40"><FileSpreadsheet size={16}/>Exportar Excel (.xlsx)</button>}
+            </div>
+            <div className="overflow-x-auto rounded-xl border border-[var(--border)]">
+              <table className="w-full min-w-[460px] text-left text-xs"><thead className="bg-[var(--surface-soft)]"><tr><th className="p-2">Fecha</th><th className="p-2">Empleado</th><th className="p-2">Entrada</th><th className="p-2">Salida</th><th className="p-2">Horas</th></tr></thead>
+              <tbody>{dailyRows.map(row=><tr key={row.userId+row.date} className="border-t border-[var(--border)]"><td className="p-2">{row.date}</td><td className="p-2">{row.name}</td><td className="p-2">{row.start?new Intl.DateTimeFormat('es-MX',{timeZone:'America/Tijuana',hour:'2-digit',minute:'2-digit'}).format(new Date(row.start)):'—'}</td><td className="p-2">{row.end?new Intl.DateTimeFormat('es-MX',{timeZone:'America/Tijuana',hour:'2-digit',minute:'2-digit'}).format(new Date(row.end)):'—'}</td><td className="p-2">{(row.totalMinutes/60).toFixed(2)} h{row.open?' · En turno':''}</td></tr>)}</tbody></table>
+              {!dailyRows.length && <p className="p-4 text-sm text-[var(--muted)]">No hay checadas para esta fecha.</p>}
+            </div>
             <div className="max-h-[480px] space-y-3 overflow-y-auto">
-              {!entries.length && <p className="rounded-xl border border-[var(--border)] p-4 text-sm text-[var(--muted)]">Todavía no existen registros.</p>}
-              {entries.map(item => <div key={item.id} className="flex items-center justify-between gap-3 rounded-xl border border-[var(--border)] p-3">
+              {!visibleEntries.length && <p className="rounded-xl border border-[var(--border)] p-4 text-sm text-[var(--muted)]">Todavía no existen registros.</p>}
+              {visibleEntries.map(item => <div key={item.id} className="flex items-center justify-between gap-3 rounded-xl border border-[var(--border)] p-3">
                 <div className="min-w-0"><p className="truncate text-sm font-semibold">{item.name}</p><p className="text-xs text-[var(--muted)]">{item.type==='entrada'?'Entrada':'Salida'} · {fmt(item.at)}</p>{item.latitude != null && item.longitude != null && <a className="inline-flex items-center gap-1 text-xs text-[#5496CC] underline" href={`https://www.google.com/maps?q=${item.latitude},${item.longitude}`} target="_blank" rel="noreferrer"><MapPin size={13}/>Ver ubicación GPS (±{Math.round(item.accuracy ?? 0)} m)</a>}</div>
                 <div className="flex shrink-0 items-center gap-2">
                   {item.photoUrl ? <a href={item.photoUrl} target="_blank" rel="noreferrer" className="text-sm font-semibold text-[#5496CC] underline">Ver foto</a> : <span className="text-xs text-[var(--muted)]">Sin foto</span>}
-                  {canViewAll && entries.find(x => x.userId === item.userId)?.id === item.id && <button type="button" disabled={busy} onClick={() => void deleteEntry(item.id)} aria-label="Anular registro" title="Anular checada (Administración)" className="rounded-lg border border-red-400/30 p-2 text-red-500 hover:bg-red-500/10 disabled:opacity-40"><Trash2 size={16}/></button>}
+                  {canDelete && entries.find(x => x.userId === item.userId)?.id === item.id && <button type="button" disabled={busy} onClick={() => void deleteEntry(item.id)} aria-label="Anular registro" title="Anular checada (Administración)" className="rounded-lg border border-red-400/30 p-2 text-red-500 hover:bg-red-500/10 disabled:opacity-40"><Trash2 size={16}/></button>}
                 </div>
               </div>)}
             </div>

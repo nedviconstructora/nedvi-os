@@ -44,6 +44,7 @@ const PERMISSION_LABELS: Record<ModulePermission, string> = {
   purchasing: 'Compras y Suministros',
   operations: 'Operaciones / Obra',
   agenda: 'Agenda',
+  'time-clock': 'Checador',
   'human-resources': 'Recursos Humanos',
   finance: 'Finanzas',
   indicators: 'Indicadores',
@@ -53,7 +54,7 @@ const PERMISSION_LABELS: Record<ModulePermission, string> = {
 }
 
 const ALL_PERMISSIONS = Object.keys(PERMISSION_LABELS) as ModulePermission[]
-const ROLES: AppRole[] = ['Administración', 'Supervisor', 'Cliente']
+const ROLES: AppRole[] = ['Administración', 'Supervisor', 'Contabilidad', 'Cliente']
 
 type Tab = 'users' | 'requests' | 'passwords'
 
@@ -123,6 +124,7 @@ export default function UsersAndPermissionsPage() {
   const [createEmail, setCreateEmail] = useState('')
   const [createPhone, setCreatePhone] = useState('')
   const [createPosition, setCreatePosition] = useState('')
+  const [createRole, setCreateRole] = useState<'Supervisor' | 'Contabilidad'>('Supervisor')
   const [createPassword, setCreatePassword] = useState('')
   const [createConfirmPassword, setCreateConfirmPassword] = useState('')
   const [createShowPassword, setCreateShowPassword] = useState(false)
@@ -251,7 +253,7 @@ export default function UsersAndPermissionsPage() {
     setCreatingUser(true)
 
     try {
-      const permissions = defaultPermissionsForRole('Supervisor')
+      const permissions = defaultPermissionsForRole(createRole)
       const response = await fetch('/api/access/users', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -261,7 +263,7 @@ export default function UsersAndPermissionsPage() {
           email,
           phone: createPhone.trim(),
           position: createPosition.trim() || 'Equipo NEDVI',
-          role: 'Supervisor',
+          role: createRole,
           permissions,
           password,
         }),
@@ -931,6 +933,13 @@ export default function UsersAndPermissionsPage() {
                 ></textarea>
               </label>
 
+              <label className="block">
+                <span className="text-xs font-semibold text-[var(--muted)]">Tipo de cuenta</span>
+                <select value={createRole} onChange={(event) => setCreateRole(event.target.value as 'Supervisor' | 'Contabilidad')} className="mt-2 h-11 w-full rounded-xl border border-[var(--border)] bg-[var(--surface)] px-3 text-sm text-[var(--foreground)]">
+                  <option value="Supervisor">Supervisor de obra</option>
+                  <option value="Contabilidad">Contabilidad · solo lectura de checadas</option>
+                </select>
+              </label>
               <label className="block">
                 <span className="text-xs font-semibold text-[var(--muted)]">Puesto</span>
                 <textarea

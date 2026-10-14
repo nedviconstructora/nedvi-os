@@ -113,7 +113,13 @@ export function readAccessSession(): AccessSession | null {
   try {
     const raw = window.localStorage.getItem(ACCESS_SESSION_KEY)
     if (!raw) return null
-    return JSON.parse(raw) as AccessSession
+    const session = JSON.parse(raw) as AccessSession
+    // Preserve existing internal users' Checador access after splitting it from Agenda.
+    if ((session.role === 'Administración' || session.role === 'Supervisor') && session.permissions?.includes('agenda') && !session.permissions.includes('time-clock')) {
+      session.permissions = [...session.permissions, 'time-clock']
+    }
+    if (session.role === 'Contabilidad') session.permissions = ['time-clock']
+    return session
   } catch {
     return null
   }
