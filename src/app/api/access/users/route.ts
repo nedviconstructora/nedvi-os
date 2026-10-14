@@ -439,6 +439,7 @@ export async function PATCH(request: Request) {
       const permissions =
         role === 'administracion'
           ? DEFAULT_PERMISSIONS.administracion
+          : role === 'contabilidad' ? DEFAULT_PERMISSIONS.contabilidad
           : Array.isArray(body.permissions)
             ? body.permissions
             : DEFAULT_PERMISSIONS[role] ?? []
