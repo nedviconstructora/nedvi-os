@@ -44,6 +44,7 @@ export const ROLE_PERMISSIONS: Record<AppRole, readonly ModulePermission[]> = {
     'purchasing',
     'operations',
     'agenda',
+    'time-clock',
     'indicators',
     'coral',
   ],
