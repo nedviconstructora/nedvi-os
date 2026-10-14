@@ -106,6 +106,14 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'No encontramos el usuario en Supabase Auth.' }, { status: 404 })
     }
 
+    const { data: targetProfile, error: targetProfileError } = await admin
+      .from('profiles').select('role').eq('id',targetUser.id).maybeSingle()
+    if (targetProfileError) throw targetProfileError
+    if (normalizeRole(targetProfile?.role) === 'contabilidad' &&
+        (permissions.length !== 2 || !permissions.includes('dashboard') || !permissions.includes('time-clock'))) {
+      return NextResponse.json({error:'Contabilidad solo puede consultar Dashboard y Checador.'},{status:403})
+    }
+
     const { error: updateError } = await admin.auth.admin.updateUserById(targetUser.id, {
       user_metadata: {
         ...(targetUser.user_metadata ?? {}),
