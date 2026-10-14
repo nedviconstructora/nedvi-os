@@ -209,6 +209,14 @@ export function AppShell({ children }: AppShellProps) {
     pathname === '/personnel' || pathname === '/hr-attendance' || pathname === '/payroll'
 
   return (
+    <>
+      <style jsx global>{`
+        /* El main crea un contexto de apilamiento: elevarlo al abrir diálogos
+           evita que el encabezado z-60 tape la barra de cerrar del modal. */
+        main.nedvi-main-content:has([role="dialog"][aria-modal="true"]) {
+          z-index: 80;
+        }
+      `}</style>
     <div className="min-h-[100dvh] bg-[var(--background)] text-[var(--foreground)] transition-colors duration-300 print:min-h-0 print:bg-white print:text-black">
       <div className="flex min-h-[100dvh] print:min-h-0 print:block">
         <div className="print:hidden">
@@ -241,7 +249,7 @@ export function AppShell({ children }: AppShellProps) {
             />
           </div>
 
-          <main className="relative z-0 min-w-0 flex-1 bg-[var(--background)] p-5 transition-colors duration-300 sm:p-8 print:bg-white print:p-0">
+          <main className="nedvi-main-content relative z-0 min-w-0 flex-1 bg-[var(--background)] p-5 transition-colors duration-300 sm:p-8 print:bg-white print:p-0">
             {hasRouteAccess ? (
               children
             ) : (
@@ -259,5 +267,6 @@ export function AppShell({ children }: AppShellProps) {
         </div>
       </div>
     </div>
+    </>
   )
 }
