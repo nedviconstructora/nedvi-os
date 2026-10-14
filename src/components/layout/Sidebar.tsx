@@ -9,6 +9,7 @@ import {
   Bot,
   BriefcaseBusiness,
   CalendarDays,
+  Clock3,
   ChevronDown,
   ChevronLeft,
   ChevronRight,
@@ -291,6 +292,13 @@ export function Sidebar({
           <Link href="/agenda" title={collapsed ? 'Agenda' : undefined} onClick={onCloseMobile} className={primaryItemClasses(isPathActive('/agenda'))}>
             <CalendarDays size={18} strokeWidth={isPathActive('/agenda') ? 2 : 1.8} className="shrink-0 text-white" />
             <span className={`whitespace-nowrap transition-opacity duration-200 ${collapsed ? 'lg:hidden' : 'opacity-100'}`}>Agenda</span>
+          </Link>
+        ) : null}
+
+        {canUse('agenda') ? (
+          <Link href="/time-clock" title={collapsed ? 'Checador' : undefined} onClick={onCloseMobile} className={`${primaryItemClasses(isPathActive('/time-clock'))} mt-2`}>
+            <Clock3 size={18} className="shrink-0 text-white"/>
+            <span className={`whitespace-nowrap transition-opacity duration-200 ${collapsed ? 'lg:hidden' : 'opacity-100'}`}>Checador</span>
           </Link>
         ) : null}
 
