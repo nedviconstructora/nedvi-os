@@ -1,4 +1,4 @@
-export type AppRole = 'Administración' | 'Supervisor' | 'Cliente'
+export type AppRole = 'Administración' | 'Supervisor' | 'Contabilidad' | 'Cliente'
 
 export type ModulePermission =
   | 'dashboard'
@@ -17,6 +17,7 @@ export type ModulePermission =
 export const ROLE_LABELS: Record<AppRole, string> = {
   Administración: 'ADMIN',
   Supervisor: 'SUPERVISOR / OBRA',
+  Contabilidad: 'CONTABILIDAD',
   Cliente: 'CLIENTE',
 }
 
@@ -44,6 +45,7 @@ export const ROLE_PERMISSIONS: Record<AppRole, readonly ModulePermission[]> = {
     'indicators',
     'coral',
   ],
+  Contabilidad: ['dashboard', 'agenda'],
   Cliente: ['client-portal'],
 }
 
@@ -52,6 +54,7 @@ export const ROLE_DESCRIPTIONS: Record<AppRole, string> = {
     'Acceso total a NEDVI OS, incluidos usuarios y permisos, Recursos Humanos, nómina, finanzas y configuración administrativa.',
   Supervisor:
     'Acceso operativo amplio: clientes, oportunidades, levantamientos, cotizaciones, proyectos, documentos, compras, proveedores, obra, avances, reportes, asistencias, cuadrillas, agenda, indicadores y Coral AI. Sin acceso a Recursos Humanos, nómina, finanzas ni configuración de usuarios y permisos.',
+  Contabilidad: 'Acceso de solo lectura al historial del Checador y sus exportaciones. Sin permisos de edición.',
   Cliente:
     'Acceso exclusivo al Portal del Cliente para consultar únicamente sus proyectos y la información de avance autorizada por NEDVI.',
 }
