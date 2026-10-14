@@ -3,7 +3,6 @@
 import { useEffect, useRef, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { ArrowLeft, Maximize, Play, Volume2 } from 'lucide-react'
-import { readAccessSession } from '@/features/access/services/accessStorage'
 
 const videoSource = process.env.NEXT_PUBLIC_PRESENTATION_VIDEO_URL || '/videos/nedvi-os-presentacion.mp4'
 const PRESENTATION_END = new Date('2026-10-16T00:00:00-07:00').getTime()
@@ -13,17 +12,13 @@ export default function PresentationPage() {
   const videoRef = useRef<HTMLVideoElement>(null)
   const stageRef = useRef<HTMLDivElement>(null)
   const redirectTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
-  const [authorized, setAuthorized] = useState(false)
   const [started, setStarted] = useState(false)
   const [finished, setFinished] = useState(false)
   const [error, setError] = useState('')
   const [localVideo, setLocalVideo] = useState<string | null>(null)
 
   useEffect(() => {
-    const session = readAccessSession()
-    if (!session) { router.replace('/login'); return }
-    if (session.role !== 'Administración' || Date.now() >= PRESENTATION_END) { router.replace('/dashboard'); return }
-    setAuthorized(true)
+    if (Date.now() >= PRESENTATION_END) { router.replace('/login'); return }
     return () => { if (redirectTimer.current) clearTimeout(redirectTimer.current) }
   }, [router])
 
@@ -56,11 +51,9 @@ export default function PresentationPage() {
     setFinished(true)
     redirectTimer.current = setTimeout(() => {
       if (document.fullscreenElement) document.exitFullscreen().catch(() => {})
-      router.replace('/dashboard')
+      router.replace('/login')
     }, 2500)
   }
-
-  if (!authorized) return <main className="min-h-screen bg-[#07162c]" />
 
   return (
     <main ref={stageRef} className="relative flex min-h-screen items-center justify-center overflow-hidden bg-[#061227] text-white">
@@ -83,14 +76,14 @@ export default function PresentationPage() {
         <button type="button" onClick={start} className="flex items-center gap-3 rounded-xl bg-[#277be7] px-7 py-4 font-semibold hover:bg-[#388ded]"><Play size={22} /> Iniciar presentación</button>
         <p className="flex items-center gap-2 text-sm text-blue-200"><Volume2 size={16} /><Maximize size={16}/> Video con audio y pantalla completa</p>
         {error && <p role="alert" className="text-sm text-red-200">{error}</p>}
-        <button type="button" onClick={() => router.push('/dashboard')} className="flex items-center gap-2 text-sm text-blue-200 hover:text-white"><ArrowLeft size={16}/> Volver al Dashboard</button>
+        <button type="button" onClick={() => router.push('/login')} className="flex items-center gap-2 text-sm text-blue-200 hover:text-white"><ArrowLeft size={16}/> Omitir presentación e iniciar sesión</button>
       </div>}
       {finished && <div className="absolute inset-0 z-20 flex flex-col items-center justify-center bg-[#061227] text-center animate-pulse">
         <img src="/icon.png" alt="NEDVI OS" className="h-28 w-28 object-contain"/>
         <h2 className="mt-6 text-5xl font-bold">NEDVI OS</h2>
         <p className="mt-3 text-xl text-[#9bd2ff]">Todo tu negocio. Un solo sistema.</p>
       </div>}
-      {started && !finished && <button type="button" onClick={finish} className="absolute bottom-6 right-6 z-10 rounded-lg bg-black/50 px-4 py-2 text-sm text-white/90 hover:bg-black/70">Ir al Dashboard</button>}
+      {started && !finished && <button type="button" onClick={finish} className="absolute bottom-6 right-6 z-10 rounded-lg bg-black/50 px-4 py-2 text-sm text-white/90 hover:bg-black/70">Ir a inicio de sesión</button>}
     </main>
   )
 }
