@@ -1,8 +1,9 @@
 'use client'
 
-import { FormEvent, useCallback, useEffect, useMemo, useState } from 'react'
-import { ClipboardList, Eye, Plus, Search, Trash2, X } from 'lucide-react'
+import { ChangeEvent, FormEvent, useCallback, useEffect, useMemo, useState } from 'react'
+import { ClipboardList, Eye, FileSpreadsheet, Plus, Search, Trash2, X } from 'lucide-react'
 import { AppShell } from '@/components/layout/AppShell'
+import { readQuoteSpreadsheet } from '@/features/quotes/services/excelQuoteImport'
 import {
   PURCHASING_UPDATED_EVENT,
   REQUISITIONS_STORAGE_KEY,
@@ -80,6 +81,8 @@ export default function RequisitionsPage() {
   const [status, setStatus] = useState<RequisitionStatus>('Borrador')
   const [items, setItems] = useState<DraftItem[]>([emptyItem()])
   const [notes, setNotes] = useState('')
+  const [readingExcel, setReadingExcel] = useState(false)
+  const [importNotice, setImportNotice] = useState('')
 
   const loadData = useCallback(() => {
     setProjects(readConvertedProjects())
@@ -136,6 +139,7 @@ export default function RequisitionsPage() {
     setStatus('Borrador')
     setItems([emptyItem()])
     setNotes('')
+    setImportNotice('')
   }
 
   function closeForm() {
@@ -145,6 +149,33 @@ export default function RequisitionsPage() {
 
   function updateItem(id: string, field: keyof DraftItem, value: string) {
     setItems((current) => current.map((item) => (item.id === id ? { ...item, [field]: value } : item)))
+  }
+
+  async function handleExcelFile(event: ChangeEvent<HTMLInputElement>) {
+    const file = event.target.files?.[0]
+    if (!file) return
+    setReadingExcel(true)
+    setImportNotice('')
+    try {
+      const imported = await readQuoteSpreadsheet(file)
+      const newItems: DraftItem[] = imported.map((row) => ({
+        id: crypto.randomUUID(),
+        description: row.description,
+        unit: units.includes(row.unit as PurchasingUnit) ? row.unit as PurchasingUnit : 'Otros',
+        quantity: String(row.quantity),
+        estimatedUnitPrice: String(row.unitPrice),
+      }))
+      setItems((current) => [
+        ...current.filter((item) => item.description.trim() || item.quantity || item.estimatedUnitPrice),
+        ...newItems,
+      ])
+      setImportNotice(`Se importaron ${newItems.length} partidas. Revisa unidades, cantidades y precios antes de guardar.`)
+    } catch (error) {
+      setImportNotice(error instanceof Error ? error.message : 'No se pudo leer el archivo.')
+    } finally {
+      setReadingExcel(false)
+      event.target.value = ''
+    }
   }
 
   function saveRequisition(event: FormEvent<HTMLFormElement>) {
@@ -269,7 +300,8 @@ export default function RequisitionsPage() {
               <Field label="Estado"><select value={status} onChange={(e) => setStatus(e.target.value as RequisitionStatus)} className="req-input">{statuses.filter((item) => item !== 'Ordenada').map((item) => <option key={item}>{item}</option>)}</select></Field>
             </div>
 
-            <section><div className="mb-3 flex items-center justify-between"><div><h3 className="font-semibold text-[var(--foreground)]">Artículos / servicios</h3><p className="text-xs text-[var(--muted)]">Registra cantidades y precio estimado.</p></div><button type="button" onClick={() => setItems((current) => [...current, emptyItem()])} className="rounded-lg border border-[var(--border)] px-3 py-2 text-xs font-semibold text-[var(--foreground)]">+ Agregar</button></div>
+            <section><div className="mb-3 flex items-center justify-between"><div><h3 className="font-semibold text-[var(--foreground)]">Artículos / servicios</h3><p className="text-xs text-[var(--muted)]">Registra cantidades y precio estimado o importa desde Excel.</p></div><div className="flex flex-wrap items-center gap-2"><label className={`inline-flex cursor-pointer items-center gap-2 rounded-lg border border-[#5496CC]/40 bg-[#5496CC]/10 px-3 py-2 text-xs font-semibold text-[#5496CC] ${readingExcel ? 'pointer-events-none opacity-60' : ''}`}><FileSpreadsheet size={15} /> {readingExcel ? 'Leyendo Excel...' : 'Importar Excel'}<input aria-label="Importar artículos desde Excel" type="file" accept=".xlsx,.csv,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,text/csv" disabled={readingExcel} onChange={(event) => void handleExcelFile(event)} className="sr-only" /></label><button type="button" onClick={() => setItems((current) => [...current, emptyItem()])} className="rounded-lg border border-[var(--border)] px-3 py-2 text-xs font-semibold text-[var(--foreground)]">+ Agregar</button></div></div>
+              {importNotice ? <p role="status" className="mb-3 rounded-lg border border-[var(--border)] bg-[var(--surface-soft)] px-3 py-2 text-sm text-[var(--foreground)]">{importNotice}</p> : null}
               <div className="space-y-3">{items.map((item) => <div key={item.id} className="grid gap-2 rounded-xl border border-[var(--border)] p-3 md:grid-cols-[minmax(220px,1fr)_150px_110px_160px_auto]"><input value={item.description} onChange={(e) => updateItem(item.id, 'description', e.target.value)} placeholder="Descripción" className="req-input" /><select value={item.unit} onChange={(e) => updateItem(item.id, 'unit', e.target.value)} className="req-input">{units.map((unit) => <option key={unit}>{unit}</option>)}</select><input type="number" min="0.01" step="0.01" value={item.quantity} onChange={(e) => updateItem(item.id, 'quantity', e.target.value)} placeholder="Cantidad" className="req-input" /><input type="number" min="0" step="0.01" value={item.estimatedUnitPrice} onChange={(e) => updateItem(item.id, 'estimatedUnitPrice', e.target.value)} placeholder="Precio estimado" className="req-input" /><button type="button" disabled={items.length === 1} onClick={() => setItems((current) => current.filter((entry) => entry.id !== item.id))} className="rounded-lg px-3 py-2 text-sm text-red-500 disabled:opacity-30">Quitar</button></div>)}</div>
             </section>
 
