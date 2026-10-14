@@ -23,7 +23,7 @@ export default function TimeClockPage() {
     try {
       const res = await fetch('/api/time-clock',{cache:'no-store'})
       const body = await res.json() as Payload
-      if (!res.ok) throw new Error(body.error || 'No fue posible cargar asistencias.')
+      if (!res.ok) throw new Error([body.error || 'No fue posible cargar asistencias.', (body as Payload & {code?:string}).code ? 'Código: '+(body as Payload & {code?:string}).code : null].filter(Boolean).join(' '))
       setEntries(body.entries)
       setMe(body.me)
       setCanViewAll(body.canViewAll)
@@ -80,7 +80,7 @@ export default function TimeClockPage() {
       const data = await res.json() as {error?:string}
       if (!res.ok) throw new Error(data.error || 'No se pudo guardar el registro.')
       setPhoto(null)
-      setNotice(nextType === 'entrada' ? 'Entrada registrada con éxito.' : 'Salida registrada con éxito. Jornada finalizada.')
+      setNotice(nextType === 'entrada' ? 'Entrada guardada en Supabase. Consultando el historial…' : 'Salida guardada en Supabase. Consultando el historial…')
       await refresh()
     } catch (err) {setError(err instanceof Error ? err.message : 'No se pudo registrar.')}
     finally {setBusy(false)}
