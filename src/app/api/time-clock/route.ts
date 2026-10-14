@@ -27,7 +27,7 @@ export async function GET() {
     const ctx = await getContext()
     if (!ctx) return NextResponse.json({error:'Sesión no autorizada.'},{status:401})
     let query = ctx.admin.from('time_clock_entries')
-      .select('id,user_id,employee_name,event_type,occurred_at,photo_path')
+      .select('id,user_id,employee_name,event_type,occurred_at,photo_path,latitude,longitude,location_accuracy_m')
       .is('deleted_at',null).order('occurred_at',{ascending:false}).limit(150)
     if (!ctx.isAdmin) query = query.eq('user_id',ctx.user.id)
     const {data,error} = await query
@@ -43,7 +43,7 @@ export async function GET() {
         if (signError) console.warn('Time clock photo URL could not be signed',signError.message)
         photoUrl = link?.signedUrl ?? null
       } catch (signError) { console.warn('Time clock photo URL failed',signError) }
-      return {id:item.id,userId:item.user_id,name:item.employee_name,type:item.event_type,at:item.occurred_at,photoUrl}
+      return {id:item.id,userId:item.user_id,name:item.employee_name,type:item.event_type,at:item.occurred_at,photoUrl,latitude:item.latitude,longitude:item.longitude,accuracy:item.location_accuracy_m}
     }))
     return NextResponse.json({entries,me:ctx.user.id,canViewAll:ctx.isAdmin},{headers:{'Cache-Control':'no-store'}})
   } catch (error) {
@@ -59,6 +59,11 @@ export async function POST(request: Request) {
     const form = await request.formData()
     const type = form.get('type')
     const photo = form.get('photo')
+    const lat = Number(form.get('latitude'))
+    const lon = Number(form.get('longitude'))
+    const accuracy = Number(form.get('accuracy'))
+    if (!form.has('latitude') || !form.has('longitude') || !form.has('accuracy') || !Number.isFinite(lat) || !Number.isFinite(lon) || !Number.isFinite(accuracy) || lat < -90 || lat > 90 || lon < -180 || lon > 180 || accuracy < 0)
+      return NextResponse.json({error:'Se requiere la ubicación GPS actual para checar.'},{status:400})
     if (type !== 'entrada' && type !== 'salida')
       return NextResponse.json({error:'Tipo de registro inválido.'},{status:400})
     if (!(photo instanceof File) || photo.size < 100 || photo.size > 5 * 1024 * 1024 || !['image/jpeg','image/png','image/webp'].includes(photo.type))
@@ -71,6 +76,9 @@ export async function POST(request: Request) {
       p_employee_name:String(ctx.profile.full_name || ctx.user.email || 'Personal NEDVI'),
       p_event_type:type,
       p_photo_path:path,
+      p_latitude:lat,
+      p_longitude:lon,
+      p_accuracy_m:accuracy,
     })
     if (entryError) {
       await ctx.admin.storage.from(bucket).remove([path])
