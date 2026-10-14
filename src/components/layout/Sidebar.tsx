@@ -21,6 +21,7 @@ import {
   HardHat,
   Instagram,
   LayoutDashboard,
+  Presentation,
   LogOut,
   Ruler,
   Search,
@@ -221,6 +222,13 @@ export function Sidebar({
             {isPathActive('/dashboard') ? <span className="absolute left-0 h-5 w-0.5 rounded-r-full bg-white" /> : null}
             <LayoutDashboard size={18} strokeWidth={isPathActive('/dashboard') ? 2 : 1.8} className="shrink-0 text-white" />
             <span className={`whitespace-nowrap transition-opacity duration-200 ${collapsed ? 'lg:hidden' : 'opacity-100'}`}>Inicio</span>
+          </Link>
+        ) : null}
+
+        {user.role === 'Administración' ? (
+          <Link href="/presentacion" onClick={onCloseMobile} title={collapsed ? 'Modo Presentación' : undefined} className={`${primaryItemClasses(isPathActive('/presentacion'))} mt-2 border-[#7BAEE3]/40 bg-[#2b6ba5]/40`}>
+            <Presentation size={18} strokeWidth={1.8} className="shrink-0" />
+            <span className={`${collapsed ? 'lg:hidden' : ''} whitespace-nowrap`}>Modo Presentación</span>
           </Link>
         ) : null}
 
