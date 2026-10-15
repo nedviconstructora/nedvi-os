@@ -98,11 +98,6 @@ export function PwaManager({ initialVersion }: { initialVersion: string }) {
       const target = event.target
       if (target instanceof HTMLElement && target.closest('form, [contenteditable="true"]')) editingRef.current = true
     }
-    const onSubmit = () => {
-      // A submitted form is no longer considered unsaved by the update detector.
-      // Give asynchronous submit handlers time to finish their navigation/save.
-      window.setTimeout(() => { editingRef.current = false; attemptUpdate() }, 1500)
-    }
     const onReset = () => { editingRef.current = false; attemptUpdate() }
     const onBlur = () => attemptUpdate()
     const onVisibility = () => {
@@ -114,7 +109,6 @@ export function PwaManager({ initialVersion }: { initialVersion: string }) {
     const onFocus = () => void checkVersion()
     document.addEventListener('input', onEdit, true)
     document.addEventListener('change', onEdit, true)
-    document.addEventListener('submit', onSubmit, true)
     document.addEventListener('reset', onReset, true)
     document.addEventListener('focusout', onBlur, true)
     document.addEventListener('visibilitychange', onVisibility)
@@ -127,7 +121,6 @@ export function PwaManager({ initialVersion }: { initialVersion: string }) {
       window.clearInterval(interval)
       document.removeEventListener('input', onEdit, true)
       document.removeEventListener('change', onEdit, true)
-      document.removeEventListener('submit', onSubmit, true)
       document.removeEventListener('reset', onReset, true)
       document.removeEventListener('focusout', onBlur, true)
       document.removeEventListener('visibilitychange', onVisibility)
