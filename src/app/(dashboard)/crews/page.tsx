@@ -189,17 +189,18 @@ export default function CrewsPage() {
   }
 
   async function remove(id: string) {
-    if (!window.confirm('¿Eliminar esta cuadrilla y sus expedientes de personal?')) return
+    if (!window.confirm('¿Eliminar esta cuadrilla de la lista compartida? Se conservarán los expedientes y la asistencia histórica por seguridad.')) return
     try {
-      const { error } = await createClient().from('crew_workers').delete().eq('crew_id', id)
-      if (error) throw error
+      const response = await fetch('/api/crews?id=' + encodeURIComponent(id), {method:'DELETE'})
+      const result = await response.json()
+      if (!response.ok) throw new Error(result.error || 'No se pudo eliminar la cuadrilla.')
+      const next = readCrews().filter(item => item.id !== id)
+      writeCrews(next)
+      setCrews(current => current.filter(item => item.id !== id))
+      await refreshCrews()
     } catch (error) {
-      window.alert('No se pudieron eliminar los expedientes protegidos. La cuadrilla no se eliminó. ' + (error instanceof Error ? error.message : ''))
-      return
+      window.alert(error instanceof Error ? error.message : 'Error al eliminar la cuadrilla.')
     }
-    const response=await fetch('/api/crews?id='+encodeURIComponent(id),{method:'DELETE'})
-    if(!response.ok){window.alert('No se pudo desactivar la cuadrilla en Supabase.');return}
-    await refreshCrews()
   }
 
   async function migrateLocal(){const local=readCrews();if(!local.length)return;const res=await fetch('/api/crews',{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify({crews:local})});if(res.ok)await refreshCrews();else window.alert('No se pudieron compartir las cuadrillas guardadas en esta PC.')}
