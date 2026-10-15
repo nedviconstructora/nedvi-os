@@ -64,7 +64,7 @@ export default function AttendancePage() {
       if(!parsed.workers.length)throw new Error('El archivo no contiene empleados.')
       const response=await fetch('/api/crew-attendance',{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify({crewId:supervisorCrew,workers:parsed.workers})})
       const payload=await response.json()
-      if(!response.ok)throw new Error(payload.error||'No se pudo importar.')
+      if(!response.ok)throw new Error([payload.error, payload.code ? 'Código: '+payload.code : '', payload.detail || ''].filter(Boolean).join(' · ') || 'No se pudo importar.')
       setExcelNotice(payload.imported+' trabajadores nuevos importados. '+(payload.message||''))
       await reloadSupervisor(supervisorCrew,supervisorDate)
     }catch(error){setSupervisorError(error instanceof Error?error.message:'Error al leer Excel.')}
