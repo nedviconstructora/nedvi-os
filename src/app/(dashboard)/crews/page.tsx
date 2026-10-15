@@ -45,6 +45,7 @@ export default function CrewsPage() {
   const [sessionName, setSessionName] = useState('')
   const [selectedFiles, setSelectedFiles] = useState<string[]>([])
 
+  async function refreshCrews(){ try { const r=await fetch('/api/crews',{cache:'no-store'}); if(!r.ok)return;const d=await r.json();setCrews(d.crews);writeCrews(d.crews) }catch{} }
   function loadData() {
     setCrews(readCrews())
     setSessionName(readAccessSession()?.name?.trim() || '')
@@ -52,14 +53,17 @@ export default function CrewsPage() {
 
   useEffect(() => {
     loadData()
+    void refreshCrews()
+    const interval=window.setInterval(()=>{if(document.visibilityState==='visible')void refreshCrews()},15000)
     const handleStorage = (event: StorageEvent) => {
       if (event.key === CREWS_STORAGE_KEY) loadData()
     }
     window.addEventListener('storage', handleStorage)
-    window.addEventListener('focus', loadData)
+    window.addEventListener('focus', refreshCrews)
     return () => {
       window.removeEventListener('storage', handleStorage)
-      window.removeEventListener('focus', loadData)
+      window.removeEventListener('focus', refreshCrews)
+      window.clearInterval(interval)
     }
   }, [])
 
