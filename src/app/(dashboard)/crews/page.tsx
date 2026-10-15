@@ -1,7 +1,9 @@
 'use client'
 
 import { FormEvent, useEffect, useMemo, useState } from 'react'
-import { Pencil, Plus, Search, Trash2, UserRound, X } from 'lucide-react'
+import { FileSpreadsheet, Pencil, Plus, Search, Trash2, UserRound, X } from 'lucide-react'
+import { createClient } from '@/lib/supabase/client'
+import { parseCrewExcel, type ImportedWorker } from '@/features/operations/services/crewExcelImport'
 import { AppShell } from '@/components/layout/AppShell'
 import {
   CREWS_STORAGE_KEY,
@@ -32,6 +34,10 @@ export default function CrewsPage() {
   const [open, setOpen] = useState(false)
   const [editingId, setEditingId] = useState<string | null>(null)
   const [form, setForm] = useState<CrewForm>(emptyForm)
+  const [imported, setImported] = useState<ImportedWorker[]>([])
+  const [importWarnings, setImportWarnings] = useState<string[]>([])
+  const [importError, setImportError] = useState('')
+  const [saving, setSaving] = useState(false)
 
   function loadData() {
     setCrews(readCrews())
@@ -63,11 +69,17 @@ export default function CrewsPage() {
 
   function openNew() {
     setEditingId(null)
+    setImported([])
+    setImportWarnings([])
+    setImportError('')
     setForm(emptyForm)
     setOpen(true)
   }
 
   function openEdit(crew: Crew) {
+    setImported([])
+    setImportWarnings([])
+    setImportError('')
     setEditingId(crew.id)
     setForm({
       name: crew.name,
@@ -79,34 +91,70 @@ export default function CrewsPage() {
     setOpen(true)
   }
 
-  function save(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault()
-    const members = form.members
-      .split(/\n|,/)
-      .map((value) => value.trim())
-      .filter(Boolean)
-
-    const crew: Crew = {
-      id: editingId ?? crypto.randomUUID(),
-      name: form.name.trim(),
-      foreman: form.foreman.trim(),
-      specialty: form.specialty.trim(),
-      members,
-      active: form.active,
+  async function importExcel(file: File | undefined) {
+    if (!file) return
+    setImportError('')
+    try {
+      const result = await parseCrewExcel(file)
+      setImported(result.workers)
+      setImportWarnings(result.warnings)
+    } catch (error) {
+      setImported([])
+      setImportError(error instanceof Error ? error.message : 'No se pudo leer el archivo.')
     }
-
-    const next = editingId
-      ? crews.map((item) => (item.id === editingId ? crew : item))
-      : [crew, ...crews]
-    setCrews(next)
-    writeCrews(next)
-    setOpen(false)
-    setEditingId(null)
-    setForm(emptyForm)
   }
 
-  function remove(id: string) {
-    if (!window.confirm('¿Eliminar esta cuadrilla?')) return
+  async function save(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault()
+    if (saving) return
+    setSaving(true)
+    setImportError('')
+    const manualNames = form.members.split(/\n|,/).map(value => value.trim()).filter(Boolean)
+    const uniqueNames = Array.from(new Set([...manualNames, ...imported.map(worker => worker.full_name)]))
+    const crewId = editingId ?? crypto.randomUUID()
+    try {
+      // Personal identifiers and salaries are NEVER written to localStorage.
+      // Only authorized administrators can insert them into Supabase (RLS).
+      if (imported.length) {
+        const supabase = createClient()
+        const { error } = await supabase.from('crew_workers').insert(
+          imported.map(worker => ({ ...worker, crew_id: crewId }))
+        )
+        if (error) throw new Error('No se pudo guardar el expediente protegido: ' + error.message)
+      }
+      const crew: Crew = {
+        id: crewId,
+        name: form.name.trim(),
+        foreman: form.foreman.trim(),
+        specialty: form.specialty.trim(),
+        members: uniqueNames,
+        active: form.active,
+      }
+      const next = editingId
+        ? crews.map(item => item.id === editingId ? crew : item)
+        : [crew, ...crews]
+      setCrews(next)
+      writeCrews(next)
+      setOpen(false)
+      setEditingId(null)
+      setImported([])
+      setForm(emptyForm)
+    } catch (error) {
+      setImportError(error instanceof Error ? error.message : 'Error al guardar la cuadrilla.')
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  async function remove(id: string) {
+    if (!window.confirm('¿Eliminar esta cuadrilla y sus expedientes de personal?')) return
+    try {
+      const { error } = await createClient().from('crew_workers').delete().eq('crew_id', id)
+      if (error) throw error
+    } catch (error) {
+      window.alert('No se pudieron eliminar los expedientes protegidos. La cuadrilla no se eliminó. ' + (error instanceof Error ? error.message : ''))
+      return
+    }
     const next = crews.filter((crew) => crew.id !== id)
     setCrews(next)
     writeCrews(next)
@@ -142,8 +190,20 @@ export default function CrewsPage() {
         <label className="block space-y-2"><span className="text-sm font-semibold">Nombre de la cuadrilla *</span><input required value={form.name} onChange={(e) => setForm((current) => ({ ...current, name: e.target.value }))} placeholder="Ej. Cuadrilla Albañilería A" className="w-full rounded-xl border border-[var(--border)] bg-transparent px-4 py-3" /></label>
         <div className="grid gap-4 sm:grid-cols-2"><label className="space-y-2"><span className="text-sm font-semibold">Responsable / Cabo *</span><input required value={form.foreman} onChange={(e) => setForm((current) => ({ ...current, foreman: e.target.value }))} className="w-full rounded-xl border border-[var(--border)] bg-transparent px-4 py-3" /></label><label className="space-y-2"><span className="text-sm font-semibold">Especialidad</span><input value={form.specialty} onChange={(e) => setForm((current) => ({ ...current, specialty: e.target.value }))} placeholder="Ej. Instalaciones eléctricas" className="w-full rounded-xl border border-[var(--border)] bg-transparent px-4 py-3" /></label></div>
         <label className="block space-y-2"><span className="text-sm font-semibold">Integrantes</span><textarea rows={6} value={form.members} onChange={(e) => setForm((current) => ({ ...current, members: e.target.value }))} placeholder="Un nombre por línea o separados por comas" className="w-full rounded-xl border border-[var(--border)] bg-transparent px-4 py-3" /></label>
+        <div className="space-y-3 rounded-xl border border-[#5496CC]/40 bg-[var(--surface-soft)] p-4">
+          <div className="flex items-center gap-2 font-semibold"><FileSpreadsheet size={20} className="text-[#5496CC]" /> Importar integrantes desde Excel</div>
+          <p className="text-xs text-[var(--muted)]">Selecciona el Excel de empleados (.xlsx) o un CSV. Se reconocerán nombre, NSS, puesto, salario, horarios, supervisor, CURP y RFC. Los expedientes sensibles se guardan solo en Supabase con acceso administrativo.</p>
+          <input type="file" accept=".xlsx,.csv" onChange={event => void importExcel(event.target.files?.[0])} className="block w-full text-sm file:mr-3 file:rounded-lg file:border-0 file:bg-[#5496CC] file:px-3 file:py-2 file:font-semibold file:text-white" />
+          {imported.length ? <div className="rounded-lg border border-[var(--border)] bg-[var(--surface)] p-3">
+            <p className="text-sm font-semibold">{imported.length} integrantes listos para importar</p>
+            <p className="mt-1 text-xs text-[var(--muted)]">Vista previa (primeros 5): {imported.slice(0, 5).map(worker => worker.full_name + (worker.position ? ' — ' + worker.position : '')).join('; ')}</p>
+            <button type="button" className="mt-2 text-xs text-red-500 underline" onClick={() => setImported([])}>Quitar importación</button>
+          </div> : null}
+          {importWarnings.length ? <p className="text-xs text-amber-600">{importWarnings.length} avisos: {importWarnings.slice(0, 3).join(' ')}</p> : null}
+          {importError ? <p role="alert" className="text-sm font-medium text-red-500">{importError}</p> : null}
+        </div>
         <label className="flex items-center gap-3 rounded-xl border border-[var(--border)] p-4"><input type="checkbox" checked={form.active} onChange={(e) => setForm((current) => ({ ...current, active: e.target.checked }))} /><span className="text-sm font-semibold">Cuadrilla activa</span></label>
-        <div className="flex justify-end gap-3"><button type="button" onClick={() => setOpen(false)} className="rounded-xl border border-[var(--border)] px-5 py-3 font-semibold">Cancelar</button><button type="submit" className="rounded-xl bg-[#5496CC] px-5 py-3 font-semibold text-white">Guardar cuadrilla</button></div>
+        <div className="flex justify-end gap-3"><button type="button" onClick={() => setOpen(false)} className="rounded-xl border border-[var(--border)] px-5 py-3 font-semibold">Cancelar</button><button type="submit" disabled={saving} className="rounded-xl bg-[#5496CC] px-5 py-3 font-semibold text-white disabled:opacity-50">{saving ? "Guardando..." : "Guardar cuadrilla"}</button></div>
       </form></div></div> : null}
     </AppShell>
   )
