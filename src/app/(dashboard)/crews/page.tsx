@@ -38,6 +38,9 @@ export default function CrewsPage() {
   const [importWarnings, setImportWarnings] = useState<string[]>([])
   const [importError, setImportError] = useState('')
   const [saving, setSaving] = useState(false)
+  const [viewingCrew, setViewingCrew] = useState<string | null>(null)
+  const [details, setDetails] = useState<ImportedWorker[]>([])
+  const [detailsError, setDetailsError] = useState('')
 
   function loadData() {
     setCrews(readCrews())
@@ -146,6 +149,21 @@ export default function CrewsPage() {
     }
   }
 
+  async function viewDetails(crewId: string) {
+    setDetails([])
+    setDetailsError('')
+    setViewingCrew(crewId)
+    try {
+      const { data, error } = await createClient().from('crew_workers')
+        .select('full_name,social_security_number,position,salary,salary_period,work_hours,entry_time,exit_time,entry_supervisor,curp,rfc')
+        .eq('crew_id', crewId).order('full_name')
+      if (error) throw error
+      setDetails((data || []) as ImportedWorker[])
+    } catch (error) {
+      setDetailsError(error instanceof Error ? error.message : 'No se pudieron consultar los expedientes.')
+    }
+  }
+
   async function remove(id: string) {
     if (!window.confirm('¿Eliminar esta cuadrilla y sus expedientes de personal?')) return
     try {
@@ -182,10 +200,19 @@ export default function CrewsPage() {
         {filtered.length === 0 ? <div className="rounded-2xl border border-[var(--border)] bg-[var(--surface)] px-6 py-16 text-center"><UserRound className="mx-auto text-[#5496CC]" size={32} /><h2 className="mt-4 text-lg font-bold">Todavía no hay cuadrillas</h2><p className="mt-2 text-sm text-[var(--muted)]">Crea la primera cuadrilla para comenzar a organizar al personal de obra.</p></div> : <div className="grid gap-4 xl:grid-cols-2">{filtered.map((crew) => <article key={crew.id} className="rounded-2xl border border-[var(--border)] bg-[var(--surface)] p-5 shadow-sm">
           <div className="flex items-start justify-between gap-4"><div><div className="flex items-center gap-2"><h2 className="text-lg font-bold">{crew.name}</h2><span className={`rounded-full px-2.5 py-1 text-[10px] font-semibold ${crew.active ? 'bg-emerald-500/10 text-emerald-500' : 'bg-slate-500/10 text-slate-500'}`}>{crew.active ? 'Activa' : 'Inactiva'}</span></div><p className="mt-1 text-sm text-[var(--muted)]">{crew.specialty || 'Sin especialidad'}</p></div><div className="flex gap-1"><button onClick={() => openEdit(crew)} className="rounded-lg p-2 hover:bg-[var(--surface-soft)]"><Pencil size={15} /></button><button onClick={() => remove(crew.id)} className="rounded-lg p-2 text-red-500 hover:bg-red-500/10"><Trash2 size={15} /></button></div></div>
           <div className="mt-4 rounded-xl bg-[var(--surface-soft)] p-4"><p className="text-xs uppercase text-[var(--muted)]">Responsable / Cabo</p><p className="mt-1 font-semibold">{crew.foreman}</p></div>
+          <button type="button" onClick={() => void viewDetails(crew.id)} className="mt-3 rounded-xl border border-[#5496CC] px-3 py-2 text-xs font-semibold text-[#5496CC]">Ver expedientes de integrantes</button>
           <div className="mt-4"><p className="text-xs font-semibold uppercase tracking-wide text-[var(--muted)]">Integrantes ({crew.members.length})</p>{crew.members.length ? <div className="mt-2 flex flex-wrap gap-2">{crew.members.map((member) => <span key={member} className="rounded-full border border-[var(--border)] px-3 py-1.5 text-xs">{member}</span>)}</div> : <p className="mt-2 text-sm text-[var(--muted)]">Sin integrantes registrados.</p>}</div>
         </article>)}</div>}
       </div>
 
+      {viewingCrew ? <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/60 p-4">
+        <div className="max-h-[90vh] w-full max-w-6xl overflow-y-auto rounded-2xl bg-[var(--surface)] p-5 shadow-2xl">
+          <div className="mb-4 flex items-center justify-between gap-4"><div><h2 className="text-xl font-bold">Expedientes de personal</h2><p className="text-xs text-[var(--muted)]">Solo administradores autorizados. Información confidencial.</p></div><button type="button" onClick={() => setViewingCrew(null)} aria-label="Cerrar expedientes"><X size={20}/></button></div>
+          {detailsError ? <p role="alert" className="text-sm text-red-500">{detailsError}</p> : null}
+          {!detailsError && !details.length ? <p className="text-sm text-[var(--muted)]">No hay expedientes importados en esta cuadrilla.</p> : null}
+          {details.length ? <div className="overflow-x-auto"><table className="w-full min-w-[1300px] text-left text-xs"><thead><tr className="border-b border-[var(--border)]">{['Nombre','NSS','Puesto','Salario','Periodicidad','Horas','Entrada','Salida','Supervisor','CURP','RFC'].map(column => <th key={column} className="px-3 py-2">{column}</th>)}</tr></thead><tbody>{details.map((worker, index) => <tr key={index} className="border-b border-[var(--border)]">{[worker.full_name,worker.social_security_number,worker.position,worker.salary === null ? '' : String(worker.salary),worker.salary_period,worker.work_hours,worker.entry_time,worker.exit_time,worker.entry_supervisor,worker.curp,worker.rfc].map((value, i) => <td key={i} className="px-3 py-2">{value || '—'}</td>)}</tr>)}</tbody></table></div> : null}
+        </div>
+      </div> : null}
       {open ? <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/55 p-4"><div className="max-h-[92vh] w-full max-w-2xl overflow-y-auto rounded-2xl bg-[var(--surface)] p-6 shadow-2xl"><div className="mb-5 flex items-center justify-between"><div><p className="text-xs font-semibold uppercase tracking-wide text-[#5496CC]">Personal de obra</p><h2 className="text-xl font-bold">{editingId ? 'Editar cuadrilla' : 'Nueva cuadrilla'}</h2></div><button onClick={() => setOpen(false)}><X size={18} /></button></div><form onSubmit={save} className="space-y-4">
         <label className="block space-y-2"><span className="text-sm font-semibold">Nombre de la cuadrilla *</span><input required value={form.name} onChange={(e) => setForm((current) => ({ ...current, name: e.target.value }))} placeholder="Ej. Cuadrilla Albañilería A" className="w-full rounded-xl border border-[var(--border)] bg-transparent px-4 py-3" /></label>
         <div className="grid gap-4 sm:grid-cols-2"><label className="space-y-2"><span className="text-sm font-semibold">Responsable / Cabo *</span><input required value={form.foreman} onChange={(e) => setForm((current) => ({ ...current, foreman: e.target.value }))} className="w-full rounded-xl border border-[var(--border)] bg-transparent px-4 py-3" /></label><label className="space-y-2"><span className="text-sm font-semibold">Especialidad</span><input value={form.specialty} onChange={(e) => setForm((current) => ({ ...current, specialty: e.target.value }))} placeholder="Ej. Instalaciones eléctricas" className="w-full rounded-xl border border-[var(--border)] bg-transparent px-4 py-3" /></label></div>
