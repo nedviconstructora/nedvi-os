@@ -88,7 +88,7 @@ export async function PUT(request:Request){
   const body=await request.json().catch(()=>null) as {crewId?:string;workers?:Array<Record<string,unknown>>}|null
   if(!validId(body?.crewId)||!Array.isArray(body?.workers)||body!.workers.length>500||body!.workers.length===0)return NextResponse.json({error:'Selecciona una cuadrilla y un Excel con 1 a 500 trabajadores.'},{status:400})
   const {data:existing,error:readError}=await ctx.admin.from('crew_workers').select('full_name').eq('crew_id',body!.crewId)
-  if(readError)throw readError
+  if(readError){console.error('Crew workers lookup failed',readError);return NextResponse.json({error:'No fue posible revisar los trabajadores registrados.',code:readError.code},{status:500})}
   const seen=new Set((existing||[]).map(x=>x.full_name.trim().toLocaleLowerCase('es-MX')))
   const batch:Record<string,unknown>[]=[]
   for(const worker of body!.workers){
@@ -104,7 +104,7 @@ export async function PUT(request:Request){
   }
   if(!batch.length)return NextResponse.json({ok:true,imported:0,message:'Los empleados ya están registrados o no contienen nombres válidos.'})
   const {error}=await ctx.admin.from('crew_workers').insert(batch)
-  if(error)throw error
+  if(error){console.error('Crew Excel insert failed',error);return NextResponse.json({error:'Supabase rechazó los registros importados.',code:error.code,detail:error.message},{status:500})}
   return NextResponse.json({ok:true,imported:batch.length})
- }catch(error){console.error('Crew Excel import failed',error);return NextResponse.json({error:'No se pudo importar el Excel.'},{status:500})}
+ }catch(error){console.error('Crew Excel import failed',error);return NextResponse.json({error:'No se pudo importar el Excel.',detail:error instanceof Error?error.message:'Error inesperado de servidor.'},{status:500})}
 }
