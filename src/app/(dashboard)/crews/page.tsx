@@ -45,7 +45,7 @@ export default function CrewsPage() {
   const [sessionName, setSessionName] = useState('')
   const [selectedFiles, setSelectedFiles] = useState<string[]>([])
 
-  async function refreshCrews(){ try { const r=await fetch('/api/crews',{cache:'no-store'}); if(!r.ok)return;const d=await r.json();setCrews(d.crews);writeCrews(d.crews) }catch{} }
+  async function refreshCrews(){ try { const r=await fetch('/api/crews',{cache:'no-store'}); if(!r.ok)return;const d=await r.json();if(!d.crews.length&&readCrews().length)return;setCrews(d.crews);writeCrews(d.crews) }catch{} }
   function loadData() {
     setCrews(readCrews())
     setSessionName(readAccessSession()?.name?.trim() || '')
@@ -197,9 +197,9 @@ export default function CrewsPage() {
       window.alert('No se pudieron eliminar los expedientes protegidos. La cuadrilla no se eliminó. ' + (error instanceof Error ? error.message : ''))
       return
     }
-    const next = crews.filter((crew) => crew.id !== id)
-    setCrews(next)
-    writeCrews(next)
+    const response=await fetch('/api/crews?id='+encodeURIComponent(id),{method:'DELETE'})
+    if(!response.ok){window.alert('No se pudo desactivar la cuadrilla en Supabase.');return}
+    await refreshCrews()
   }
 
   async function migrateLocal(){const local=readCrews();if(!local.length)return;const res=await fetch('/api/crews',{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify({crews:local})});if(res.ok)await refreshCrews();else window.alert('No se pudieron compartir las cuadrillas guardadas en esta PC.')}
