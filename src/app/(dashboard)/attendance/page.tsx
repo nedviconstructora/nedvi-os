@@ -160,14 +160,14 @@ export default function AttendancePage() {
         <header className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
           <div>
             <p className="text-xs font-semibold uppercase tracking-[0.16em] text-[#5496CC]">Operaciones / Obra</p>
-            <h1 className="mt-2 text-3xl font-bold text-[var(--foreground)]">Asistencias</h1>
-            <p className="mt-2 text-sm text-[var(--muted)]">Registra asistencia, retardos y horarios del personal en obra.</p>
+            <h1 className="mt-2 text-3xl font-bold text-[var(--foreground)]">Asistencias · Personal de obra</h1>
+            <p className="mt-2 text-sm text-[var(--muted)]">Checador de trabajadores por cuadrilla: el supervisor registra las entradas, salidas y ausencias. No se mezcla con el checador del equipo interno.</p>
           </div>
           <button onClick={() => setOpen(true)} className="inline-flex h-11 items-center gap-2 rounded-xl bg-[#5496CC] px-4 text-sm font-semibold text-white"><Plus size={16} /> Registrar asistencia</button>
         </header>
 
         <section className="space-y-4 rounded-2xl border border-[var(--border)] bg-[var(--surface)] p-5">
-          <div><h2 className="flex items-center gap-2 text-lg font-bold"><Clock3 size={20} className="text-[#5496CC]"/> Pase de lista por supervisor</h2><p className="mt-1 text-sm text-[var(--muted)]">Integrantes sincronizados desde Supabase. Hora de entrada y salida tomada del servidor; sin registros duplicados.</p></div>
+          <div><h2 className="flex items-center gap-2 text-lg font-bold"><Clock3 size={20} className="text-[#5496CC]"/> Checador de trabajadores · Pase de lista por supervisor</h2><p className="mt-1 text-sm text-[var(--muted)]">Selecciona la cuadrilla y registra cada entrada o salida desde el celular del supervisor. El servidor asigna la hora; este registro es independiente del checador del equipo NEDVI.</p></div>
           <div className="grid gap-3 sm:grid-cols-2">
             <label className="space-y-1"><span className="text-xs font-semibold">Cuadrilla</span><select className="w-full rounded-xl border border-[var(--border)] bg-[var(--background)] p-3 text-sm" value={supervisorCrew} onChange={e=>{setSupervisorCrew(e.target.value);void reloadSupervisor(e.target.value,supervisorDate)}}><option value="">Seleccionar cuadrilla</option>{crews.filter(c=>c.active).map(c=><option key={c.id} value={c.id}>{c.name}</option>)}</select></label>
             <label className="space-y-1"><span className="text-xs font-semibold">Fecha (consulta)</span><input type="date" className="w-full rounded-xl border border-[var(--border)] bg-[var(--background)] p-3 text-sm" value={supervisorDate} onChange={e=>{setSupervisorDate(e.target.value);void reloadSupervisor(supervisorCrew,e.target.value)}}/></label>
