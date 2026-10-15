@@ -29,41 +29,54 @@ export async function GET(request:Request) {
   if(!validId(crewId)||!validDate(date)) return NextResponse.json({error:'Cuadrilla o fecha inválida.'},{status:400})
   const {data:workers,error:we}=await ctx.admin.from('crew_workers').select('id,full_name,position,entry_time').eq('crew_id',crewId).order('full_name')
   if(we) throw we
-  const {data:entries,error:ae}=await ctx.admin.from('crew_attendance').select('id,worker_id,status,check_in,check_out,recorded_by').eq('crew_id',crewId).eq('work_date',date)
+  const {data:entries,error:ae}=await ctx.admin.from('crew_attendance').select('id,worker_id,status,check_in,check_out,recorded_by,entry_photo_path,exit_photo_path').eq('crew_id',crewId).eq('work_date',date)
   if(ae) throw ae
-  return NextResponse.json({workers:workers||[],entries:entries||[],date},{headers:{'Cache-Control':'no-store'}})
+  const signed=await Promise.all((entries||[]).map(async e=>{const urls=await Promise.all([e.entry_photo_path,e.exit_photo_path].map(async path=>path?(await ctx.admin.storage.from('nedvi-crew-attendance').createSignedUrl(path,300)).data?.signedUrl||null:null));return {id:e.id,worker_id:e.worker_id,status:e.status,check_in:e.check_in,check_out:e.check_out,entry_photo_url:urls[0],exit_photo_url:urls[1]}}))
+  return NextResponse.json({workers:workers||[],entries:signed,date},{headers:{'Cache-Control':'no-store'}})
  } catch(error) {console.error('Crew attendance read failed',error);return NextResponse.json({error:'No se pudieron cargar las asistencias.'},{status:500})}
 }
 export async function POST(request:Request) {
  try {
   const ctx=await context()
   if(!ctx) return NextResponse.json({error:'Acceso reservado para supervisores y administración.'},{status:403})
-  const body=await request.json().catch(()=>null) as {workerId?:string;crewId?:string;action?:string;date?:string}|null
-  if(!validId(body?.workerId)||!validId(body?.crewId)||!['entrada','salida','ausente'].includes(body?.action||'')||!validDate(body?.date))
+  const form=await request.formData()
+  const workerId=form.get('workerId'),crewId=form.get('crewId'),action=form.get('action'),date=form.get('date')
+  if(!validId(workerId)||!validId(crewId)||!['entrada','salida','ausente'].includes(String(action))||!validDate(date))
     return NextResponse.json({error:'Solicitud inválida.'},{status:400})
-  if(body!.date!==localDay()) return NextResponse.json({error:'Solo se pueden registrar eventos de hoy.'},{status:400})
-  const {data:worker,error:we}=await ctx.admin.from('crew_workers').select('id,crew_id,entry_time').eq('id',body!.workerId).eq('crew_id',body!.crewId).maybeSingle()
-  if(we || !worker) return NextResponse.json({error:'El trabajador no pertenece a esta cuadrilla.'},{status:404})
-  const {data:existing,error:ee}=await ctx.admin.from('crew_attendance').select('id,status,check_in,check_out').eq('worker_id',worker.id).eq('work_date',body!.date).maybeSingle()
+  if(date!==localDay()) return NextResponse.json({error:'Solo se pueden registrar eventos de hoy.'},{status:400})
+  const photo=form.get('photo')
+  if(action!=='ausente' && (!(photo instanceof File)||photo.size<100||photo.size>5*1024*1024||!['image/jpeg','image/png','image/webp'].includes(photo.type)))
+    return NextResponse.json({error:'Se requiere una fotografía JPG, PNG o WebP de hasta 5 MB para la entrada y la salida.'},{status:400})
+  const {data:worker,error:we}=await ctx.admin.from('crew_workers').select('id,crew_id,entry_time').eq('id',workerId).eq('crew_id',crewId).maybeSingle()
+  if(we||!worker) return NextResponse.json({error:'El trabajador no pertenece a esta cuadrilla.'},{status:404})
+  const {data:existing,error:ee}=await ctx.admin.from('crew_attendance').select('id,status,check_in,check_out').eq('worker_id',worker.id).eq('work_date',date).maybeSingle()
   if(ee) throw ee
+  if(action==='entrada'&&(existing?.check_in||existing?.status==='Ausente')) return NextResponse.json({error:'Ya existe entrada o ausencia.'},{status:409})
+  if(action==='salida'&&(!existing?.check_in||existing.check_out)) return NextResponse.json({error:'Para registrar salida debe existir una entrada sin salida.'},{status:409})
+  if(action==='ausente'&&(existing?.check_in||existing?.check_out)) return NextResponse.json({error:'La persona ya tiene asistencia.'},{status:409})
   const now=new Date()
-  let payload:Record<string,unknown>
-  if(body!.action==='entrada') {
-    if(existing?.check_in || existing?.status==='Ausente') return NextResponse.json({error:'La entrada ya fue registrada o el trabajador está marcado ausente.'},{status:409})
-    const localTime=new Intl.DateTimeFormat('en-GB',{timeZone:'America/Tijuana',hour:'2-digit',minute:'2-digit',hour12:false}).format(now)
-    const late= /^\d{2}:\d{2}$/.test(worker.entry_time||'') && localTime > worker.entry_time
-    payload={check_in:now.toISOString(),status:late?'Retardo':'Presente'}
-  } else if(body!.action==='salida') {
-    if(!existing?.check_in || existing.check_out) return NextResponse.json({error:'Primero registra la entrada; la salida no puede duplicarse.'},{status:409})
-    payload={check_out:now.toISOString()}
-  } else {
-    if(existing?.check_in || existing?.check_out) return NextResponse.json({error:'No se puede marcar ausente después de registrar una entrada.'},{status:409})
-    payload={status:'Ausente'}
+  let photoPath:string|null=null
+  if(photo instanceof File && action!=='ausente') {
+   const extension=photo.type==='image/png'?'png':photo.type==='image/webp'?'webp':'jpg'
+   photoPath=crewId+'/'+workerId+'/'+date+'/'+crypto.randomUUID()+'.'+extension
+   const {error:uploadError}=await ctx.admin.storage.from('nedvi-crew-attendance').upload(photoPath,photo,{contentType:photo.type,upsert:false})
+   if(uploadError) throw uploadError
   }
+  let payload:Record<string,unknown>
+  if(action==='entrada'){
+   const localTime=new Intl.DateTimeFormat('en-GB',{timeZone:'America/Tijuana',hour:'2-digit',minute:'2-digit',hour12:false}).format(now)
+   const late=/^\\d{2}:\\d{2}$/.test(worker.entry_time||'')&&localTime>worker.entry_time
+   payload={check_in:now.toISOString(),entry_photo_path:photoPath,status:late?'Retardo':'Presente'}
+  }else if(action==='salida')payload={check_out:now.toISOString(),exit_photo_path:photoPath}
+  else payload={status:'Ausente'}
   let error
   if(existing) ({error}=await ctx.admin.from('crew_attendance').update({...payload,recorded_by:ctx.user.id,updated_at:now.toISOString()}).eq('id',existing.id))
-  else ({error}=await ctx.admin.from('crew_attendance').insert({worker_id:worker.id,crew_id:worker.crew_id,work_date:body!.date,recorded_by:ctx.user.id,...payload}))
-  if(error) { if(error.code==='23505') return NextResponse.json({error:'Esta asistencia ya está registrada.'},{status:409});throw error }
-  return NextResponse.json({ok:true})
- } catch(error) {console.error('Crew attendance write failed',error);return NextResponse.json({error:'No se pudo registrar la asistencia.'},{status:500})}
+  else ({error}=await ctx.admin.from('crew_attendance').insert({worker_id:worker.id,crew_id:worker.crew_id,work_date:date,recorded_by:ctx.user.id,...payload}))
+  if(error) {
+   if(photoPath) await ctx.admin.storage.from('nedvi-crew-attendance').remove([photoPath])
+   if(error.code==='23505') return NextResponse.json({error:'Esta asistencia ya existe.'},{status:409})
+   throw error
+  }
+  return NextResponse.json({ok:true},{status:201})
+ } catch(error){console.error('Crew attendance write failed',error);return NextResponse.json({error:'No se pudo registrar la asistencia.'},{status:500})}
 }
