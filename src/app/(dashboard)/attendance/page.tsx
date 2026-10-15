@@ -3,6 +3,7 @@
 import { FormEvent, useEffect, useMemo, useState } from 'react'
 import { CalendarDays, Plus, Search, Trash2, UsersRound, X, Clock3, LogIn, LogOut } from 'lucide-react'
 import { AppShell } from '@/components/layout/AppShell'
+import { parseCrewExcel } from '@/features/operations/services/crewExcelImport'
 import {
   ATTENDANCE_STORAGE_KEY,
   CREWS_STORAGE_KEY,
@@ -36,7 +37,10 @@ export default function AttendancePage() {
   const [supervisorCrew, setSupervisorCrew] = useState('')
   const [supervisorDate, setSupervisorDate] = useState(new Intl.DateTimeFormat('en-CA',{timeZone:'America/Tijuana',year:'numeric',month:'2-digit',day:'2-digit'}).format(new Date()))
   const [workers, setWorkers] = useState<Array<{id:string;full_name:string;position:string;entry_time:string}>>([])
-  const [crewEntries,setCrewEntries] = useState<Array<{worker_id:string;status:string;check_in:string|null;check_out:string|null}>>([])
+  const [crewEntries,setCrewEntries] = useState<Array<{worker_id:string;status:string;check_in:string|null;check_out:string|null;entry_photo_url:string|null;exit_photo_url:string|null}>>([])
+  const [photos,setPhotos] = useState<Record<string,File>>({})
+  const [excelBusy,setExcelBusy] = useState(false)
+  const [excelNotice,setExcelNotice] = useState('')
   const [supervisorError,setSupervisorError] = useState('')
   const [supervisorLoading,setSupervisorLoading] = useState(false)
   const [supervisorBusy,setSupervisorBusy] = useState('')
@@ -52,12 +56,31 @@ export default function AttendancePage() {
     } catch(error) {setSupervisorError(error instanceof Error?error.message:'Error al cargar asistencias.')}
     finally {setSupervisorLoading(false)}
   }
+  const uploadExcel = async (file:File|undefined) => {
+    if(!file||!supervisorCrew)return
+    setExcelBusy(true);setSupervisorError('');setExcelNotice('')
+    try{
+      const parsed=await parseCrewExcel(file)
+      if(!parsed.workers.length)throw new Error('El archivo no contiene empleados.')
+      const response=await fetch('/api/crew-attendance',{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify({crewId:supervisorCrew,workers:parsed.workers})})
+      const payload=await response.json()
+      if(!response.ok)throw new Error(payload.error||'No se pudo importar.')
+      setExcelNotice(payload.imported+' trabajadores nuevos importados. '+(payload.message||''))
+      await reloadSupervisor(supervisorCrew,supervisorDate)
+    }catch(error){setSupervisorError(error instanceof Error?error.message:'Error al leer Excel.')}
+    finally{setExcelBusy(false)}
+  }
   const registerSupervisor = async (workerId:string,action:'entrada'|'salida'|'ausente') => {
+    if(action!=='ausente'&&!photos[workerId]){setSupervisorError('Toma o selecciona una fotografía del trabajador antes de registrar '+action+'.');return}
     setSupervisorBusy(workerId);setSupervisorError('')
     try {
-      const response=await fetch('/api/crew-attendance',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({workerId,crewId:supervisorCrew,date:supervisorDate,action})})
+      const form=new FormData()
+      form.set('workerId',workerId);form.set('crewId',supervisorCrew);form.set('date',supervisorDate);form.set('action',action)
+      if(action!=='ausente')form.set('photo',photos[workerId])
+      const response=await fetch('/api/crew-attendance',{method:'POST',body:form})
       const payload=await response.json()
-      if(!response.ok) throw new Error(payload.error||'No se pudo guardar.')
+      if(!response.ok)throw new Error(payload.error||'No se pudo guardar.')
+      setPhotos(current=>{const next={...current};delete next[workerId];return next})
       await reloadSupervisor(supervisorCrew,supervisorDate)
     } catch(error) {setSupervisorError(error instanceof Error?error.message:'Error al registrar.')}
     finally {setSupervisorBusy('')}
@@ -172,14 +195,16 @@ export default function AttendancePage() {
             <label className="space-y-1"><span className="text-xs font-semibold">Cuadrilla</span><select className="w-full rounded-xl border border-[var(--border)] bg-[var(--background)] p-3 text-sm" value={supervisorCrew} onChange={e=>{setSupervisorCrew(e.target.value);void reloadSupervisor(e.target.value,supervisorDate)}}><option value="">Seleccionar cuadrilla</option>{crews.filter(c=>c.active).map(c=><option key={c.id} value={c.id}>{c.name}</option>)}</select></label>
             <label className="space-y-1"><span className="text-xs font-semibold">Fecha (consulta)</span><input type="date" className="w-full rounded-xl border border-[var(--border)] bg-[var(--background)] p-3 text-sm" value={supervisorDate} onChange={e=>{setSupervisorDate(e.target.value);void reloadSupervisor(supervisorCrew,e.target.value)}}/></label>
           </div>
+          {supervisorCrew && <div className="flex flex-wrap items-center gap-3 rounded-xl border border-[var(--border)] p-3"><label className="inline-flex cursor-pointer items-center gap-2 rounded-lg border border-[#5496CC]/50 px-3 py-2 text-xs font-semibold text-[#5496CC]">Importar trabajadores de Excel (.xlsx o .csv)<input type="file" accept=".xlsx,.csv" className="sr-only" disabled={excelBusy} onChange={e=>{void uploadExcel(e.target.files?.[0]);e.target.value=''}}/></label><span className="text-xs text-[var(--muted)]">{excelBusy?'Importando…':'Se omiten nombres ya registrados en esta cuadrilla.'}</span></div>}
+          {excelNotice && <p role="status" className="rounded-lg bg-emerald-500/10 p-3 text-sm text-emerald-600">{excelNotice}</p>}
           {supervisorError && <p role="alert" className="rounded-lg bg-red-500/10 p-3 text-sm text-red-500">{supervisorError}</p>}
           {supervisorLoading && <p className="text-sm text-[var(--muted)]">Cargando integrantes…</p>}
           {supervisorCrew && !supervisorLoading && workers.length===0 && !supervisorError && <p className="text-sm text-[var(--muted)]">No hay trabajadores asociados a esta cuadrilla en Supabase.</p>}
-          {workers.length>0 && <div className="overflow-x-auto"><table className="w-full min-w-[780px] text-left text-sm"><thead><tr className="border-b border-[var(--border)] text-xs"><th className="p-3">Trabajador</th><th className="p-3">Estado</th><th className="p-3">Entrada</th><th className="p-3">Salida</th><th className="p-3">Registrar</th></tr></thead><tbody>{workers.map(w=>{
+          {workers.length>0 && <div className="overflow-x-auto"><table className="w-full min-w-[780px] text-left text-sm"><thead><tr className="border-b border-[var(--border)] text-xs"><th className="p-3">Trabajador</th><th className="p-3">Estado</th><th className="p-3">Entrada</th><th className="p-3">Salida</th><th className="p-3">Evidencia fotográfica y registro</th></tr></thead><tbody>{workers.map(w=>{
             const record=crewEntries.find(e=>e.worker_id===w.id)
             const time=(v:string|null|undefined)=>v?new Intl.DateTimeFormat('es-MX',{timeZone:'America/Tijuana',hour:'2-digit',minute:'2-digit'}).format(new Date(v)):'—'
             const busy=!!supervisorBusy || supervisorLoading
-            return <tr key={w.id} className="border-b border-[var(--border)]"><td className="p-3"><p className="font-semibold">{w.full_name}</p><p className="text-xs text-[var(--muted)]">{w.position}</p></td><td className="p-3">{record?.status||'Pendiente'}</td><td className="p-3">{time(record?.check_in)}</td><td className="p-3">{time(record?.check_out)}</td><td className="p-3"><div className="flex flex-wrap gap-2"><button type="button" disabled={busy||!!record?.check_in||record?.status==='Ausente'} onClick={()=>void registerSupervisor(w.id,'entrada')} className="rounded-lg bg-[#5496CC] px-3 py-2 text-xs font-semibold text-white disabled:opacity-40"><LogIn size={13} className="inline"/> Entrada</button><button type="button" disabled={busy||!record?.check_in||!!record?.check_out} onClick={()=>void registerSupervisor(w.id,'salida')} className="rounded-lg bg-emerald-600 px-3 py-2 text-xs font-semibold text-white disabled:opacity-40"><LogOut size={13} className="inline"/> Salida</button><button type="button" disabled={busy||!!record?.check_in||record?.status==='Ausente'} onClick={()=>void registerSupervisor(w.id,'ausente')} className="rounded-lg border border-red-500/40 px-3 py-2 text-xs text-red-500 disabled:opacity-40">Ausente</button></div></td></tr>
+            return <tr key={w.id} className="border-b border-[var(--border)]"><td className="p-3"><p className="font-semibold">{w.full_name}</p><p className="text-xs text-[var(--muted)]">{w.position}</p></td><td className="p-3">{record?.status||'Pendiente'}</td><td className="p-3">{time(record?.check_in)}</td><td className="p-3">{time(record?.check_out)}</td><td className="p-3"><div className="space-y-2"><label className="inline-flex cursor-pointer items-center gap-2 rounded-lg border border-[var(--border)] px-3 py-2 text-xs">📷 {photos[w.id]?'Fotografía lista':'Tomar foto'}<input type="file" accept="image/jpeg,image/png,image/webp" capture="environment" className="sr-only" onChange={e=>{const file=e.target.files?.[0];if(file){if(file.size>5*1024*1024){setSupervisorError('La fotografía no puede superar 5 MB.')}else setPhotos(current=>({...current,[w.id]:file}))}e.target.value=''}}/></label><div className="flex flex-wrap gap-2"><button type="button" disabled={busy||!photos[w.id]||!!record?.check_in||record?.status==='Ausente'} onClick={()=>void registerSupervisor(w.id,'entrada')} className="rounded-lg bg-[#5496CC] px-3 py-2 text-xs font-semibold text-white disabled:opacity-40"><LogIn size={13} className="inline"/> Entrada</button><button type="button" disabled={busy||!photos[w.id]||!record?.check_in||!!record?.check_out} onClick={()=>void registerSupervisor(w.id,'salida')} className="rounded-lg bg-emerald-600 px-3 py-2 text-xs font-semibold text-white disabled:opacity-40"><LogOut size={13} className="inline"/> Salida</button><button type="button" disabled={busy||!!record?.check_in||record?.status==='Ausente'} onClick={()=>void registerSupervisor(w.id,'ausente')} className="rounded-lg border border-red-500/40 px-3 py-2 text-xs text-red-500 disabled:opacity-40">Ausente</button></div><div className="flex gap-3 text-xs">{record?.entry_photo_url&&<a className="text-[#5496CC] underline" target="_blank" rel="noreferrer" href={record.entry_photo_url}>Ver foto entrada</a>}{record?.exit_photo_url&&<a className="text-[#5496CC] underline" target="_blank" rel="noreferrer" href={record.exit_photo_url}>Ver foto salida</a>}</div></div></td></tr>
           })}</tbody></table></div>}
         </section>
 
