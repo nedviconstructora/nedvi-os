@@ -17,7 +17,7 @@ async function ctx(){
 export async function GET(){
  try{
   const c=await ctx();if(!c)return NextResponse.json({error:'Sin autorización'},{status:403})
-  const {data,error}=await c.db.from('nedvi_crews').select('id,name,foreman,specialty,members,active,updated_at').order('name')
+  const {data,error}=await c.db.from('nedvi_crews').select('id,name,foreman,specialty,members,active,updated_at').is('deleted_at',null).order('name')
   if(error)throw error
   return NextResponse.json({crews:data||[]},{headers:{'Cache-Control':'no-store'}})
  }catch(e){console.error('Crew listing failed',e);return NextResponse.json({error:'No se pudieron sincronizar las cuadrillas.'},{status:500})}
@@ -34,6 +34,9 @@ export async function PUT(request:Request){
    if(!uuid(crew.id)||typeof crew.name!=='string'||!crew.name.trim()||!Array.isArray(crew.members)||crew.members.length>1000)return NextResponse.json({error:'Revisa el identificador, nombre e integrantes.'},{status:400})
    rows.push({id:crew.id,name:crew.name.trim().slice(0,160),foreman:String(crew.foreman||'').slice(0,160),specialty:String(crew.specialty||'').slice(0,160),members:crew.members.filter((x):x is string=>typeof x==='string').map(x=>x.slice(0,160)),active:crew.active!==false,updated_at:new Date().toISOString()})
   }
+  const {data:archived,error:archivedError}=await c.db.from('nedvi_crews').select('id').in('id',rows.map(row=>row.id)).not('deleted_at','is',null)
+  if(archivedError)throw archivedError
+  if(archived?.length)return NextResponse.json({error:'Una cuadrilla eliminada no puede restaurarse mediante sincronización local.'},{status:409})
   const {error}=await c.db.from('nedvi_crews').upsert(rows,{onConflict:'id'})
   if(error)throw error
   return NextResponse.json({ok:true,count:rows.length})
@@ -44,8 +47,8 @@ export async function DELETE(request:Request){
   const c=await ctx();if(!c)return NextResponse.json({error:'Sin autorización'},{status:403})
   const id=new URL(request.url).searchParams.get('id')
   if(!uuid(id))return NextResponse.json({error:'Identificador inválido'},{status:400})
-  // Do not delete worker and attendance records: disabling a crew preserves employee history.
-  const {error}=await c.db.from('nedvi_crews').update({active:false,updated_at:new Date().toISOString()}).eq('id',id)
+  // Archive the crew without destroying legally relevant employee attendance history.
+  const {error}=await c.db.from('nedvi_crews').update({active:false,deleted_at:new Date().toISOString(),updated_at:new Date().toISOString()}).eq('id',id).is('deleted_at',null)
   if(error)throw error
   return NextResponse.json({ok:true})
  }catch(e){console.error('Crew disable failed',e);return NextResponse.json({error:'No fue posible desactivar la cuadrilla.'},{status:500})}
