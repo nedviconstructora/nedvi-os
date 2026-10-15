@@ -5,6 +5,7 @@ import { FileSpreadsheet, Pencil, Plus, Search, Trash2, UserRound, X } from 'luc
 import { createClient } from '@/lib/supabase/client'
 import { parseCrewExcel, type ImportedWorker } from '@/features/operations/services/crewExcelImport'
 import { AppShell } from '@/components/layout/AppShell'
+import { readAccessSession } from '@/features/access/services/accessStorage'
 import {
   CREWS_STORAGE_KEY,
   type Crew,
@@ -41,9 +42,12 @@ export default function CrewsPage() {
   const [viewingCrew, setViewingCrew] = useState<string | null>(null)
   const [details, setDetails] = useState<ImportedWorker[]>([])
   const [detailsError, setDetailsError] = useState('')
+  const [sessionName, setSessionName] = useState('')
+  const [selectedFiles, setSelectedFiles] = useState<string[]>([])
 
   function loadData() {
     setCrews(readCrews())
+    setSessionName(readAccessSession()?.name?.trim() || '')
   }
 
   useEffect(() => {
@@ -75,7 +79,8 @@ export default function CrewsPage() {
     setImported([])
     setImportWarnings([])
     setImportError('')
-    setForm(emptyForm)
+    setSelectedFiles([])
+    setForm({ ...emptyForm, foreman: readAccessSession()?.name?.trim() || '' })
     setOpen(true)
   }
 
@@ -83,6 +88,7 @@ export default function CrewsPage() {
     setImported([])
     setImportWarnings([])
     setImportError('')
+    setSelectedFiles([])
     setEditingId(crew.id)
     setForm({
       name: crew.name,
@@ -94,13 +100,23 @@ export default function CrewsPage() {
     setOpen(true)
   }
 
-  async function importExcel(file: File | undefined) {
-    if (!file) return
+  async function importExcel(files: FileList | null) {
+    if (!files?.length) return
     setImportError('')
+    setSelectedFiles(Array.from(files).map(file => file.name))
     try {
-      const result = await parseCrewExcel(file)
-      setImported(result.workers)
-      setImportWarnings(result.warnings)
+      const results = await Promise.all(Array.from(files).map(file => parseCrewExcel(file)))
+      const workers = results.flatMap(result => result.workers)
+      const warnings = results.flatMap((result, index) => result.warnings.map(w => files[index].name + ': ' + w))
+      const seen = new Set<string>()
+      const unique = workers.filter(worker => {
+        const key = (worker.curp || worker.social_security_number || worker.full_name).trim().toUpperCase()
+        if (seen.has(key)) { warnings.push('Registro duplicado omitido: ' + worker.full_name); return false }
+        seen.add(key)
+        return true
+      })
+      setImported(unique)
+      setImportWarnings(warnings)
     } catch (error) {
       setImported([])
       setImportError(error instanceof Error ? error.message : 'No se pudo leer el archivo.')
@@ -115,6 +131,8 @@ export default function CrewsPage() {
     const manualNames = form.members.split(/\n|,/).map(value => value.trim()).filter(Boolean)
     const uniqueNames = Array.from(new Set([...manualNames, ...imported.map(worker => worker.full_name)]))
     const crewId = editingId ?? crypto.randomUUID()
+    const responsible = readAccessSession()?.name?.trim()
+    if (!responsible) { setImportError('Inicia sesión nuevamente para identificar al responsable.'); setSaving(false); return }
     try {
       // Personal identifiers and salaries are NEVER written to localStorage.
       // Only authorized administrators can insert them into Supabase (RLS).
@@ -128,7 +146,7 @@ export default function CrewsPage() {
       const crew: Crew = {
         id: crewId,
         name: form.name.trim(),
-        foreman: form.foreman.trim(),
+        foreman: responsible,
         specialty: form.specialty.trim(),
         members: uniqueNames,
         active: form.active,
@@ -215,12 +233,13 @@ export default function CrewsPage() {
       </div> : null}
       {open ? <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/55 p-4"><div className="max-h-[92vh] w-full max-w-2xl overflow-y-auto rounded-2xl bg-[var(--surface)] p-6 shadow-2xl"><div className="mb-5 flex items-center justify-between"><div><p className="text-xs font-semibold uppercase tracking-wide text-[#5496CC]">Personal de obra</p><h2 className="text-xl font-bold">{editingId ? 'Editar cuadrilla' : 'Nueva cuadrilla'}</h2></div><button onClick={() => setOpen(false)}><X size={18} /></button></div><form onSubmit={save} className="space-y-4">
         <label className="block space-y-2"><span className="text-sm font-semibold">Nombre de la cuadrilla *</span><input required value={form.name} onChange={(e) => setForm((current) => ({ ...current, name: e.target.value }))} placeholder="Ej. Cuadrilla Albañilería A" className="w-full rounded-xl border border-[var(--border)] bg-transparent px-4 py-3" /></label>
-        <div className="grid gap-4 sm:grid-cols-2"><label className="space-y-2"><span className="text-sm font-semibold">Responsable / Cabo *</span><input required value={form.foreman} onChange={(e) => setForm((current) => ({ ...current, foreman: e.target.value }))} className="w-full rounded-xl border border-[var(--border)] bg-transparent px-4 py-3" /></label><label className="space-y-2"><span className="text-sm font-semibold">Especialidad</span><input value={form.specialty} onChange={(e) => setForm((current) => ({ ...current, specialty: e.target.value }))} placeholder="Ej. Instalaciones eléctricas" className="w-full rounded-xl border border-[var(--border)] bg-transparent px-4 py-3" /></label></div>
+        <div className="grid gap-4 sm:grid-cols-2"><label className="space-y-2"><span className="text-sm font-semibold">Responsable / Cabo *</span><input required readOnly value={sessionName || form.foreman} title="Responsable asignado según la sesión activa" className="w-full rounded-xl border border-[var(--border)] bg-transparent px-4 py-3" /></label><label className="space-y-2"><span className="text-sm font-semibold">Especialidad</span><input value={form.specialty} onChange={(e) => setForm((current) => ({ ...current, specialty: e.target.value }))} placeholder="Ej. Instalaciones eléctricas" className="w-full rounded-xl border border-[var(--border)] bg-transparent px-4 py-3" /></label></div>
         <label className="block space-y-2"><span className="text-sm font-semibold">Integrantes</span><textarea rows={6} value={form.members} onChange={(e) => setForm((current) => ({ ...current, members: e.target.value }))} placeholder="Un nombre por línea o separados por comas" className="w-full rounded-xl border border-[var(--border)] bg-transparent px-4 py-3" /></label>
         <div className="space-y-3 rounded-xl border border-[#5496CC]/40 bg-[var(--surface-soft)] p-4">
           <div className="flex items-center gap-2 font-semibold"><FileSpreadsheet size={20} className="text-[#5496CC]" /> Importar integrantes desde Excel</div>
           <p className="text-xs text-[var(--muted)]">Selecciona el Excel de empleados (.xlsx) o un CSV. Se reconocerán nombre, NSS, puesto, salario, horarios, supervisor, CURP y RFC. Los expedientes sensibles se guardan solo en Supabase con acceso administrativo.</p>
-          <input type="file" accept=".xlsx,.csv" onChange={event => void importExcel(event.target.files?.[0])} className="block w-full text-sm file:mr-3 file:rounded-lg file:border-0 file:bg-[#5496CC] file:px-3 file:py-2 file:font-semibold file:text-white" />
+          <input type="file" multiple accept=".xlsx,.csv,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,text/csv" onChange={event => void importExcel(event.target.files)} className="block w-full text-sm file:mr-3 file:rounded-lg file:border-0 file:bg-[#5496CC] file:px-3 file:py-2 file:font-semibold file:text-white" />
+          {selectedFiles.length ? <p className="text-xs text-[var(--muted)]">Archivos seleccionados: {selectedFiles.join(', ')}</p> : null}
           {imported.length ? <div className="rounded-lg border border-[var(--border)] bg-[var(--surface)] p-3">
             <p className="text-sm font-semibold">{imported.length} integrantes listos para importar</p>
             <p className="mt-1 text-xs text-[var(--muted)]">Vista previa (primeros 5): {imported.slice(0, 5).map(worker => worker.full_name + (worker.position ? ' — ' + worker.position : '')).join('; ')}</p>
