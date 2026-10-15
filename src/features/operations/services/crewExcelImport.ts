@@ -126,11 +126,17 @@ export async function parseCrewExcel(file: File): Promise<{ workers: ImportedWor
     }
     rows = rowsFromXml(new TextDecoder().decode(sheet), strings)
   } else throw new Error('Selecciona un archivo .xlsx o .csv.')
-  const headers = rows[0]?.map(h => columns[normalize(String(h || ''))])
-  if (!headers?.includes('full_name')) throw new Error('Falta la columna obligatoria "Nombre completo".')
+  // Templates may begin with a title/instructions before the column headers.
+  // Locate the first row with a name header and other recognizable fields.
+  const headerIndex = rows.findIndex(row => {
+    const detected = row.map(h => columns[normalize(String(h || ''))]).filter(Boolean)
+    return detected.includes('full_name') && detected.length >= 2
+  })
+  if (headerIndex < 0) throw new Error('No se encontró una fila de encabezados con "Nombre completo". Revisa que el archivo contenga nombres de columnas.')
+  const headers = rows[headerIndex].map(h => columns[normalize(String(h || ''))])
   const warnings: string[] = [], workers: ImportedWorker[] = []
   const seen = new Set<string>()
-  for (let i = 1; i < rows.length; i++) {
+  for (let i = headerIndex + 1; i < rows.length; i++) {
     const row = rows[i]
     if (!row?.some(value => String(value || '').trim())) continue
     const record: Record<string, string> = {}
