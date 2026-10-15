@@ -45,6 +45,7 @@ export default function AttendancePage() {
   const [supervisorLoading,setSupervisorLoading] = useState(false)
   const [supervisorBusy,setSupervisorBusy] = useState('')
   const [syncTick,setSyncTick] = useState(0)
+  async function refreshSharedCrews(){try{const r=await fetch('/api/crews',{cache:'no-store'});if(!r.ok)return;const d=await r.json();setCrews(d.crews)}catch{}}
   const reloadSupervisor = async (id:string,day:string) => {
     if (!id) {setWorkers([]);setCrewEntries([]);return}
     setSupervisorLoading(true);setSupervisorError('')
@@ -58,7 +59,7 @@ export default function AttendancePage() {
     finally {setSupervisorLoading(false)}
   }
   useEffect(()=>{const refresh=()=>setSyncTick(t=>t+1);window.addEventListener('focus',refresh);const interval=window.setInterval(()=>{if(document.visibilityState==='visible')refresh()},15000);return ()=>{window.removeEventListener('focus',refresh);window.clearInterval(interval)}},[])
-  useEffect(()=>{if(supervisorCrew)void reloadSupervisor(supervisorCrew,supervisorDate)},[syncTick,supervisorCrew,supervisorDate])
+  useEffect(()=>{void refreshSharedCrews();if(supervisorCrew)void reloadSupervisor(supervisorCrew,supervisorDate)},[syncTick,supervisorCrew,supervisorDate])
   const uploadExcel = async (file:File|undefined) => {
     if(!file||!supervisorCrew)return
     setExcelBusy(true);setSupervisorError('');setExcelNotice('')
