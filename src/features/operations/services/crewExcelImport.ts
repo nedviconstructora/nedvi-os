@@ -17,11 +17,14 @@ const columns: Record<string, keyof ImportedWorker> = {
   'nombre': 'full_name',
   'numero de seguro social': 'social_security_number',
   'nss': 'social_security_number',
+  'numero de seguro social nss': 'social_security_number',
   'puesto': 'position',
   'salario': 'salary',
+  'salario mxn': 'salary',
   'periodicidad salarial': 'salary_period',
   'periodo de pago': 'salary_period',
   'horas de trabajo': 'work_hours',
+  'horas de trabajo al dia': 'work_hours',
   'hora de trabajo': 'work_hours',
   'hora de entrada': 'entry_time',
   'hora de salida': 'exit_time',
@@ -70,18 +73,18 @@ function rowsFromXml(xmlText: string, strings: string[]): string[][] {
   const xml = new DOMParser().parseFromString(xmlText, 'application/xml')
   if (xml.querySelector('parsererror')) throw new Error('El contenido del Excel es inválido.')
   const rows: string[][] = []
-  for (const row of Array.from(xml.getElementsByTagName('row'))) {
+  for (const row of Array.from(xml.getElementsByTagNameNS('*', 'row'))) {
     const cells: string[] = []
-    for (const cell of Array.from(row.getElementsByTagName('c'))) {
+    for (const cell of Array.from(row.getElementsByTagNameNS('*', 'c'))) {
       const ref = cell.getAttribute('r') || ''
       const col = ref.match(/^[A-Z]+/)?.[0] || 'A'
       let index = 0
       for (const ch of col) index = index * 26 + ch.charCodeAt(0) - 64
       index--
-      const raw = cell.getElementsByTagName('v')[0]?.textContent || ''
-      const inline = cell.getElementsByTagName('is')[0]
+      const raw = cell.getElementsByTagNameNS('*', 'v')[0]?.textContent || ''
+      const inline = cell.getElementsByTagNameNS('*', 'is')[0]
       const text = cell.getAttribute('t') === 's' ? (strings[Number(raw)] || '') :
-        inline ? Array.from(inline.getElementsByTagName('t')).map((t) => t.textContent || '').join('') : raw
+        inline ? Array.from(inline.getElementsByTagNameNS('*', 't')).map((t) => t.textContent || '').join('') : raw
       cells[index] = text
     }
     rows.push(cells)
@@ -121,8 +124,8 @@ export async function parseCrewExcel(file: File): Promise<{ workers: ImportedWor
     let strings: string[] = []
     if (shared) {
       const xml = new DOMParser().parseFromString(new TextDecoder().decode(shared), 'application/xml')
-      strings = Array.from(xml.getElementsByTagName('si')).map(si =>
-        Array.from(si.getElementsByTagName('t')).map(t => t.textContent || '').join(''))
+      strings = Array.from(xml.getElementsByTagNameNS('*', 'si')).map(si =>
+        Array.from(si.getElementsByTagNameNS('*', 't')).map(t => t.textContent || '').join(''))
     }
     rows = rowsFromXml(new TextDecoder().decode(sheet), strings)
   } else throw new Error('Selecciona un archivo .xlsx o .csv.')
