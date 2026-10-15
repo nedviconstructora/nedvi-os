@@ -1,7 +1,7 @@
 'use client'
 
 import { FormEvent, useEffect, useMemo, useState } from 'react'
-import { CalendarDays, Plus, Search, Trash2, UsersRound, X } from 'lucide-react'
+import { CalendarDays, Plus, Search, Trash2, UsersRound, X, Clock3, LogIn, LogOut } from 'lucide-react'
 import { AppShell } from '@/components/layout/AppShell'
 import {
   ATTENDANCE_STORAGE_KEY,
@@ -33,6 +33,35 @@ export default function AttendancePage() {
   const [status, setStatus] = useState<AttendanceStatus>('Presente')
   const [checkIn, setCheckIn] = useState('')
   const [checkOut, setCheckOut] = useState('')
+  const [supervisorCrew, setSupervisorCrew] = useState('')
+  const [supervisorDate, setSupervisorDate] = useState(new Intl.DateTimeFormat('en-CA',{timeZone:'America/Tijuana',year:'numeric',month:'2-digit',day:'2-digit'}).format(new Date()))
+  const [workers, setWorkers] = useState<Array<{id:string;full_name:string;position:string;entry_time:string}>>([])
+  const [crewEntries,setCrewEntries] = useState<Array<{worker_id:string;status:string;check_in:string|null;check_out:string|null}>>([])
+  const [supervisorError,setSupervisorError] = useState('')
+  const [supervisorLoading,setSupervisorLoading] = useState(false)
+  const [supervisorBusy,setSupervisorBusy] = useState('')
+  const reloadSupervisor = async (id:string,day:string) => {
+    if (!id) {setWorkers([]);setCrewEntries([]);return}
+    setSupervisorLoading(true);setSupervisorError('')
+    try {
+      const response=await fetch('/api/crew-attendance?crewId='+encodeURIComponent(id)+'&date='+encodeURIComponent(day),{cache:'no-store'})
+      const payload=await response.json()
+      if(!response.ok) throw new Error(payload.error||'No se pudo cargar la cuadrilla.')
+      setWorkers(payload.workers||[])
+      setCrewEntries(payload.entries||[])
+    } catch(error) {setSupervisorError(error instanceof Error?error.message:'Error al cargar asistencias.')}
+    finally {setSupervisorLoading(false)}
+  }
+  const registerSupervisor = async (workerId:string,action:'entrada'|'salida'|'ausente') => {
+    setSupervisorBusy(workerId);setSupervisorError('')
+    try {
+      const response=await fetch('/api/crew-attendance',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({workerId,crewId:supervisorCrew,date:supervisorDate,action})})
+      const payload=await response.json()
+      if(!response.ok) throw new Error(payload.error||'No se pudo guardar.')
+      await reloadSupervisor(supervisorCrew,supervisorDate)
+    } catch(error) {setSupervisorError(error instanceof Error?error.message:'Error al registrar.')}
+    finally {setSupervisorBusy('')}
+  }
 
   function loadData() {
     const currentProjects = readOperationProjects()
@@ -136,6 +165,23 @@ export default function AttendancePage() {
           </div>
           <button onClick={() => setOpen(true)} className="inline-flex h-11 items-center gap-2 rounded-xl bg-[#5496CC] px-4 text-sm font-semibold text-white"><Plus size={16} /> Registrar asistencia</button>
         </header>
+
+        <section className="space-y-4 rounded-2xl border border-[var(--border)] bg-[var(--surface)] p-5">
+          <div><h2 className="flex items-center gap-2 text-lg font-bold"><Clock3 size={20} className="text-[#5496CC]"/> Pase de lista por supervisor</h2><p className="mt-1 text-sm text-[var(--muted)]">Integrantes sincronizados desde Supabase. Hora de entrada y salida tomada del servidor; sin registros duplicados.</p></div>
+          <div className="grid gap-3 sm:grid-cols-2">
+            <label className="space-y-1"><span className="text-xs font-semibold">Cuadrilla</span><select className="w-full rounded-xl border border-[var(--border)] bg-[var(--background)] p-3 text-sm" value={supervisorCrew} onChange={e=>{setSupervisorCrew(e.target.value);void reloadSupervisor(e.target.value,supervisorDate)}}><option value="">Seleccionar cuadrilla</option>{crews.filter(c=>c.active).map(c=><option key={c.id} value={c.id}>{c.name}</option>)}</select></label>
+            <label className="space-y-1"><span className="text-xs font-semibold">Fecha (consulta)</span><input type="date" className="w-full rounded-xl border border-[var(--border)] bg-[var(--background)] p-3 text-sm" value={supervisorDate} onChange={e=>{setSupervisorDate(e.target.value);void reloadSupervisor(supervisorCrew,e.target.value)}}/></label>
+          </div>
+          {supervisorError && <p role="alert" className="rounded-lg bg-red-500/10 p-3 text-sm text-red-500">{supervisorError}</p>}
+          {supervisorLoading && <p className="text-sm text-[var(--muted)]">Cargando integrantes…</p>}
+          {supervisorCrew && !supervisorLoading && workers.length===0 && !supervisorError && <p className="text-sm text-[var(--muted)]">No hay trabajadores asociados a esta cuadrilla en Supabase.</p>}
+          {workers.length>0 && <div className="overflow-x-auto"><table className="w-full min-w-[780px] text-left text-sm"><thead><tr className="border-b border-[var(--border)] text-xs"><th className="p-3">Trabajador</th><th className="p-3">Estado</th><th className="p-3">Entrada</th><th className="p-3">Salida</th><th className="p-3">Registrar</th></tr></thead><tbody>{workers.map(w=>{
+            const record=crewEntries.find(e=>e.worker_id===w.id)
+            const time=(v:string|null|undefined)=>v?new Intl.DateTimeFormat('es-MX',{timeZone:'America/Tijuana',hour:'2-digit',minute:'2-digit'}).format(new Date(v)):'—'
+            const busy=!!supervisorBusy || supervisorLoading
+            return <tr key={w.id} className="border-b border-[var(--border)]"><td className="p-3"><p className="font-semibold">{w.full_name}</p><p className="text-xs text-[var(--muted)]">{w.position}</p></td><td className="p-3">{record?.status||'Pendiente'}</td><td className="p-3">{time(record?.check_in)}</td><td className="p-3">{time(record?.check_out)}</td><td className="p-3"><div className="flex flex-wrap gap-2"><button type="button" disabled={busy||!!record?.check_in||record?.status==='Ausente'} onClick={()=>void registerSupervisor(w.id,'entrada')} className="rounded-lg bg-[#5496CC] px-3 py-2 text-xs font-semibold text-white disabled:opacity-40"><LogIn size={13} className="inline"/> Entrada</button><button type="button" disabled={busy||!record?.check_in||!!record?.check_out} onClick={()=>void registerSupervisor(w.id,'salida')} className="rounded-lg bg-emerald-600 px-3 py-2 text-xs font-semibold text-white disabled:opacity-40"><LogOut size={13} className="inline"/> Salida</button><button type="button" disabled={busy||!!record?.check_in||record?.status==='Ausente'} onClick={()=>void registerSupervisor(w.id,'ausente')} className="rounded-lg border border-red-500/40 px-3 py-2 text-xs text-red-500 disabled:opacity-40">Ausente</button></div></td></tr>
+          })}</tbody></table></div>}
+        </section>
 
         <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4"><Metric label="Registros de hoy" value={todayRecords.length.toString()} /><Metric label="Presentes" value={presentToday.toString()} /><Metric label="Retardos" value={lateToday.toString()} /><Metric label="Ausentes" value={absentToday.toString()} /></div>
 
