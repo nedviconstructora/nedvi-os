@@ -1,6 +1,6 @@
 'use client'
 
-import { FormEvent, useEffect, useMemo, useState } from 'react'
+import { FormEvent, useEffect, useMemo, useRef, useState } from 'react'
 import { CalendarDays, Plus, Search, Trash2, UsersRound, X, Clock3, LogIn, LogOut } from 'lucide-react'
 import { AppShell } from '@/components/layout/AppShell'
 import { parseCrewExcel } from '@/features/operations/services/crewExcelImport'
@@ -39,6 +39,52 @@ export default function AttendancePage() {
   const [workers, setWorkers] = useState<Array<{id:string;full_name:string;position:string;entry_time:string}>>([])
   const [crewEntries,setCrewEntries] = useState<Array<{worker_id:string;status:string;check_in:string|null;check_out:string|null;entry_photo_url:string|null;exit_photo_url:string|null}>>([])
   const [photos,setPhotos] = useState<Record<string,File>>({})
+  const [cameraWorker,setCameraWorker] = useState<string|null>(null)
+  const [cameraError,setCameraError] = useState('')
+  const [cameraReady,setCameraReady] = useState(false)
+  const cameraVideo=useRef<HTMLVideoElement|null>(null)
+  const cameraStream=useRef<MediaStream|null>(null)
+  useEffect(()=>{
+    if(!cameraWorker)return
+    let cancelled=false
+    setCameraReady(false)
+    setCameraError('')
+    async function startCamera(){
+      try{
+        if(!navigator.mediaDevices?.getUserMedia)throw new Error('La cámara no está disponible en este navegador. Abre NEDVI OS desde HTTPS y concede permiso a la cámara.')
+        const stream=await navigator.mediaDevices.getUserMedia({audio:false,video:{facingMode:{ideal:'environment'}}})
+        if(cancelled){stream.getTracks().forEach(track=>track.stop());return}
+        cameraStream.current=stream
+        const video=cameraVideo.current
+        if(!video)throw new Error('No se pudo iniciar la vista de cámara.')
+        video.srcObject=stream
+        await video.play()
+        if(!cancelled)setCameraReady(true)
+      }catch(err){
+        if(!cancelled)setCameraError(err instanceof Error?err.message:'No se pudo abrir la cámara. Comprueba los permisos.')
+      }
+    }
+    void startCamera()
+    return ()=>{cancelled=true;cameraStream.current?.getTracks().forEach(track=>track.stop());cameraStream.current=null}
+  },[cameraWorker])
+  const takeCameraPhoto=()=>{
+    const video=cameraVideo.current
+    if(!cameraWorker||!video||!video.videoWidth)return
+    const canvas=document.createElement('canvas')
+    const scale=Math.min(1,1600/video.videoWidth)
+    canvas.width=Math.round(video.videoWidth*scale);canvas.height=Math.round(video.videoHeight*scale)
+    const context=canvas.getContext('2d')
+    if(!context){setCameraError('No se pudo capturar la imagen.');return}
+    context.drawImage(video,0,0,canvas.width,canvas.height)
+    canvas.toBlob(blob=>{
+      if(!blob){setCameraError('No se pudo guardar la fotografía.');return}
+      const file=new File([blob],'asistencia-'+Date.now()+'.jpg',{type:'image/jpeg'})
+      if(file.size>5*1024*1024){setCameraError('La fotografía no puede superar 5 MB.');return}
+      setPhotos(current=>({...current,[cameraWorker]:file}))
+      setCameraWorker(null)
+    },'image/jpeg',0.82)
+  }
+
   const [excelBusy,setExcelBusy] = useState(false)
   const [excelNotice,setExcelNotice] = useState('')
   const [supervisorError,setSupervisorError] = useState('')
@@ -217,7 +263,7 @@ export default function AttendancePage() {
                 <div><span className="text-[var(--muted)]">Entrada</span><p className="font-semibold">{time(record?.check_in)}</p></div>
                 <div><span className="text-[var(--muted)]">Salida</span><p className="font-semibold">{time(record?.check_out)}</p></div>
               </div>
-              <label className="flex min-h-11 w-full cursor-pointer items-center justify-center rounded-lg border border-[var(--border)] px-3 py-2 text-xs font-semibold">📷 {photos[w.id]?'Fotografía lista · Cambiar':'Tomar o seleccionar foto'}<input type="file" accept="image/jpeg,image/png,image/webp" capture="environment" className="sr-only" onChange={e=>{const file=e.target.files?.[0];if(file){if(file.size>5*1024*1024){setSupervisorError('La fotografía no puede superar 5 MB.')}else setPhotos(current=>({...current,[w.id]:file}))}e.target.value=''}}/></label>
+              <button type="button" onClick={()=>setCameraWorker(w.id)} className="flex min-h-11 w-full items-center justify-center rounded-lg border border-[var(--border)] px-3 py-2 text-xs font-semibold">📷 {photos[w.id]?'Foto lista · Volver a tomar':'Abrir cámara y tomar foto'}</button>
               <div className="grid grid-cols-3 gap-2">
                 <button type="button" disabled={busy||!photos[w.id]||!!record?.check_in||record?.status==='Ausente'} onClick={()=>void registerSupervisor(w.id,'entrada')} className="min-h-11 rounded-lg bg-[#5496CC] px-1 text-xs font-semibold text-white disabled:opacity-40"><LogIn size={13} className="inline"/> Entrada</button>
                 <button type="button" disabled={busy||!photos[w.id]||!record?.check_in||!!record?.check_out} onClick={()=>void registerSupervisor(w.id,'salida')} className="min-h-11 rounded-lg bg-emerald-600 px-1 text-xs font-semibold text-white disabled:opacity-40"><LogOut size={13} className="inline"/> Salida</button>
@@ -230,7 +276,7 @@ export default function AttendancePage() {
             const record=crewEntries.find(e=>e.worker_id===w.id)
             const time=(v:string|null|undefined)=>v?new Intl.DateTimeFormat('es-MX',{timeZone:'America/Tijuana',hour:'2-digit',minute:'2-digit'}).format(new Date(v)):'—'
             const busy=!!supervisorBusy || supervisorLoading
-            return <tr key={w.id} className="border-b border-[var(--border)]"><td className="p-3"><p className="font-semibold">{w.full_name}</p><p className="text-xs text-[var(--muted)]">{w.position}</p></td><td className="p-3">{record?.status||'Pendiente'}</td><td className="p-3">{time(record?.check_in)}</td><td className="p-3">{time(record?.check_out)}</td><td className="p-3"><div className="space-y-2"><label className="inline-flex cursor-pointer items-center gap-2 rounded-lg border border-[var(--border)] px-3 py-2 text-xs">📷 {photos[w.id]?'Fotografía lista':'Tomar foto'}<input type="file" accept="image/jpeg,image/png,image/webp" capture="environment" className="sr-only" onChange={e=>{const file=e.target.files?.[0];if(file){if(file.size>5*1024*1024){setSupervisorError('La fotografía no puede superar 5 MB.')}else setPhotos(current=>({...current,[w.id]:file}))}e.target.value=''}}/></label><div className="flex flex-wrap gap-2"><button type="button" disabled={busy||!photos[w.id]||!!record?.check_in||record?.status==='Ausente'} onClick={()=>void registerSupervisor(w.id,'entrada')} className="rounded-lg bg-[#5496CC] px-3 py-2 text-xs font-semibold text-white disabled:opacity-40"><LogIn size={13} className="inline"/> Entrada</button><button type="button" disabled={busy||!photos[w.id]||!record?.check_in||!!record?.check_out} onClick={()=>void registerSupervisor(w.id,'salida')} className="rounded-lg bg-emerald-600 px-3 py-2 text-xs font-semibold text-white disabled:opacity-40"><LogOut size={13} className="inline"/> Salida</button><button type="button" disabled={busy||!!record?.check_in||record?.status==='Ausente'} onClick={()=>void registerSupervisor(w.id,'ausente')} className="rounded-lg border border-red-500/40 px-3 py-2 text-xs text-red-500 disabled:opacity-40">Ausente</button></div><div className="flex gap-3 text-xs">{record?.entry_photo_url&&<a className="text-[#5496CC] underline" target="_blank" rel="noreferrer" href={record.entry_photo_url}>Ver foto entrada</a>}{record?.exit_photo_url&&<a className="text-[#5496CC] underline" target="_blank" rel="noreferrer" href={record.exit_photo_url}>Ver foto salida</a>}</div></div></td></tr>
+            return <tr key={w.id} className="border-b border-[var(--border)]"><td className="p-3"><p className="font-semibold">{w.full_name}</p><p className="text-xs text-[var(--muted)]">{w.position}</p></td><td className="p-3">{record?.status||'Pendiente'}</td><td className="p-3">{time(record?.check_in)}</td><td className="p-3">{time(record?.check_out)}</td><td className="p-3"><div className="space-y-2"><button type="button" onClick={()=>setCameraWorker(w.id)} className="inline-flex min-h-10 items-center gap-2 rounded-lg border border-[var(--border)] px-3 py-2 text-xs">📷 {photos[w.id]?'Foto lista · Repetir':'Abrir cámara'}</button><div className="flex flex-wrap gap-2"><button type="button" disabled={busy||!photos[w.id]||!!record?.check_in||record?.status==='Ausente'} onClick={()=>void registerSupervisor(w.id,'entrada')} className="rounded-lg bg-[#5496CC] px-3 py-2 text-xs font-semibold text-white disabled:opacity-40"><LogIn size={13} className="inline"/> Entrada</button><button type="button" disabled={busy||!photos[w.id]||!record?.check_in||!!record?.check_out} onClick={()=>void registerSupervisor(w.id,'salida')} className="rounded-lg bg-emerald-600 px-3 py-2 text-xs font-semibold text-white disabled:opacity-40"><LogOut size={13} className="inline"/> Salida</button><button type="button" disabled={busy||!!record?.check_in||record?.status==='Ausente'} onClick={()=>void registerSupervisor(w.id,'ausente')} className="rounded-lg border border-red-500/40 px-3 py-2 text-xs text-red-500 disabled:opacity-40">Ausente</button></div><div className="flex gap-3 text-xs">{record?.entry_photo_url&&<a className="text-[#5496CC] underline" target="_blank" rel="noreferrer" href={record.entry_photo_url}>Ver foto entrada</a>}{record?.exit_photo_url&&<a className="text-[#5496CC] underline" target="_blank" rel="noreferrer" href={record.exit_photo_url}>Ver foto salida</a>}</div></div></td></tr>
           })}</tbody></table></div>}
         </section>
 
@@ -247,6 +293,15 @@ export default function AttendancePage() {
         </div>
       </div>
 
+      {cameraWorker && <div role="dialog" aria-modal="true" aria-label="Tomar fotografía de asistencia" className="fixed inset-0 z-[100] flex items-center justify-center bg-black/85 p-3">
+        <div className="w-full max-w-lg space-y-3 rounded-2xl bg-[var(--surface)] p-4 text-[var(--foreground)]">
+          <div className="flex items-center justify-between gap-3"><h2 className="text-base font-bold">Cámara · Evidencia de asistencia</h2><button type="button" aria-label="Cerrar cámara" onClick={()=>setCameraWorker(null)} className="rounded-lg border border-[var(--border)] px-3 py-2"><X size={18}/></button></div>
+          <video ref={cameraVideo} playsInline autoPlay muted className="aspect-[3/4] max-h-[65dvh] w-full rounded-xl bg-black object-contain"/>
+          {cameraError && <p role="alert" className="rounded-lg bg-red-500/10 p-3 text-sm text-red-500">{cameraError}</p>}
+          <button type="button" disabled={!cameraReady} onClick={takeCameraPhoto} className="min-h-12 w-full rounded-xl bg-[#5496CC] px-4 font-semibold text-white disabled:opacity-40">📷 Capturar fotografía</button>
+          <p className="text-center text-xs text-[var(--muted)]">Autoriza el acceso a la cámara cuando tu teléfono lo solicite. No se abrirá la galería.</p>
+        </div>
+      </div>}
       {open ? <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/55 p-4"><div className="max-h-[92vh] w-full max-w-2xl overflow-y-auto rounded-2xl bg-[var(--surface)] p-6 shadow-2xl"><div className="mb-5 flex items-center justify-between"><div><p className="text-xs font-semibold uppercase tracking-wide text-[#5496CC]">Control de personal</p><h2 className="text-xl font-bold">Registrar asistencia</h2></div><button onClick={() => setOpen(false)}><X size={18} /></button></div><form onSubmit={save} className="space-y-4">
         <label className="block space-y-2"><span className="text-sm font-semibold">Proyecto</span><select required value={quoteId} onChange={(e) => setQuoteId(e.target.value)} className="w-full rounded-xl border border-[var(--border)] bg-transparent px-4 py-3"><option value="">Seleccionar proyecto</option>{projects.map((project) => <option key={project.id} value={project.id}>{project.folio} — {project.project}</option>)}</select></label>
         <div className="grid gap-4 sm:grid-cols-2"><label className="space-y-2"><span className="text-sm font-semibold">Cuadrilla</span><select value={crewId} onChange={(e) => { setCrewId(e.target.value); setPerson('') }} className="w-full rounded-xl border border-[var(--border)] bg-transparent px-4 py-3"><option value="">Sin cuadrilla</option>{crews.filter((crew) => crew.active).map((crew) => <option key={crew.id} value={crew.id}>{crew.name}</option>)}</select></label><label className="space-y-2"><span className="text-sm font-semibold">Fecha</span><input type="date" required value={date} onChange={(e) => setDate(e.target.value)} className="w-full rounded-xl border border-[var(--border)] bg-transparent px-4 py-3" /></label></div>
