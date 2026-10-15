@@ -80,3 +80,31 @@ export async function POST(request:Request) {
   return NextResponse.json({ok:true},{status:201})
  } catch(error){console.error('Crew attendance write failed',error);return NextResponse.json({error:'No se pudo registrar la asistencia.'},{status:500})}
 }
+
+export async function PUT(request:Request){
+ try {
+  const ctx=await context()
+  if(!ctx)return NextResponse.json({error:'No autorizado.'},{status:403})
+  const body=await request.json().catch(()=>null) as {crewId?:string;workers?:Array<Record<string,unknown>>}|null
+  if(!validId(body?.crewId)||!Array.isArray(body?.workers)||body!.workers.length>500||body!.workers.length===0)return NextResponse.json({error:'Selecciona una cuadrilla y un Excel con 1 a 500 trabajadores.'},{status:400})
+  const {data:existing,error:readError}=await ctx.admin.from('crew_workers').select('full_name').eq('crew_id',body!.crewId)
+  if(readError)throw readError
+  const seen=new Set((existing||[]).map(x=>x.full_name.trim().toLocaleLowerCase('es-MX')))
+  const batch:Record<string,unknown>[]=[]
+  for(const worker of body!.workers){
+   const name=String(worker.full_name||'').trim().slice(0,160)
+   if(!name)continue
+   const key=name.toLocaleLowerCase('es-MX')
+   if(seen.has(key))continue
+   seen.add(key)
+   const str=(field:string,max=160)=>String(worker[field]||'').trim().slice(0,max)
+   const salary=worker.salary===null||worker.salary===''?null:Number(worker.salary)
+   if(salary!==null&&(!Number.isFinite(salary)||salary<0))continue
+   batch.push({crew_id:body!.crewId,full_name:name,social_security_number:str('social_security_number',32),position:str('position'),salary,salary_period:str('salary_period',80),work_hours:str('work_hours',80),entry_time:str('entry_time',20),exit_time:str('exit_time',20),entry_supervisor:str('entry_supervisor'),curp:str('curp',24),rfc:str('rfc',20)})
+  }
+  if(!batch.length)return NextResponse.json({ok:true,imported:0,message:'Los empleados ya están registrados o no contienen nombres válidos.'})
+  const {error}=await ctx.admin.from('crew_workers').insert(batch)
+  if(error)throw error
+  return NextResponse.json({ok:true,imported:batch.length})
+ }catch(error){console.error('Crew Excel import failed',error);return NextResponse.json({error:'No se pudo importar el Excel.'},{status:500})}
+}
