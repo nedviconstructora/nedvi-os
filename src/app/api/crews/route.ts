@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server'
 import { createClient as createAdminClient } from '@supabase/supabase-js'
 import { createClient as createServerClient } from '@/utils/supabase/server'
 export const dynamic = 'force-dynamic'
-const allowed = new Set(['administracion','administrador','admin','supervisor'])
+const allowed = new Set(['administracion','administrador','admin','supervisor','obra'])
 const uuid=(x:unknown):x is string=>typeof x==='string'&&/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(x)
 async function ctx(){
  const s=await createServerClient()
