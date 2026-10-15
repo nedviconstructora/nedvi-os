@@ -167,6 +167,6 @@ export async function parseCrewExcel(file: File): Promise<{ workers: ImportedWor
       rfc: record.rfc || '',
     })
   }
-  if (!workers.length) throw new Error('No se encontraron integrantes válidos.')
+  if (!workers.length) throw new Error('El archivo contiene encabezados, pero no tiene empleados capturados. Usa el Excel de 150 empleados ficticios o completa al menos una fila de la plantilla.')
   return { workers, warnings }
 }
