@@ -158,6 +158,8 @@ export default function CrewsPage() {
       const next = editingId
         ? crews.map(item => item.id === editingId ? crew : item)
         : [crew, ...crews]
+      const res=await fetch('/api/crews',{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify({crews:[crew]})})
+      if(!res.ok)throw new Error('No fue posible compartir esta cuadrilla en Supabase.')
       setCrews(next)
       writeCrews(next)
       setOpen(false)
@@ -200,6 +202,8 @@ export default function CrewsPage() {
     writeCrews(next)
   }
 
+  async function migrateLocal(){const local=readCrews();if(!local.length)return;const res=await fetch('/api/crews',{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify({crews:local})});if(res.ok)await refreshCrews();else window.alert('No se pudieron compartir las cuadrillas guardadas en esta PC.')}
+
   const totalMembers = crews.reduce((sum, crew) => sum + crew.members.length, 0)
   const activeCrews = crews.filter((crew) => crew.active).length
 
@@ -215,6 +219,7 @@ export default function CrewsPage() {
           <button onClick={openNew} className="inline-flex h-11 items-center gap-2 rounded-xl bg-[#5496CC] px-4 text-sm font-semibold text-white"><Plus size={16} /> Nueva cuadrilla</button>
         </header>
 
+        <div className="flex flex-wrap gap-2"><button type="button" onClick={()=>void migrateLocal()} className="rounded-lg border border-[#5496CC] px-3 py-2 text-xs">Compartir cuadrillas guardadas en esta PC</button><button type="button" onClick={()=>void refreshCrews()} className="rounded-lg border px-3 py-2 text-xs">Actualizar desde Supabase</button></div>
         <div className="grid gap-4 sm:grid-cols-3"><Metric label="Cuadrillas" value={crews.length.toString()} /><Metric label="Activas" value={activeCrews.toString()} /><Metric label="Integrantes" value={totalMembers.toString()} /></div>
 
         <div className="rounded-2xl border border-[var(--border)] bg-[var(--surface)] p-4"><div className="relative max-w-xl"><Search size={17} className="absolute left-4 top-1/2 -translate-y-1/2 text-[var(--muted)]" /><input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Buscar cuadrilla, responsable o especialidad..." className="w-full rounded-xl border border-[var(--border)] bg-transparent py-3 pl-11 pr-4 text-sm outline-none focus:border-[#5496CC]" /></div></div>
