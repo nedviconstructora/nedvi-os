@@ -52,9 +52,14 @@ export function PwaManager({ initialVersion }: { initialVersion: string }) {
     let cancelled = false
     let pendingVersion = ''
     let reloadScheduled = false
+    let checking = false
     const checkVersion = async () => {
-      if (!navigator.onLine || document.visibilityState === 'hidden') return
+      if (checking || !navigator.onLine || document.visibilityState === 'hidden') return
+      checking = true
       try {
+        // Ask the browser to fetch the latest Service Worker, not a cached copy.
+        const registration = await navigator.serviceWorker?.getRegistration()
+        await registration?.update().catch(() => undefined)
         const response = await fetch(`/api/app-version?check=${Date.now()}`, {
           cache: 'no-store',
           headers: { 'Cache-Control': 'no-cache' },
@@ -67,6 +72,8 @@ export function PwaManager({ initialVersion }: { initialVersion: string }) {
         attemptUpdate()
       } catch {
         // Keep the current app usable when connectivity is interrupted.
+      } finally {
+        checking = false
       }
     }
 
@@ -91,6 +98,13 @@ export function PwaManager({ initialVersion }: { initialVersion: string }) {
       const target = event.target
       if (target instanceof HTMLElement && target.closest('form, [contenteditable="true"]')) editingRef.current = true
     }
+    const onSubmit = () => {
+      // A submitted form is no longer considered unsaved by the update detector.
+      // Give asynchronous submit handlers time to finish their navigation/save.
+      window.setTimeout(() => { editingRef.current = false; attemptUpdate() }, 1500)
+    }
+    const onReset = () => { editingRef.current = false; attemptUpdate() }
+    const onBlur = () => attemptUpdate()
     const onVisibility = () => {
       if (document.visibilityState === 'visible') {
         void checkVersion()
@@ -100,16 +114,22 @@ export function PwaManager({ initialVersion }: { initialVersion: string }) {
     const onFocus = () => void checkVersion()
     document.addEventListener('input', onEdit, true)
     document.addEventListener('change', onEdit, true)
+    document.addEventListener('submit', onSubmit, true)
+    document.addEventListener('reset', onReset, true)
+    document.addEventListener('focusout', onBlur, true)
     document.addEventListener('visibilitychange', onVisibility)
     window.addEventListener('focus', onFocus)
     window.addEventListener('online', onFocus)
-    const interval = window.setInterval(() => void checkVersion(), 60_000)
+    const interval = window.setInterval(() => void checkVersion(), 30_000)
     void checkVersion()
     return () => {
       cancelled = true
       window.clearInterval(interval)
       document.removeEventListener('input', onEdit, true)
       document.removeEventListener('change', onEdit, true)
+      document.removeEventListener('submit', onSubmit, true)
+      document.removeEventListener('reset', onReset, true)
+      document.removeEventListener('focusout', onBlur, true)
       document.removeEventListener('visibilitychange', onVisibility)
       window.removeEventListener('focus', onFocus)
       window.removeEventListener('online', onFocus)
