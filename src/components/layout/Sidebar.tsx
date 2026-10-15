@@ -102,7 +102,7 @@ const navigationGroups: NavigationGroup[] = [
       { label: 'Avance de obra', href: '/site-progress', icon: BarChart3 },
       { label: 'Reportes diarios', href: '/daily-reports', icon: FileText },
       { label: 'Inspecciones de obra', href: '/inspections', icon: ClipboardList },
-      { label: 'Asistencias', href: '/attendance', icon: UsersRound },
+      { label: 'Asistencias · Trabajadores', href: '/attendance', icon: UsersRound },
       { label: 'Cuadrillas', href: '/crews', icon: UserRound },
     ],
   },
@@ -298,7 +298,7 @@ export function Sidebar({
         {canUse('time-clock') ? (
           <Link href="/time-clock" title={collapsed ? 'Checador' : undefined} onClick={onCloseMobile} className={`${primaryItemClasses(isPathActive('/time-clock'))} mt-2`}>
             <Clock3 size={18} className="shrink-0 text-white"/>
-            <span className={`whitespace-nowrap transition-opacity duration-200 ${collapsed ? 'lg:hidden' : 'opacity-100'}`}>Checador</span>
+            <span className={`whitespace-nowrap transition-opacity duration-200 ${collapsed ? 'lg:hidden' : 'opacity-100'}`}>Checador · Equipo NEDVI</span>
           </Link>
         ) : null}
 
