@@ -44,6 +44,7 @@ export default function AttendancePage() {
   const [supervisorError,setSupervisorError] = useState('')
   const [supervisorLoading,setSupervisorLoading] = useState(false)
   const [supervisorBusy,setSupervisorBusy] = useState('')
+  const [syncTick,setSyncTick] = useState(0)
   const reloadSupervisor = async (id:string,day:string) => {
     if (!id) {setWorkers([]);setCrewEntries([]);return}
     setSupervisorLoading(true);setSupervisorError('')
@@ -56,6 +57,8 @@ export default function AttendancePage() {
     } catch(error) {setSupervisorError(error instanceof Error?error.message:'Error al cargar asistencias.')}
     finally {setSupervisorLoading(false)}
   }
+  useEffect(()=>{const refresh=()=>setSyncTick(t=>t+1);window.addEventListener('focus',refresh);const interval=window.setInterval(()=>{if(document.visibilityState==='visible')refresh()},15000);return ()=>{window.removeEventListener('focus',refresh);window.clearInterval(interval)}},[])
+  useEffect(()=>{if(supervisorCrew)void reloadSupervisor(supervisorCrew,supervisorDate)},[syncTick,supervisorCrew,supervisorDate])
   const uploadExcel = async (file:File|undefined) => {
     if(!file||!supervisorCrew)return
     setExcelBusy(true);setSupervisorError('');setExcelNotice('')
