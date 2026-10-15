@@ -183,20 +183,20 @@ export default function AttendancePage() {
 
   return (
     <AppShell>
-      <div className="mx-auto w-full max-w-[1600px] space-y-6">
+      <div className="mx-auto w-full min-w-0 max-w-[1600px] space-y-4 sm:space-y-6">
         <header className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
           <div>
             <p className="text-xs font-semibold uppercase tracking-[0.16em] text-[#5496CC]">Operaciones / Obra</p>
-            <h1 className="mt-2 text-3xl font-bold text-[var(--foreground)]">Asistencias · Personal de obra</h1>
+            <h1 className="mt-2 text-2xl font-bold leading-tight text-[var(--foreground)] sm:text-3xl">Asistencias · Personal de obra</h1>
             <p className="mt-2 text-sm text-[var(--muted)]">Checador de trabajadores por cuadrilla: el supervisor registra las entradas, salidas y ausencias. No se mezcla con el checador del equipo interno.</p>
           </div>
-          <button onClick={() => setOpen(true)} className="inline-flex h-11 items-center gap-2 rounded-xl bg-[#5496CC] px-4 text-sm font-semibold text-white"><Plus size={16} /> Registrar asistencia</button>
+          <button onClick={() => setOpen(true)} className="inline-flex min-h-11 w-full items-center justify-center gap-2 rounded-xl bg-[#5496CC] px-4 text-sm font-semibold text-white sm:w-auto"><Plus size={16} /> Registrar asistencia</button>
         </header>
 
-        <section className="space-y-4 rounded-2xl border border-[var(--border)] bg-[var(--surface)] p-5">
+        <section className="min-w-0 space-y-4 rounded-2xl border border-[var(--border)] bg-[var(--surface)] p-3 sm:p-5">
           <div><h2 className="flex items-center gap-2 text-lg font-bold"><Clock3 size={20} className="text-[#5496CC]"/> Checador de trabajadores · Pase de lista por supervisor</h2><p className="mt-1 text-sm text-[var(--muted)]">Selecciona la cuadrilla y registra cada entrada o salida desde el celular del supervisor. El servidor asigna la hora; este registro es independiente del checador del equipo NEDVI.</p></div>
           <div className="grid gap-3 sm:grid-cols-2">
-            <label className="space-y-1"><span className="text-xs font-semibold">Cuadrilla</span><select className="w-full rounded-xl border border-[var(--border)] bg-[var(--background)] p-3 text-sm" value={supervisorCrew} onChange={e=>{setSupervisorCrew(e.target.value);void reloadSupervisor(e.target.value,supervisorDate)}}><option value="">Seleccionar cuadrilla</option>{crews.filter(c=>c.active).map(c=><option key={c.id} value={c.id}>{c.name}</option>)}</select></label>
+            <label className="space-y-1"><span className="text-xs font-semibold">Cuadrilla</span><select className="min-w-0 w-full rounded-xl border border-[var(--border)] bg-[var(--background)] p-3 text-sm" value={supervisorCrew} onChange={e=>{setSupervisorCrew(e.target.value);void reloadSupervisor(e.target.value,supervisorDate)}}><option value="">Seleccionar cuadrilla</option>{crews.filter(c=>c.active).map(c=><option key={c.id} value={c.id}>{c.name}</option>)}</select></label>
             <label className="space-y-1"><span className="text-xs font-semibold">Fecha (consulta)</span><input type="date" className="w-full rounded-xl border border-[var(--border)] bg-[var(--background)] p-3 text-sm" value={supervisorDate} onChange={e=>{setSupervisorDate(e.target.value);void reloadSupervisor(supervisorCrew,e.target.value)}}/></label>
           </div>
           {supervisorCrew && <div className="flex flex-wrap items-center gap-3 rounded-xl border border-[var(--border)] p-3"><label className="inline-flex cursor-pointer items-center gap-2 rounded-lg border border-[#5496CC]/50 px-3 py-2 text-xs font-semibold text-[#5496CC]">Importar trabajadores de Excel (.xlsx o .csv)<input type="file" accept=".xlsx,.csv" className="sr-only" disabled={excelBusy} onChange={e=>{void uploadExcel(e.target.files?.[0]);e.target.value=''}}/></label><span className="text-xs text-[var(--muted)]">{excelBusy?'Importando…':'Se omiten nombres ya registrados en esta cuadrilla.'}</span></div>}
@@ -204,7 +204,29 @@ export default function AttendancePage() {
           {supervisorError && <p role="alert" className="rounded-lg bg-red-500/10 p-3 text-sm text-red-500">{supervisorError}</p>}
           {supervisorLoading && <p className="text-sm text-[var(--muted)]">Cargando integrantes…</p>}
           {supervisorCrew && !supervisorLoading && workers.length===0 && !supervisorError && <p className="text-sm text-[var(--muted)]">No hay trabajadores asociados a esta cuadrilla en Supabase.</p>}
-          {workers.length>0 && <div className="overflow-x-auto"><table className="w-full min-w-[780px] text-left text-sm"><thead><tr className="border-b border-[var(--border)] text-xs"><th className="p-3">Trabajador</th><th className="p-3">Estado</th><th className="p-3">Entrada</th><th className="p-3">Salida</th><th className="p-3">Evidencia fotográfica y registro</th></tr></thead><tbody>{workers.map(w=>{
+          {workers.length>0 && <div className="space-y-3 md:hidden">{workers.map(w=>{
+            const record=crewEntries.find(e=>e.worker_id===w.id)
+            const time=(v:string|null|undefined)=>v?new Intl.DateTimeFormat('es-MX',{timeZone:'America/Tijuana',hour:'2-digit',minute:'2-digit'}).format(new Date(v)):'—'
+            const busy=!!supervisorBusy || supervisorLoading
+            return <article key={w.id} className="min-w-0 space-y-3 rounded-xl border border-[var(--border)] bg-[var(--background)] p-3">
+              <div className="flex min-w-0 items-start justify-between gap-2">
+                <div className="min-w-0"><h3 className="break-words text-sm font-semibold">{w.full_name}</h3><p className="text-xs text-[var(--muted)]">{w.position}</p></div>
+                <span className="shrink-0 rounded-full bg-[var(--surface)] px-2 py-1 text-[11px] font-medium">{record?.status||'Pendiente'}</span>
+              </div>
+              <div className="grid grid-cols-2 gap-2 rounded-lg bg-[var(--surface)] p-2 text-xs">
+                <div><span className="text-[var(--muted)]">Entrada</span><p className="font-semibold">{time(record?.check_in)}</p></div>
+                <div><span className="text-[var(--muted)]">Salida</span><p className="font-semibold">{time(record?.check_out)}</p></div>
+              </div>
+              <label className="flex min-h-11 w-full cursor-pointer items-center justify-center rounded-lg border border-[var(--border)] px-3 py-2 text-xs font-semibold">📷 {photos[w.id]?'Fotografía lista · Cambiar':'Tomar o seleccionar foto'}<input type="file" accept="image/jpeg,image/png,image/webp" capture="environment" className="sr-only" onChange={e=>{const file=e.target.files?.[0];if(file){if(file.size>5*1024*1024){setSupervisorError('La fotografía no puede superar 5 MB.')}else setPhotos(current=>({...current,[w.id]:file}))}e.target.value=''}}/></label>
+              <div className="grid grid-cols-3 gap-2">
+                <button type="button" disabled={busy||!photos[w.id]||!!record?.check_in||record?.status==='Ausente'} onClick={()=>void registerSupervisor(w.id,'entrada')} className="min-h-11 rounded-lg bg-[#5496CC] px-1 text-xs font-semibold text-white disabled:opacity-40"><LogIn size={13} className="inline"/> Entrada</button>
+                <button type="button" disabled={busy||!photos[w.id]||!record?.check_in||!!record?.check_out} onClick={()=>void registerSupervisor(w.id,'salida')} className="min-h-11 rounded-lg bg-emerald-600 px-1 text-xs font-semibold text-white disabled:opacity-40"><LogOut size={13} className="inline"/> Salida</button>
+                <button type="button" disabled={busy||!!record?.check_in||record?.status==='Ausente'} onClick={()=>void registerSupervisor(w.id,'ausente')} className="min-h-11 rounded-lg border border-red-500/40 px-1 text-xs font-semibold text-red-500 disabled:opacity-40">Ausente</button>
+              </div>
+              {(record?.entry_photo_url||record?.exit_photo_url)&&<div className="flex flex-wrap gap-3 text-xs">{record?.entry_photo_url&&<a className="text-[#5496CC] underline" target="_blank" rel="noreferrer" href={record.entry_photo_url}>Ver foto entrada</a>}{record?.exit_photo_url&&<a className="text-[#5496CC] underline" target="_blank" rel="noreferrer" href={record.exit_photo_url}>Ver foto salida</a>}</div>}
+            </article>
+          })}</div>}
+          {workers.length>0 && <div className="hidden overflow-x-auto md:block"><table className="w-full min-w-[780px] text-left text-sm"><thead><tr className="border-b border-[var(--border)] text-xs"><th className="p-3">Trabajador</th><th className="p-3">Estado</th><th className="p-3">Entrada</th><th className="p-3">Salida</th><th className="p-3">Evidencia fotográfica y registro</th></tr></thead><tbody>{workers.map(w=>{
             const record=crewEntries.find(e=>e.worker_id===w.id)
             const time=(v:string|null|undefined)=>v?new Intl.DateTimeFormat('es-MX',{timeZone:'America/Tijuana',hour:'2-digit',minute:'2-digit'}).format(new Date(v)):'—'
             const busy=!!supervisorBusy || supervisorLoading
