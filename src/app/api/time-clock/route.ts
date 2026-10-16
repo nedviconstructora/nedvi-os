@@ -1,31 +1,11 @@
 import { NextResponse } from 'next/server'
-import { createClient as createAdminClient } from '@supabase/supabase-js'
-import { createClient as createServerClient } from '@/utils/supabase/server'
+import { getTimeClockContext } from '@/features/time-clock/services/server'
 
 const bucket = 'nedvi-time-clock'
-const roles = ['administracion','administrador','admin','obra','supervisor','contabilidad']
-const admins = ['administracion','administrador','admin']
-
-async function getContext() {
-  const server = await createServerClient()
-  const { data: { user } } = await server.auth.getUser()
-  if (!user) return null
-  const { data: profile } = await server.from('profiles').select('full_name,role,active').eq('id',user.id).maybeSingle()
-  if (!profile?.active || !roles.includes(String(profile.role ?? '').toLowerCase().trim())) return null
-  const url = process.env.NEXT_PUBLIC_SUPABASE_URL
-  const key = process.env.SUPABASE_SERVICE_ROLE_KEY
-  if (!url || !key) throw new Error('Configuración de Supabase incompleta')
-  return {
-    user, profile,
-    admin: createAdminClient(url,key,{auth:{persistSession:false,autoRefreshToken:false}}),
-    isAdmin: admins.includes(String(profile.role ?? '').toLowerCase().trim()),
-    isAccountant: String(profile.role ?? '').toLowerCase().trim() === 'contabilidad',
-  }
-}
 
 export async function GET() {
   try {
-    const ctx = await getContext()
+    const ctx = await getTimeClockContext()
     if (!ctx) return NextResponse.json({error:'Sesión no autorizada.'},{status:401})
     const canViewAll = ctx.isAdmin || ctx.isAccountant || ['obra','supervisor'].includes(String(ctx.profile.role ?? '').toLowerCase().trim())
     let query = ctx.admin.from('time_clock_entries')
@@ -37,15 +17,11 @@ export async function GET() {
       console.error('Time clock DB read failed', {code:error.code,message:error.message})
       return NextResponse.json({error:'No se pudieron consultar las asistencias en Supabase.',code:error.code || 'DB_READ_ERROR'},{status:500})
     }
-    const entries = await Promise.all((data ?? []).map(async (item) => {
-      // A temporary photo-signing failure must not hide successful attendance events.
-      let photoUrl: string | null = null
-      try {
-        const {data: link,error: signError} = await ctx.admin.storage.from(bucket).createSignedUrl(item.photo_path,300)
-        if (signError) console.warn('Time clock photo URL could not be signed',signError.message)
-        photoUrl = link?.signedUrl ?? null
-      } catch (signError) { console.warn('Time clock photo URL failed',signError) }
-      return {id:item.id,userId:item.user_id,name:item.employee_name,type:item.event_type,at:item.occurred_at,photoUrl,latitude:item.latitude,longitude:item.longitude,accuracy:item.location_accuracy_m}
+    const entries = (data ?? []).map(item => ({
+      id:item.id,userId:item.user_id,name:item.employee_name,type:item.event_type,at:item.occurred_at,
+      // Resolve the private photo only when opened, so backgrounded apps cannot keep expired links.
+      photoUrl:item.photo_path ? `/api/time-clock/photo?id=${encodeURIComponent(item.id)}` : null,
+      latitude:item.latitude,longitude:item.longitude,accuracy:item.location_accuracy_m,
     }))
     return NextResponse.json({entries,me:ctx.user.id,canViewAll,canDelete:ctx.isAdmin,canClock:!ctx.isAccountant},{headers:{'Cache-Control':'no-store'}})
   } catch (error) {
@@ -56,7 +32,7 @@ export async function GET() {
 
 export async function POST(request: Request) {
   try {
-    const ctx = await getContext()
+    const ctx = await getTimeClockContext()
     if (!ctx) return NextResponse.json({error:'Sesión no autorizada.'},{status:401})
     if (ctx.isAccountant) return NextResponse.json({error:'Contabilidad solo puede consultar registros.'},{status:403})
     const form = await request.formData()
@@ -96,7 +72,7 @@ export async function POST(request: Request) {
 
 export async function DELETE(request: Request) {
   try {
-    const ctx = await getContext()
+    const ctx = await getTimeClockContext()
     if (!ctx) return NextResponse.json({error:'Sesión no autorizada.'},{status:401})
     if (!ctx.isAdmin) return NextResponse.json({error:'Solo Administración puede anular registros de asistencia.'},{status:403})
     const body = await request.json().catch(() => null) as {id?:string;reason?:string}|null
