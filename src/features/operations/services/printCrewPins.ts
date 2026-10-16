@@ -1,0 +1,30 @@
+type Worker={name:string;pin:string|null;needsReset:boolean}
+type Project={name:string;folio:string|null;client_name:string|null;client_contact:string|null;address:string|null;manager:string|null;project_type:string|null}
+type Context={foreman:string;specialty:string;project:Project|null}
+const escape=(v:string)=>v.replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]||c))
+const field=(v:string|null|undefined)=>escape(v?.trim()||'No registrado')
+export function printCrewPinReport(name:string,workers:Worker[],ctx:Context){
+  // Opening synchronously from the click lets Chrome display its native print dialog.
+  const popup=window.open('','_blank','width=1000,height=800')
+  if(!popup)throw new Error('Tu navegador bloqueó la ventana de impresión. Permite ventanas emergentes para NEDVI OS.')
+  const date=new Intl.DateTimeFormat('es-MX',{dateStyle:'medium',timeZone:'America/Tijuana'}).format(new Date())
+  const rows=workers.map((w,i)=>'<tr><td class="index">'+(i+1).toString().padStart(3,'0')+'</td><td>'+escape(w.name)+'</td><td class="pin">'+(w.pin?escape(w.pin):'PENDIENTE')+'</td><td class="signature"></td></tr>').join('')
+  const html='<!doctype html><html lang="es"><head><meta charset="utf-8"><title>NEDVI | Credenciales de '+escape(name)+'</title><style>'+
+  '@page{size:A4;margin:14mm}*{box-sizing:border-box}body{font:11px Arial,Helvetica,sans-serif;color:#14263c;margin:0;background:white}'+
+  '.header{display:flex;align-items:center;justify-content:space-between;background:#20252a;color:#fff;border-radius:9px;padding:16px 20px;margin-bottom:17px;print-color-adjust:exact;-webkit-print-color-adjust:exact}'+
+  '.brand{display:flex;align-items:center;gap:12px}.logo{height:49px;width:49px;object-fit:contain}.brand strong{font-size:18px}.sub{font-size:9px;color:#d3d8dd;margin-top:4px}.head-right{text-align:right;font-size:11px}.head-right b{display:block;font-size:12px;margin-bottom:5px}'+
+  '.title{font-size:14px;font-weight:bold;margin:0 0 12px}.panel{border:1px solid #e1e6ec;border-radius:8px;padding:12px 14px;margin:12px 0}.panel h2{font-size:10px;letter-spacing:.08em;color:#59738d;margin:0 0 12px}.fields{display:grid;grid-template-columns:1fr 1fr 1fr;gap:13px 20px}.item small{font-size:8px;color:#66798e;text-transform:uppercase;display:block;margin-bottom:4px}.item b{font-size:10px;line-height:1.5}.wide{grid-column:span 2}.crew{display:flex;justify-content:space-between;gap:12px;background:#eff5fb;print-color-adjust:exact;-webkit-print-color-adjust:exact;border-radius:8px;padding:13px;margin:13px 0}.crew strong{display:block;font-size:12px;margin-bottom:4px}.crew span{font-size:10px}.section{font-size:11px;font-weight:bold;margin:17px 0 8px}'+
+  'table{width:100%;border-collapse:collapse;table-layout:fixed}thead{display:table-header-group}tr{break-inside:avoid;page-break-inside:avoid}th{background:#253f59;color:#fff;text-align:left;padding:9px 8px;font-size:9px;print-color-adjust:exact;-webkit-print-color-adjust:exact}td{padding:9px 8px;border-bottom:1px solid #e1e7ec;font-size:9px}tbody tr:nth-child(even){background:#f5f8fb;print-color-adjust:exact;-webkit-print-color-adjust:exact}.index{width:40px}.pin{width:95px;font-weight:bold;letter-spacing:.05em}.signature{width:110px}.footer{font-size:8px;color:#6b7886;margin-top:16px;border-top:1px solid #ccd5e0;padding-top:9px}.screen-tip{padding:8px;text-align:center;background:#eef4fa}'+
+  '@media print{.screen-tip{display:none}.header{border-radius:6px}}'+
+  '</style></head><body><div class="screen-tip">Se abrirá el cuadro de impresión de Chrome. Puedes elegir tu impresora o Guardar como PDF.</div>'+
+  '<header class="header"><div class="brand"><img class="logo" src="'+escape(window.location.origin)+'/logo-blanco.svg" alt="NEDVI"><div><strong>NEDVI CONSTRUCTORA</strong><div class="sub">Control de credenciales | NEDVI OS</div></div></div><div class="head-right"><b>LISTADO DE PIN</b>Documento confidencial<br>Emisión: '+escape(date)+'</div></header>'+
+  '<h1 class="title">CONTROL DE PERSONAL POR CUADRILLA</h1><section class="panel"><h2>DATOS DEL CLIENTE Y PROYECTO</h2><div class="fields">'+
+  '<div class="item"><small>Cliente</small><b>'+field(ctx.project?.client_name)+'</b></div><div class="item"><small>Proyecto</small><b>'+field(ctx.project?.name)+'</b></div><div class="item"><small>Folio</small><b>'+field(ctx.project?.folio)+'</b></div>'+
+  '<div class="item"><small>Contacto</small><b>'+field(ctx.project?.client_contact)+'</b></div><div class="item"><small>Responsable del proyecto</small><b>'+field(ctx.project?.manager)+'</b></div><div class="item"><small>Tipo de proyecto</small><b>'+field(ctx.project?.project_type)+'</b></div>'+
+  '<div class="item wide"><small>Dirección</small><b>'+field(ctx.project?.address)+'</b></div></div></section>'+
+  '<section class="crew"><div><strong>'+escape(name)+'</strong><span>Supervisor: '+field(ctx.foreman)+' | Especialidad: '+field(ctx.specialty)+'</span></div><div><strong>'+workers.length+' trabajadores</strong><span>Relación de personal</span></div></section>'+
+  '<h2 class="section">INTEGRANTES Y CREDENCIALES</h2><table><thead><tr><th style="width:40px">No.</th><th>Trabajador</th><th style="width:95px">PIN / Estado</th><th style="width:110px">Firma de entrega</th></tr></thead><tbody>'+rows+'</tbody></table>'+
+  '<div class="footer">Documento de acceso restringido. Entregar credenciales únicamente a su titular. Resguardar copias impresas.</div>'+
+  '<script>window.addEventListener("load",()=>{const images=[...document.images];Promise.all(images.map(i=>i.decode().catch(()=>{}))).then(()=>setTimeout(()=>window.print(),200))})<\/script></body></html>'
+  popup.document.open();popup.document.write(html);popup.document.close();popup.focus()
+}
