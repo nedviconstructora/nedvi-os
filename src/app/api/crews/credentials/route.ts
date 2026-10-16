@@ -31,7 +31,7 @@ export async function POST(request: Request) {
     const { data: profile } = await client.from('profiles').select('role,active').eq('id', user.id).maybeSingle()
     if (!profile?.active || !allowedRoles.has(String(profile.role))) return NextResponse.json({ error: 'Sin permisos para asignar credenciales.' }, { status: 403 })
     const body = await request.json() as RequestBody
-    if (!validUuid(body.crewId) || (!body.resetWorkerId && !Array.isArray(body.names)) || (body.names?.length || 0) > 200) {
+    if (!validUuid(body.crewId) || (!body.resetWorkerId && !body.resetLegacy && !Array.isArray(body.names)) || (body.names?.length || 0) > 200) {
       return NextResponse.json({ error: 'Datos inválidos.' }, { status: 400 })
     }
     const url = process.env.NEXT_PUBLIC_SUPABASE_URL
