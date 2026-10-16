@@ -1,10 +1,13 @@
 type Worker = {name:string;pin:string|null;needsReset:boolean}
 const ascii=(s:string)=>s.normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/[^\x20-\x7e]/g,'?')
 const esc=(s:string)=>ascii(s).replace(/[\\()]/g,'\\$&')
-export function createCrewPinPdfUrl(crewName:string,workers:Worker[]){
-  const lines=['NEDVI OS - LISTA DE PIN DE TRABAJADORES','Documento confidencial - entregar PIN individualmente','Cuadrilla: '+crewName,'',...workers.map((w,i)=>String(i+1).padStart(3,'0')+'   '+w.name+'    PIN: '+(w.pin||'PENDIENTE DE RESTABLECER'))]
+type Project = {name:string;folio:string|null;client_name:string|null;client_contact:string|null;address:string|null;manager:string|null;project_type:string|null}
+type Context = {foreman:string;specialty:string;project:Project|null}
+const val=(s:string|null|undefined)=>s?.trim()||'No registrado'
+export function createCrewPinPdfUrl(crewName:string,workers:Worker[],ctx:Context){
+  const lines=['NEDVI CONSTRUCTORA  /  NEDVI OS','CONTROL DE CREDENCIALES DE PERSONAL','Documento confidencial - uso exclusivo de administracion','', 'PROYECTO: '+val(ctx.project?.name),'FOLIO: '+val(ctx.project?.folio),'CLIENTE: '+val(ctx.project?.client_name),'CONTACTO: '+val(ctx.project?.client_contact),'DIRECCION: '+val(ctx.project?.address),'RESPONSABLE DEL PROYECTO: '+val(ctx.project?.manager),'', 'CUADRILLA: '+crewName,'SUPERVISOR: '+val(ctx.foreman),'ESPECIALIDAD: '+val(ctx.specialty),'TRABAJADORES: '+workers.length,'FECHA DE EMISION: '+new Date().toLocaleDateString('es-MX'),'','No.   TRABAJADOR                                    PIN / ESTADO','-----------------------------------------------------------------------',...workers.map((w,i)=>String(i+1).padStart(3,'0')+'   '+w.name.padEnd(45,' ').slice(0,45)+'   '+(w.pin||'PENDIENTE'))]
   const pages:string[][]=[]
-  for(let i=0;i<lines.length;i+=43)pages.push(lines.slice(i,i+43))
+  for(let i=0;i<lines.length;i+=38)pages.push(lines.slice(i,i+38))
   const objects:string[]=['','']
   const pageIds:number[]=[]
   objects.push('<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>')
