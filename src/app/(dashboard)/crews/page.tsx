@@ -50,6 +50,10 @@ export default function CrewsPage() {
   const [credentials, setCredentials] = useState<Array<{name:string;employeeNumber:string;pin:string}>>([])
   const [credentialsInfo, setCredentialsInfo] = useState('')
   const [credentialsBusy, setCredentialsBusy] = useState(false)
+  const [pinCrewId,setPinCrewId]=useState<string|null>(null)
+  const [pinWorkers,setPinWorkers]=useState<Array<{id:string;name:string;pin:string|null;needsReset:boolean}>>([])
+  const [pinVisible,setPinVisible]=useState(false)
+  const [pinError,setPinError]=useState('')
 
   async function refreshCrews(){ try { const r=await fetch('/api/crews',{cache:'no-store'}); if(!r.ok)return;const d=await r.json();if(!d.crews.length&&readCrews().length)return;setCrews(d.crews);writeCrews(d.crews) }catch{} }
   function loadData() {
@@ -198,6 +202,11 @@ export default function CrewsPage() {
     finally { setCredentialsBusy(false) }
   }
 
+  async function viewPins(crewId:string){
+    setPinCrewId(crewId);setPinWorkers([]);setPinError('');setPinVisible(false)
+    try{const response=await fetch('/api/crews/credentials?crewId='+encodeURIComponent(crewId),{cache:'no-store'});const result=await response.json();if(!response.ok)throw new Error(result.error||'Error al consultar PIN');setPinWorkers(result.workers||[])}catch(e){setPinError(e instanceof Error?e.message:'No se pudieron consultar los PIN.')}
+  }
+
   async function resetPin(workerId:string) {
     if(!viewingCrew || credentialsBusy || !window.confirm('¿Restablecer el PIN de este trabajador? El PIN anterior dejará de funcionar.'))return
     setCredentialsBusy(true)
@@ -270,11 +279,13 @@ export default function CrewsPage() {
             <span><span className="font-semibold text-[var(--foreground)]">Proyecto:</span> {projects.find(p=>p.id===crew.project_id)?.name || 'Sin proyecto asignado'}</span><span><span className="font-semibold text-[var(--foreground)]">Responsable:</span> {crew.foreman || 'Sin asignar'}</span>
             <span className="inline-flex items-center gap-1.5"><UserRound size={14} className="text-[#5496CC]" /><strong className="text-[var(--foreground)]">{crew.members.length}</strong> integrantes</span>
           </div>
+          <button type="button" onClick={() => void viewPins(crew.id)} className="mt-3 mr-2 inline-flex items-center rounded-lg border border-[#5496CC] px-3 py-2 text-xs font-semibold text-[#5496CC]">Consultar PIN</button>
           <button type="button" disabled={credentialsBusy} onClick={() => void issueCredentials(crew)} className="mt-3 mr-2 inline-flex items-center rounded-lg bg-[#5496CC] px-3 py-2 text-xs font-semibold text-white disabled:opacity-50">Generar PIN individuales</button>
           <button type="button" onClick={() => void viewDetails(crew.id)} className="mt-3 inline-flex items-center rounded-lg border border-[#5496CC]/50 px-3 py-2 text-xs font-semibold text-[#5496CC] transition hover:bg-[#5496CC]/10">Ver expedientes de integrantes</button>
         </article>)}</div>}
       </div>
 
+      {pinCrewId ? <div className="fixed inset-0 z-[75] flex items-center justify-center bg-black/70 p-4"><div className="max-h-[90vh] w-full max-w-2xl overflow-y-auto rounded-2xl bg-[var(--surface)] p-5 shadow-2xl"><h2 className="text-xl font-bold">PIN de trabajadores · Acceso restringido</h2><p className="mt-2 text-xs text-[var(--muted)]">Solo personal autorizado. Evita exponerlos a terceros. Los PIN anteriores sin copia cifrada necesitan restablecerse.</p><button type="button" className="mt-3 rounded-lg border border-[var(--border)] px-3 py-2 text-sm" onClick={()=>setPinVisible(v=>!v)}>{pinVisible?'Ocultar PIN':'Mostrar PIN'}</button>{pinError?<p role="alert" className="mt-3 text-sm text-red-500">{pinError}</p>:null}<div className="mt-4 space-y-2">{pinWorkers.map(w=><div key={w.id} className="flex items-center justify-between gap-2 rounded-lg border border-[var(--border)] p-3"><span className="text-sm font-semibold">{w.name}</span><span className="font-mono text-sm">{w.pin?(pinVisible?w.pin:'••••'):(w.needsReset?'Restablecer PIN':'Sin PIN')}</span></div>)}</div><button type="button" onClick={()=>{setPinCrewId(null);setPinWorkers([]);setPinVisible(false)}} className="mt-5 w-full rounded-xl bg-[#5496CC] px-4 py-3 font-semibold text-white">Cerrar</button></div></div> : null}
       {(credentialsInfo || credentials.length > 0) ? <div className="fixed inset-0 z-[80] flex items-center justify-center bg-black/70 p-4"><div className="max-h-[90vh] w-full max-w-xl overflow-y-auto rounded-2xl bg-[var(--surface)] p-5 shadow-2xl"><h2 className="text-xl font-bold">PIN individuales de trabajadores</h2><p className="mt-2 text-sm text-[var(--muted)]">{credentialsInfo}</p><div className="mt-4 space-y-2">{credentials.map(item=><div key={item.employeeNumber} className="flex items-center justify-between gap-3 rounded-xl border border-[var(--border)] p-3"><div><p className="text-sm font-semibold">{item.name}</p></div><span className="font-mono text-xl font-bold tracking-widest">{item.pin}</span></div>)}</div><button type="button" className="mt-5 w-full rounded-xl bg-[#5496CC] px-5 py-3 font-semibold text-white" onClick={()=>{setCredentials([]);setCredentialsInfo('')}}>Cerrar y ocultar PIN</button></div></div> : null}
       {viewingCrew ? <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/60 p-4">
         <div className="max-h-[90vh] w-full max-w-6xl overflow-y-auto rounded-2xl bg-[var(--surface)] p-5 shadow-2xl">
