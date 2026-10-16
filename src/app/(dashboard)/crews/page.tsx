@@ -47,6 +47,9 @@ export default function CrewsPage() {
   const [detailsError, setDetailsError] = useState('')
   const [sessionName, setSessionName] = useState('')
   const [selectedFiles, setSelectedFiles] = useState<string[]>([])
+  const [credentials, setCredentials] = useState<Array<{name:string;employeeNumber:string;pin:string}>>([])
+  const [credentialsInfo, setCredentialsInfo] = useState('')
+  const [credentialsBusy, setCredentialsBusy] = useState(false)
 
   async function refreshCrews(){ try { const r=await fetch('/api/crews',{cache:'no-store'}); if(!r.ok)return;const d=await r.json();if(!d.crews.length&&readCrews().length)return;setCrews(d.crews);writeCrews(d.crews) }catch{} }
   function loadData() {
@@ -168,6 +171,7 @@ export default function CrewsPage() {
       if(!res.ok)throw new Error('No fue posible compartir esta cuadrilla en Supabase.')
       setCrews(next)
       writeCrews(next)
+      await issueCredentials(crew)
       setOpen(false)
       setEditingId(null)
       setImported([])
@@ -179,13 +183,28 @@ export default function CrewsPage() {
     }
   }
 
+  async function issueCredentials(crew: Crew) {
+    if (credentialsBusy) return
+    setCredentialsBusy(true)
+    setCredentialsInfo('')
+    setCredentials([])
+    try {
+      const response = await fetch('/api/crews/credentials', {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({crewId:crew.id,names:crew.members})})
+      const result = await response.json()
+      if (!response.ok) throw new Error(result.error || 'No se pudieron generar las credenciales.')
+      setCredentials(result.credentials || [])
+      setCredentialsInfo(result.credentials?.length ? 'Entrega estos PIN iniciales de forma individual. Se muestran una sola vez.' : 'Los trabajadores ya tienen PIN asignado. Para protegerlos, no pueden volver a consultarse.')
+    } catch (error) { setCredentialsInfo(error instanceof Error ? error.message : 'Error al generar PIN.') }
+    finally { setCredentialsBusy(false) }
+  }
+
   async function viewDetails(crewId: string) {
     setDetails([])
     setDetailsError('')
     setViewingCrew(crewId)
     try {
       const { data, error } = await createClient().from('crew_workers')
-        .select('full_name,social_security_number,position,salary,salary_period,work_hours,entry_time,exit_time,entry_supervisor,curp,rfc')
+        .select('full_name,employee_number,social_security_number,position,salary,salary_period,work_hours,entry_time,exit_time,entry_supervisor,curp,rfc')
         .eq('crew_id', crewId).order('full_name')
       if (error) throw error
       setDetails((data || []) as ImportedWorker[])
@@ -237,16 +256,18 @@ export default function CrewsPage() {
             <span><span className="font-semibold text-[var(--foreground)]">Proyecto:</span> {projects.find(p=>p.id===crew.project_id)?.name || 'Sin proyecto asignado'}</span><span><span className="font-semibold text-[var(--foreground)]">Responsable:</span> {crew.foreman || 'Sin asignar'}</span>
             <span className="inline-flex items-center gap-1.5"><UserRound size={14} className="text-[#5496CC]" /><strong className="text-[var(--foreground)]">{crew.members.length}</strong> integrantes</span>
           </div>
+          <button type="button" disabled={credentialsBusy} onClick={() => void issueCredentials(crew)} className="mt-3 mr-2 inline-flex items-center rounded-lg bg-[#5496CC] px-3 py-2 text-xs font-semibold text-white disabled:opacity-50">Generar números y PIN</button>
           <button type="button" onClick={() => void viewDetails(crew.id)} className="mt-3 inline-flex items-center rounded-lg border border-[#5496CC]/50 px-3 py-2 text-xs font-semibold text-[#5496CC] transition hover:bg-[#5496CC]/10">Ver expedientes de integrantes</button>
         </article>)}</div>}
       </div>
 
+      {(credentialsInfo || credentials.length > 0) ? <div className="fixed inset-0 z-[80] flex items-center justify-center bg-black/70 p-4"><div className="max-h-[90vh] w-full max-w-xl overflow-y-auto rounded-2xl bg-[var(--surface)] p-5 shadow-2xl"><h2 className="text-xl font-bold">Credenciales de trabajadores</h2><p className="mt-2 text-sm text-[var(--muted)]">{credentialsInfo}</p><div className="mt-4 space-y-2">{credentials.map(item=><div key={item.employeeNumber} className="flex items-center justify-between gap-3 rounded-xl border border-[var(--border)] p-3"><div><p className="text-sm font-semibold">{item.name}</p><p className="text-xs text-[#5496CC]">{item.employeeNumber}</p></div><span className="font-mono text-xl font-bold tracking-widest">{item.pin}</span></div>)}</div><button type="button" className="mt-5 w-full rounded-xl bg-[#5496CC] px-5 py-3 font-semibold text-white" onClick={()=>{setCredentials([]);setCredentialsInfo('')}}>Cerrar y ocultar PIN</button></div></div> : null}
       {viewingCrew ? <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/60 p-4">
         <div className="max-h-[90vh] w-full max-w-6xl overflow-y-auto rounded-2xl bg-[var(--surface)] p-5 shadow-2xl">
           <div className="mb-4 flex items-center justify-between gap-4"><div><h2 className="text-xl font-bold">Expedientes de personal</h2><p className="text-xs text-[var(--muted)]">Solo administradores autorizados. Información confidencial.</p></div><button type="button" onClick={() => setViewingCrew(null)} aria-label="Cerrar expedientes"><X size={20}/></button></div>
           {detailsError ? <p role="alert" className="text-sm text-red-500">{detailsError}</p> : null}
           {!detailsError && !details.length ? <p className="text-sm text-[var(--muted)]">No hay expedientes importados en esta cuadrilla.</p> : null}
-          {details.length ? <div className="overflow-x-auto"><table className="w-full min-w-[1300px] text-left text-xs"><thead><tr className="border-b border-[var(--border)]">{['Nombre','NSS','Puesto','Salario','Periodicidad','Horas','Entrada','Salida','Supervisor','CURP','RFC'].map(column => <th key={column} className="px-3 py-2">{column}</th>)}</tr></thead><tbody>{details.map((worker, index) => <tr key={index} className="border-b border-[var(--border)]">{[worker.full_name,worker.social_security_number,worker.position,worker.salary === null ? '' : String(worker.salary),worker.salary_period,worker.work_hours,worker.entry_time,worker.exit_time,worker.entry_supervisor,worker.curp,worker.rfc].map((value, i) => <td key={i} className="px-3 py-2">{value || '—'}</td>)}</tr>)}</tbody></table></div> : null}
+          {details.length ? <div className="overflow-x-auto"><table className="w-full min-w-[1300px] text-left text-xs"><thead><tr className="border-b border-[var(--border)]">{['Nombre','Núm. empleado','NSS','Puesto','Salario','Periodicidad','Horas','Entrada','Salida','Supervisor','CURP','RFC'].map(column => <th key={column} className="px-3 py-2">{column}</th>)}</tr></thead><tbody>{details.map((worker, index) => <tr key={index} className="border-b border-[var(--border)]">{[worker.full_name,(worker as ImportedWorker & {employee_number?:string}).employee_number,worker.social_security_number,worker.position,worker.salary === null ? '' : String(worker.salary),worker.salary_period,worker.work_hours,worker.entry_time,worker.exit_time,worker.entry_supervisor,worker.curp,worker.rfc].map((value, i) => <td key={i} className="px-3 py-2">{value || '—'}</td>)}</tr>)}</tbody></table></div> : null}
         </div>
       </div> : null}
       {open ? <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/55 p-4"><div className="max-h-[92vh] w-full max-w-2xl overflow-y-auto rounded-2xl bg-[var(--surface)] p-6 shadow-2xl"><div className="mb-5 flex items-center justify-between"><div><p className="text-xs font-semibold uppercase tracking-wide text-[#5496CC]">Personal de obra</p><h2 className="text-xl font-bold">{editingId ? 'Editar cuadrilla' : 'Nueva cuadrilla'}</h2></div><button onClick={() => setOpen(false)}><X size={18} /></button></div><form onSubmit={save} className="space-y-4">
