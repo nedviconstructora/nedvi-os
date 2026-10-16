@@ -17,7 +17,7 @@ async function ctx(){
 export async function GET(){
  try{
   const c=await ctx();if(!c)return NextResponse.json({error:'Sin autorización'},{status:403})
-  const {data,error}=await c.db.from('nedvi_crews').select('id,name,foreman,specialty,members,active,updated_at').is('deleted_at',null).order('name')
+  const {data,error}=await c.db.from('nedvi_crews').select('id,name,foreman,specialty,members,active,project_id,updated_at').is('deleted_at',null).order('name')
   if(error)throw error
   return NextResponse.json({crews:data||[]},{headers:{'Cache-Control':'no-store'}})
  }catch(e){console.error('Crew listing failed',e);return NextResponse.json({error:'No se pudieron sincronizar las cuadrillas.'},{status:500})}
@@ -27,12 +27,15 @@ export async function PUT(request:Request){
   const c=await ctx();if(!c)return NextResponse.json({error:'Sin autorización'},{status:403})
   const body=await request.json().catch(()=>null) as {crews?:unknown[]}|null
   if(!Array.isArray(body?.crews)||body!.crews.length<1||body!.crews.length>500)return NextResponse.json({error:'Datos inválidos.'},{status:400})
+  const validIds=[...new Set(body!.crews.map(x=>x && typeof x==='object'?(x as Record<string,unknown>).project_id:null).filter((x):x is string=>typeof x==='string' && x.length>0))]
+  if(validIds.some(id=>!uuid(id)))return NextResponse.json({error:'Proyecto inválido.'},{status:400})
+  if(validIds.length){const {data:validProjects,error:projectError}=await c.db.from('projects').select('id').in('id',validIds);if(projectError)throw projectError;if(validProjects?.length!==validIds.length)return NextResponse.json({error:'El proyecto seleccionado no existe.'},{status:400})}
   const rows=[]
   for(const raw of body!.crews){
    if(!raw||typeof raw!=='object')return NextResponse.json({error:'Cuadrilla inválida.'},{status:400})
    const crew=raw as Record<string,unknown>
    if(!uuid(crew.id)||typeof crew.name!=='string'||!crew.name.trim()||!Array.isArray(crew.members)||crew.members.length>1000)return NextResponse.json({error:'Revisa el identificador, nombre e integrantes.'},{status:400})
-   rows.push({id:crew.id,name:crew.name.trim().slice(0,160),foreman:String(crew.foreman||'').slice(0,160),specialty:String(crew.specialty||'').slice(0,160),members:crew.members.filter((x):x is string=>typeof x==='string').map(x=>x.slice(0,160)),active:crew.active!==false,updated_at:new Date().toISOString()})
+   rows.push({id:crew.id,project_id:typeof crew.project_id==='string'&&crew.project_id?crew.project_id:null,name:crew.name.trim().slice(0,160),foreman:String(crew.foreman||'').slice(0,160),specialty:String(crew.specialty||'').slice(0,160),members:crew.members.filter((x):x is string=>typeof x==='string').map(x=>x.slice(0,160)),active:crew.active!==false,updated_at:new Date().toISOString()})
   }
   const {data:archived,error:archivedError}=await c.db.from('nedvi_crews').select('id').in('id',rows.map(row=>row.id)).not('deleted_at','is',null)
   if(archivedError)throw archivedError
