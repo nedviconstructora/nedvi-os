@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server'
 import { createClient as createAdminClient } from '@supabase/supabase-js'
 import { createClient as createServerClient } from '@/utils/supabase/server'
-import { randomBytes, randomInt, scryptSync } from 'node:crypto'
+import { createHmac, randomBytes, randomInt, scryptSync } from 'node:crypto'
 
 export const dynamic = 'force-dynamic'
 const validUuid = (x: unknown): x is string => typeof x === 'string' && /^[0-9a-f]{8}-[0-9a-f-]{27}$/i.test(x)
@@ -40,12 +40,19 @@ export async function POST(request: Request) {
         worker = data
       }
       if (!worker.pin_hash) {
-        const pin = String(randomInt(0, 10000)).padStart(4,'0')
-        const salt = randomBytes(16).toString('hex')
-        const pinHash = 'scrypt:' + salt + ':' + scryptSync(pin, salt, 64).toString('hex')
-        const { data: updated, error } = await admin.from('crew_workers').update({pin_hash:pinHash}).eq('id',worker.id).is('pin_hash',null).select('employee_number').maybeSingle()
-        if (error) throw error
-        if (updated) credentials.push({name,employeeNumber:updated.employee_number,pin})
+        let assigned = false
+        for (let attempt = 0; attempt < 100 && !assigned; attempt++) {
+          const pin = String(randomInt(0, 10000)).padStart(4,'0')
+          const pinLookup = createHmac('sha256',key).update('nedvi-pin-v1:' + pin).digest('hex')
+          const salt = randomBytes(16).toString('hex')
+          const pinHash = 'scrypt:' + salt + ':' + scryptSync(pin, salt, 64).toString('hex')
+          const { data: updated, error } = await admin.from('crew_workers').update({pin_hash:pinHash,pin_lookup:pinLookup}).eq('id',worker.id).is('pin_hash',null).select('employee_number').maybeSingle()
+          if (error?.code === '23505') continue
+          if (error) throw error
+          if (updated) {credentials.push({name,employeeNumber:updated.employee_number,pin});assigned = true}
+          else assigned = true
+        }
+        if (!assigned) throw new Error('No hay un PIN disponible; intenta nuevamente.')
       }
     }
     return NextResponse.json({ credentials }, { headers: { 'Cache-Control': 'no-store' } })
