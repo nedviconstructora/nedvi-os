@@ -60,7 +60,7 @@ export async function POST(request: Request) {
     }
     if(body.resetLegacy){
       if(String(profile.role)!=='administracion')return NextResponse.json({error:'Solo administración puede asignar nuevamente PIN antiguos.'},{status:403})
-      const {data:legacy,error:legacyError}=await admin.from('crew_workers').select('id,full_name,employee_number,pin_hash,pin_encrypted').eq('crew_id',body.crewId)
+      const {data:legacy,error:legacyError}=await admin.from('crew_workers').select('id,full_name,employee_number,pin_hash,pin_encrypted').eq('crew_id',body.crewId).is('pin_encrypted',null).limit(10)
       if(legacyError)throw legacyError
       const credentials: Array<{name:string;employeeNumber:string;pin:string}>=[]
       for(const worker of legacy||[]){
