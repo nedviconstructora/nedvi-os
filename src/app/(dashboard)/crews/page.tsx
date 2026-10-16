@@ -14,6 +14,7 @@ import {
 } from '@/features/operations/services/operationsStorage'
 
 type CrewForm = {
+  project_id: string
   name: string
   foreman: string
   specialty: string
@@ -22,6 +23,7 @@ type CrewForm = {
 }
 
 const emptyForm: CrewForm = {
+  project_id: '',
   name: '',
   foreman: '',
   specialty: '',
@@ -31,6 +33,7 @@ const emptyForm: CrewForm = {
 
 export default function CrewsPage() {
   const [crews, setCrews] = useState<Crew[]>([])
+  const [projects, setProjects] = useState<Array<{id:string;name:string;folio:string|null}>>([])
   const [search, setSearch] = useState('')
   const [open, setOpen] = useState(false)
   const [editingId, setEditingId] = useState<string | null>(null)
@@ -54,6 +57,7 @@ export default function CrewsPage() {
   useEffect(() => {
     loadData()
     void refreshCrews()
+    void createClient().from('projects').select('id,name,folio').order('name').then(({data}) => {if(data)setProjects(data)})
     const interval=window.setInterval(()=>{if(document.visibilityState==='visible')void refreshCrews()},15000)
     const handleStorage = (event: StorageEvent) => {
       if (event.key === CREWS_STORAGE_KEY) loadData()
@@ -71,12 +75,12 @@ export default function CrewsPage() {
     const query = search.trim().toLowerCase()
     if (!query) return crews
     return crews.filter((crew) =>
-      [crew.name, crew.foreman, crew.specialty, crew.members.join(' ')]
+      [crew.name, crew.foreman, crew.specialty, crew.members.join(' '), projects.find(p=>p.id===crew.project_id)?.name || '']
         .join(' ')
         .toLowerCase()
         .includes(query),
     )
-  }, [crews, search])
+  }, [crews, search, projects])
 
   function openNew() {
     setEditingId(null)
@@ -95,6 +99,7 @@ export default function CrewsPage() {
     setSelectedFiles([])
     setEditingId(crew.id)
     setForm({
+      project_id: crew.project_id || '',
       name: crew.name,
       foreman: crew.foreman,
       specialty: crew.specialty,
@@ -149,6 +154,7 @@ export default function CrewsPage() {
       }
       const crew: Crew = {
         id: crewId,
+        project_id: form.project_id || null,
         name: form.name.trim(),
         foreman: responsible,
         specialty: form.specialty.trim(),
@@ -228,7 +234,7 @@ export default function CrewsPage() {
         {filtered.length === 0 ? <div className="rounded-2xl border border-[var(--border)] bg-[var(--surface)] px-6 py-16 text-center"><UserRound className="mx-auto text-[#5496CC]" size={32} /><h2 className="mt-4 text-lg font-bold">Todavía no hay cuadrillas</h2><p className="mt-2 text-sm text-[var(--muted)]">Crea la primera cuadrilla para comenzar a organizar al personal de obra.</p></div> : <div className="grid gap-3 md:grid-cols-2 2xl:grid-cols-3">{filtered.map((crew) => <article key={crew.id} className="rounded-2xl border border-[var(--border)] bg-[var(--surface)] p-4 shadow-sm">
           <div className="flex items-start justify-between gap-4"><div><div className="flex items-center gap-2"><h2 className="text-lg font-bold">{crew.name}</h2><span className={`rounded-full px-2.5 py-1 text-[10px] font-semibold ${crew.active ? 'bg-emerald-500/10 text-emerald-500' : 'bg-slate-500/10 text-slate-500'}`}>{crew.active ? 'Activa' : 'Inactiva'}</span></div><p className="mt-1 text-sm text-[var(--muted)]">{crew.specialty || 'Sin especialidad'}</p></div><div className="flex gap-1"><button onClick={() => openEdit(crew)} className="rounded-lg p-2 hover:bg-[var(--surface-soft)]"><Pencil size={15} /></button><button onClick={() => remove(crew.id)} className="rounded-lg p-2 text-red-500 hover:bg-red-500/10"><Trash2 size={15} /></button></div></div>
           <div className="mt-3 flex flex-wrap items-center gap-x-5 gap-y-2 text-xs text-[var(--muted)]">
-            <span><span className="font-semibold text-[var(--foreground)]">Responsable:</span> {crew.foreman || 'Sin asignar'}</span>
+            <span><span className="font-semibold text-[var(--foreground)]">Proyecto:</span> {projects.find(p=>p.id===crew.project_id)?.name || 'Sin proyecto asignado'}</span><span><span className="font-semibold text-[var(--foreground)]">Responsable:</span> {crew.foreman || 'Sin asignar'}</span>
             <span className="inline-flex items-center gap-1.5"><UserRound size={14} className="text-[#5496CC]" /><strong className="text-[var(--foreground)]">{crew.members.length}</strong> integrantes</span>
           </div>
           <button type="button" onClick={() => void viewDetails(crew.id)} className="mt-3 inline-flex items-center rounded-lg border border-[#5496CC]/50 px-3 py-2 text-xs font-semibold text-[#5496CC] transition hover:bg-[#5496CC]/10">Ver expedientes de integrantes</button>
@@ -244,6 +250,7 @@ export default function CrewsPage() {
         </div>
       </div> : null}
       {open ? <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/55 p-4"><div className="max-h-[92vh] w-full max-w-2xl overflow-y-auto rounded-2xl bg-[var(--surface)] p-6 shadow-2xl"><div className="mb-5 flex items-center justify-between"><div><p className="text-xs font-semibold uppercase tracking-wide text-[#5496CC]">Personal de obra</p><h2 className="text-xl font-bold">{editingId ? 'Editar cuadrilla' : 'Nueva cuadrilla'}</h2></div><button onClick={() => setOpen(false)}><X size={18} /></button></div><form onSubmit={save} className="space-y-4">
+        <label className="block space-y-2"><span className="text-sm font-semibold">Asignar a proyecto *</span><select required value={form.project_id} onChange={e=>setForm(current=>({...current,project_id:e.target.value}))} className="w-full rounded-xl border border-[var(--border)] bg-[var(--surface)] px-4 py-3"><option value="">Selecciona un proyecto</option>{projects.map(p=><option key={p.id} value={p.id}>{p.folio ? p.folio + ' · ' : ''}{p.name}</option>)}</select><span className="block text-xs text-[var(--muted)]">Esta cuadrilla quedará asignada al proyecto seleccionado.</span></label>
         <label className="block space-y-2"><span className="text-sm font-semibold">Nombre de la cuadrilla *</span><input required value={form.name} onChange={(e) => setForm((current) => ({ ...current, name: e.target.value }))} placeholder="Ej. Cuadrilla Albañilería A" className="w-full rounded-xl border border-[var(--border)] bg-transparent px-4 py-3" /></label>
         <div className="grid gap-4 sm:grid-cols-2"><label className="space-y-2"><span className="text-sm font-semibold">Responsable / Cabo *</span><input required readOnly value={sessionName || form.foreman} title="Responsable asignado según la sesión activa" className="w-full rounded-xl border border-[var(--border)] bg-transparent px-4 py-3" /></label><label className="space-y-2"><span className="text-sm font-semibold">Especialidad</span><input value={form.specialty} onChange={(e) => setForm((current) => ({ ...current, specialty: e.target.value }))} placeholder="Ej. Instalaciones eléctricas" className="w-full rounded-xl border border-[var(--border)] bg-transparent px-4 py-3" /></label></div>
         <label className="block space-y-2"><span className="text-sm font-semibold">Integrantes</span><textarea rows={6} value={form.members} onChange={(e) => setForm((current) => ({ ...current, members: e.target.value }))} placeholder="Un nombre por línea o separados por comas" className="w-full rounded-xl border border-[var(--border)] bg-transparent px-4 py-3" /></label>
