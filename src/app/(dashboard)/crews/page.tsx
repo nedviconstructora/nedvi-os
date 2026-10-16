@@ -43,7 +43,7 @@ export default function CrewsPage() {
   const [importError, setImportError] = useState('')
   const [saving, setSaving] = useState(false)
   const [viewingCrew, setViewingCrew] = useState<string | null>(null)
-  const [details, setDetails] = useState<ImportedWorker[]>([])
+  const [details, setDetails] = useState<Array<ImportedWorker & {id:string;employee_number?:string}>>([])
   const [detailsError, setDetailsError] = useState('')
   const [sessionName, setSessionName] = useState('')
   const [selectedFiles, setSelectedFiles] = useState<string[]>([])
@@ -198,16 +198,30 @@ export default function CrewsPage() {
     finally { setCredentialsBusy(false) }
   }
 
+  async function resetPin(workerId:string) {
+    if(!viewingCrew || credentialsBusy || !window.confirm('¿Restablecer el PIN de este trabajador? El PIN anterior dejará de funcionar.'))return
+    setCredentialsBusy(true)
+    try{
+      const response=await fetch('/api/crews/credentials',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({crewId:viewingCrew,resetWorkerId:workerId})})
+      const result=await response.json()
+      if(!response.ok)throw new Error(result.error || 'No se pudo restablecer el PIN.')
+      setCredentials(result.credentials || [])
+      setCredentialsInfo('PIN restablecido. Entrégalo personalmente: solo se mostrará una vez.')
+      setViewingCrew(null)
+    }catch(error){setDetailsError(error instanceof Error?error.message:'Error al restablecer PIN.')}
+    finally{setCredentialsBusy(false)}
+  }
+
   async function viewDetails(crewId: string) {
     setDetails([])
     setDetailsError('')
     setViewingCrew(crewId)
     try {
       const { data, error } = await createClient().from('crew_workers')
-        .select('full_name,employee_number,social_security_number,position,salary,salary_period,work_hours,entry_time,exit_time,entry_supervisor,curp,rfc')
+        .select('id,full_name,employee_number,social_security_number,position,salary,salary_period,work_hours,entry_time,exit_time,entry_supervisor,curp,rfc')
         .eq('crew_id', crewId).order('full_name')
       if (error) throw error
-      setDetails((data || []) as ImportedWorker[])
+      setDetails((data || []) as Array<ImportedWorker & {id:string;employee_number?:string}>)
     } catch (error) {
       setDetailsError(error instanceof Error ? error.message : 'No se pudieron consultar los expedientes.')
     }
@@ -267,7 +281,7 @@ export default function CrewsPage() {
           <div className="mb-4 flex items-center justify-between gap-4"><div><h2 className="text-xl font-bold">Expedientes de personal</h2><p className="text-xs text-[var(--muted)]">Solo administradores autorizados. Información confidencial.</p></div><button type="button" onClick={() => setViewingCrew(null)} aria-label="Cerrar expedientes"><X size={20}/></button></div>
           {detailsError ? <p role="alert" className="text-sm text-red-500">{detailsError}</p> : null}
           {!detailsError && !details.length ? <p className="text-sm text-[var(--muted)]">No hay expedientes importados en esta cuadrilla.</p> : null}
-          {details.length ? <div className="overflow-x-auto"><table className="w-full min-w-[1300px] text-left text-xs"><thead><tr className="border-b border-[var(--border)]">{['Nombre','NSS','Puesto','Salario','Periodicidad','Horas','Entrada','Salida','Supervisor','CURP','RFC'].map(column => <th key={column} className="px-3 py-2">{column}</th>)}</tr></thead><tbody>{details.map((worker, index) => <tr key={index} className="border-b border-[var(--border)]">{[worker.full_name,worker.social_security_number,worker.position,worker.salary === null ? '' : String(worker.salary),worker.salary_period,worker.work_hours,worker.entry_time,worker.exit_time,worker.entry_supervisor,worker.curp,worker.rfc].map((value, i) => <td key={i} className="px-3 py-2">{value || '—'}</td>)}</tr>)}</tbody></table></div> : null}
+          {details.length ? <div className="overflow-x-auto"><table className="w-full min-w-[1300px] text-left text-xs"><thead><tr className="border-b border-[var(--border)]">{['Nombre','NSS','Puesto','Salario','Periodicidad','Horas','Entrada','Salida','Supervisor','CURP','RFC','PIN'].map(column => <th key={column} className="px-3 py-2">{column}</th>)}</tr></thead><tbody>{details.map((worker, index) => <tr key={index} className="border-b border-[var(--border)]">{[worker.full_name,worker.social_security_number,worker.position,worker.salary === null ? '' : String(worker.salary),worker.salary_period,worker.work_hours,worker.entry_time,worker.exit_time,worker.entry_supervisor,worker.curp,worker.rfc].map((value, i) => <td key={i} className="px-3 py-2">{value || '—'}</td>)}<td className="px-3 py-2"><button type="button" disabled={credentialsBusy} onClick={()=>void resetPin(worker.id)} className="rounded-lg bg-[#5496CC] px-3 py-2 font-semibold text-white disabled:opacity-50">Restablecer PIN</button></td></tr>)}</tbody></table></div> : null}
         </div>
       </div> : null}
       {open ? <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/55 p-4"><div className="max-h-[92vh] w-full max-w-2xl overflow-y-auto rounded-2xl bg-[var(--surface)] p-6 shadow-2xl"><div className="mb-5 flex items-center justify-between"><div><p className="text-xs font-semibold uppercase tracking-wide text-[#5496CC]">Personal de obra</p><h2 className="text-xl font-bold">{editingId ? 'Editar cuadrilla' : 'Nueva cuadrilla'}</h2></div><button onClick={() => setOpen(false)}><X size={18} /></button></div><form onSubmit={save} className="space-y-4">
