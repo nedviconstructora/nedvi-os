@@ -62,6 +62,7 @@ export type DailyReport = {
 }
 
 export type Crew = {
+  project_id?: string | null
   id: string
   name: string
   foreman: string
@@ -281,6 +282,7 @@ export function readCrews(): Crew[] {
     )
     .map((item) => ({
       id: item.id as string,
+      project_id: typeof item.project_id === 'string' ? item.project_id : null,
       name: item.name as string,
       foreman: item.foreman as string,
       specialty: typeof item.specialty === 'string' ? item.specialty : '',
