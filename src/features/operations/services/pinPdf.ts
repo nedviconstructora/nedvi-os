@@ -19,7 +19,7 @@ export async function createCrewPinPdfUrl(crewName:string,workers:Worker[],ctx:C
     const pageId=objects.length+1
     const streamId=pageId+1
     pageIds.push(pageId)
-    const cmds=[...(logoJpeg?['q 50 0 0 50 42 755 cm /Logo Do Q']:[]),'BT','/F1 10 Tf','48 792 Td','14 TL',...pages[p].map((line,i)=>'('+esc(line)+') Tj'+(i<pages[p].length-1?' T*':'')),'ET'].join('\n')
+    const cmds=[...(logoJpeg?['q 50 0 0 50 510 779 cm /Logo Do Q']:[]),'BT','/F1 10 Tf','48 792 Td','14 TL',...pages[p].map((line,i)=>'('+esc(line)+') Tj'+(i<pages[p].length-1?' T*':'')),'ET'].join('\n')
     objects.push('<< /Type /Page /Parent 2 0 R /MediaBox [0 0 612 842] /Resources << /Font << /F1 3 0 R >>'+(logoJpeg?' /XObject << /Logo 4 0 R >>':'')+' >> /Contents '+streamId+' 0 R >>')
     objects.push('<< /Length '+cmds.length+' >>\nstream\n'+cmds+'\nendstream')
   }
