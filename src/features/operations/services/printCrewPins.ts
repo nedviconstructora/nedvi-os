@@ -8,7 +8,7 @@ export function printCrewPinReport(name:string,workers:Worker[],ctx:Context){
   const popup=window.open('','_blank','width=1000,height=800')
   if(!popup)throw new Error('Tu navegador bloqueó la ventana de impresión. Permite ventanas emergentes para NEDVI OS.')
   const date=new Intl.DateTimeFormat('es-MX',{dateStyle:'medium',timeZone:'America/Tijuana'}).format(new Date())
-  const rowFor=(w:Worker,i:number)=>'<tr><td class="index">'+(i+1).toString().padStart(3,'0')+'</td><td>'+escape(w.name)+'</td><td class="pin">'+(w.pin?escape(w.pin):'PENDIENTE')+'</td><td class="signature"></td></tr>')
+  const rowFor=(w:Worker,i:number)=>'<tr><td class="index">'+(i+1).toString().padStart(3,'0')+'</td><td>'+escape(w.name)+'</td><td class="pin">'+(w.pin?escape(w.pin):'PENDIENTE')+'</td><td class="signature"></td></tr>'
   const chunks:Worker[][]=[]
   if(workers.length){chunks.push(workers.slice(0,12));for(let i=12;i<workers.length;i+=23)chunks.push(workers.slice(i,i+23))}else chunks.push([])
   const html='<!doctype html><html lang="es"><head><meta charset="utf-8"><title>NEDVI | Credenciales de '+escape(name)+'</title><style>'+
