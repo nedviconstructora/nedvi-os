@@ -8,7 +8,7 @@ const validUuid = (x: unknown): x is string => typeof x === 'string' && /^[0-9a-
 const allowedRoles = new Set(['administracion', 'obra'])
 function encryptPin(pin:string,secret:string){const iv=randomBytes(12);const cipher=createCipheriv('aes-256-gcm',scryptSync(secret,'nedvi-pin-storage-v1',32),iv);const encrypted=Buffer.concat([cipher.update(pin,'utf8'),cipher.final()]);return [iv.toString('hex'),cipher.getAuthTag().toString('hex'),encrypted.toString('hex')].join(':')}
 function decryptPin(ciphertext:string,secret:string){const [iv,tag,encrypted]=ciphertext.split(':');const decipher=createDecipheriv('aes-256-gcm',scryptSync(secret,'nedvi-pin-storage-v1',32),Buffer.from(iv,'hex'));decipher.setAuthTag(Buffer.from(tag,'hex'));return Buffer.concat([decipher.update(Buffer.from(encrypted,'hex')),decipher.final()]).toString('utf8')}
-type RequestBody = { crewId?: string; names?: string[]; resetWorkerId?: string }
+type RequestBody = { crewId?: string; names?: string[]; resetWorkerId?: string; resetLegacy?: boolean }
 
 export async function GET(request:Request){
   try{
@@ -57,6 +57,27 @@ export async function POST(request: Request) {
         return NextResponse.json({credentials:[{name:target.full_name,employeeNumber:target.employee_number,pin}]},{headers:{'Cache-Control':'no-store'}})
       }
       throw new Error('No se encontró PIN disponible.')
+    }
+    if(body.resetLegacy){
+      if(String(profile.role)!=='administracion')return NextResponse.json({error:'Solo administración puede asignar nuevamente PIN antiguos.'},{status:403})
+      const {data:legacy,error:legacyError}=await admin.from('crew_workers').select('id,full_name,employee_number,pin_hash,pin_encrypted').eq('crew_id',body.crewId)
+      if(legacyError)throw legacyError
+      const credentials: Array<{name:string;employeeNumber:string;pin:string}>=[]
+      for(const worker of legacy||[]){
+        if(worker.pin_encrypted)continue
+        for(let attempt=0;attempt<100;attempt++){
+          const pin=String(randomInt(0,10000)).padStart(4,'0')
+          const lookup=createHmac('sha256',key).update('nedvi-pin-v1:'+pin).digest('hex')
+          const salt=randomBytes(16).toString('hex')
+          const hash='scrypt:'+salt+':'+scryptSync(pin,salt,64).toString('hex')
+          const {data:updated,error}=await admin.from('crew_workers').update({pin_hash:hash,pin_lookup:lookup,pin_encrypted:encryptPin(pin,key)}).eq('id',worker.id).is('pin_encrypted',null).select('employee_number').maybeSingle()
+          if(error?.code==='23505')continue
+          if(error)throw error
+          if(updated)credentials.push({name:worker.full_name,employeeNumber:updated.employee_number,pin})
+          break
+        }
+      }
+      return NextResponse.json({credentials},{headers:{'Cache-Control':'no-store, private'}})
     }
     const officialNames = new Set((crew.members as string[]).map(n => n.trim().toLocaleLowerCase('es-MX')))
     const requested = Array.from(new Set((body.names || []).map(n => String(n).trim()).filter(n => n.length > 0 && n.length <= 160)))
