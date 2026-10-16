@@ -103,6 +103,7 @@ const navigationGroups: NavigationGroup[] = [
       { label: 'Reportes diarios', href: '/daily-reports', icon: FileText },
       { label: 'Inspecciones de obra', href: '/inspections', icon: ClipboardList },
       { label: 'Asistencias · Trabajadores', href: '/attendance', icon: UsersRound },
+      { label: 'Asistencia - PIN', href: '/attendance-pin', icon: Clock3 },
       { label: 'Cuadrillas', href: '/crews', icon: UserRound },
     ],
   },
