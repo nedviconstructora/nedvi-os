@@ -1,6 +1,7 @@
 'use client'
 
 import { ChangeEvent, useCallback, useEffect, useMemo, useState } from 'react'
+import Image from 'next/image'
 import { Camera, Clock3, LogIn, LogOut, RefreshCw, ShieldCheck, Trash2, MapPin, FileSpreadsheet, CalendarDays } from 'lucide-react'
 import { AppShell } from '@/components/layout/AppShell'
 import { downloadClockWorkbook } from '@/features/time-clock/services/exportXlsx'
@@ -42,10 +43,17 @@ export default function TimeClockPage() {
 
   useEffect(() => {
     void refresh()
-    const interval = window.setInterval(() => {setNow(new Date());void refresh()},30000)
+    const refreshVisible = () => { if (document.visibilityState === 'visible') {setNow(new Date());void refresh()} }
+    const interval = window.setInterval(refreshVisible,30000)
+    window.addEventListener('focus',refreshVisible)
+    document.addEventListener('visibilitychange',refreshVisible)
     setNow(new Date())
     setDateFilter(new Intl.DateTimeFormat('sv-SE',{timeZone:'America/Tijuana',year:'numeric',month:'2-digit',day:'2-digit'}).format(new Date()))
-    return () => window.clearInterval(interval)
+    return () => {
+      window.clearInterval(interval)
+      window.removeEventListener('focus',refreshVisible)
+      document.removeEventListener('visibilitychange',refreshVisible)
+    }
   },[refresh])
 
   useEffect(() => {
@@ -218,7 +226,7 @@ export default function TimeClockPage() {
               {visibleEntries.map(item => <div key={item.id} className="flex items-center justify-between gap-3 rounded-xl border border-[var(--border)] p-3">
                 <div className="min-w-0"><p className="truncate text-sm font-semibold">{item.name}</p><p className="text-xs text-[var(--muted)]">{item.type==='entrada'?'Entrada':'Salida'} · {fmt(item.at)}</p>{item.latitude != null && item.longitude != null && <a className="inline-flex items-center gap-1 text-xs text-[#5496CC] underline" href={`https://www.google.com/maps?q=${item.latitude},${item.longitude}`} target="_blank" rel="noreferrer"><MapPin size={13}/>Ver ubicación GPS (±{Math.round(item.accuracy ?? 0)} m)</a>}</div>
                 <div className="flex shrink-0 items-center gap-2">
-                  {item.photoUrl ? <a href={item.photoUrl} target="_blank" rel="noreferrer" className="text-sm font-semibold text-[#5496CC] underline">Ver foto</a> : <span className="text-xs text-[var(--muted)]">Sin foto</span>}
+                  {item.photoUrl ? <ClockPhoto url={item.photoUrl} name={item.name} type={item.type}/> : <span className="text-xs text-[var(--muted)]">Sin foto</span>}
                   {canDelete && entries.find(x => x.userId === item.userId)?.id === item.id && <button type="button" disabled={busy} onClick={() => void deleteEntry(item.id)} aria-label="Anular registro" title="Anular checada (Administración)" className="rounded-lg border border-red-400/30 p-2 text-red-500 hover:bg-red-500/10 disabled:opacity-40"><Trash2 size={16}/></button>}
                 </div>
               </div>)}
@@ -228,4 +236,16 @@ export default function TimeClockPage() {
       </main>
     </AppShell>
   )
+}
+
+function ClockPhoto({url,name,type}:{url:string;name:string;type:ClockEntry['type']}) {
+  const [failed,setFailed] = useState(false)
+  const [retry,setRetry] = useState(0)
+  return <div className="space-y-1 text-center">
+    <a href={url} target="_blank" rel="noreferrer" className="block text-xs font-semibold text-[#5496CC] underline">
+      {!failed && <Image key={retry} unoptimized src={`${url}&retry=${retry}`} width={64} height={64} alt={`Foto de ${type} de ${name}`} onError={()=>setFailed(true)} className="mb-1 h-16 w-16 rounded-lg border border-[var(--border)] object-cover"/>}
+      Ver foto
+    </a>
+    {failed && <button type="button" onClick={()=>{setRetry(value=>value+1);setFailed(false)}} className="text-xs text-[#5496CC] underline" aria-label={`Reintentar foto de ${name}`}>Reintentar foto</button>}
+  </div>
 }
