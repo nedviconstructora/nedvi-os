@@ -1,7 +1,7 @@
 type Worker = {name:string;pin:string|null;needsReset:boolean}
 const ascii=(s:string)=>s.normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/[^\x20-\x7e]/g,'?')
 const esc=(s:string)=>ascii(s).replace(/[\\()]/g,'\\$&')
-export function downloadCrewPinPdf(crewName:string,workers:Worker[]){
+export function viewCrewPinPdf(crewName:string,workers:Worker[]){
   const lines=['NEDVI OS - LISTA DE PIN DE TRABAJADORES','Documento confidencial - entregar PIN individualmente','Cuadrilla: '+crewName,'',...workers.map((w,i)=>String(i+1).padStart(3,'0')+'   '+w.name+'    PIN: '+(w.pin||'PENDIENTE DE RESTABLECER'))]
   const pages:string[][]=[]
   for(let i=0;i<lines.length;i+=43)pages.push(lines.slice(i,i+43))
@@ -27,5 +27,5 @@ export function downloadCrewPinPdf(crewName:string,workers:Worker[]){
   pdf+='trailer\n<< /Size '+(objects.length+1)+' /Root 1 0 R >>\nstartxref\n'+start+'\n%%EOF'
   const blob=new Blob([pdf],{type:'application/pdf'})
   const url=URL.createObjectURL(blob)
-  const link=document.createElement('a');link.href=url;link.download='NEDVI_PIN_Cuadrilla_'+ascii(crewName).replace(/[^a-zA-Z0-9_-]/g,'_')+'.pdf';document.body.appendChild(link);link.click();link.remove();setTimeout(()=>URL.revokeObjectURL(url),60000)
+  const tab=window.open(url,'_blank','noopener,noreferrer');if(!tab){window.location.href=url}setTimeout(()=>URL.revokeObjectURL(url),300000)
 }
