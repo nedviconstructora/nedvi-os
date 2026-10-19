@@ -124,9 +124,9 @@ export async function GET() {
       return NextResponse.json({ error: profileError.message }, { status: 500 })
     }
 
-    if (!currentProfile?.active || !['developer','administracion'].includes(normalizeRole(currentProfile.role))) {
+    if (!currentProfile?.active || !['developer','administracion','gerente_comercial','gerente_administrativo','gerente_operativo'].includes(normalizeRole(currentProfile.role))) {
       return NextResponse.json(
-        { error: 'Solo Administración puede consultar usuarios.' },
+        { error: 'Solo DEVELOPER, Administración y Gerencia pueden consultar usuarios.' },
         { status: 403 },
       )
     }
