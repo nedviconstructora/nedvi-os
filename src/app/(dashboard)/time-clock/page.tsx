@@ -6,7 +6,7 @@ import { Camera, Clock3, LogIn, LogOut, RefreshCw, ShieldCheck, Trash2, MapPin, 
 import { AppShell } from '@/components/layout/AppShell'
 import { downloadClockWorkbook } from '@/features/time-clock/services/exportXlsx'
 
-type ClockEntry = { id:string; userId:string; name:string; type:'entrada'|'salida'; at:string; photoUrl:string|null; latitude:number|null; longitude:number|null; accuracy:number|null }
+type ClockEntry = { id:string; userId:string; name:string; type:'entrada'|'salida'; at:string; originalAt?:string|null; photoUrl:string|null; latitude:number|null; longitude:number|null; accuracy:number|null }
 type ExitReview={id:string;employee_name:string;entry_at:string|null;requested_exit_time:string;reason:string;submitted_at:string;status:string;has_photo:boolean;reviewed_at:string|null}
 type Payload = {entries:ClockEntry[]; me:string; canViewAll:boolean; canDelete:boolean; canClock:boolean; resolvedExitEntryIds:string[]; error?:string}
 
@@ -132,7 +132,7 @@ export default function TimeClockPage() {
       ...dailyRows.map(r=>[r.date,r.name,localTime(r.start),localTime(r.end),(r.totalMinutes/60).toFixed(2),r.open?'Entrada sin salida':'Completo']),
     ]
     const events=[
-      ['Fecha','Empleado','Tipo','Hora local','Hora oficial UTC','Latitud GPS','Longitud GPS','Precisión (m)','ID del registro (evidencia en Supabase)'],
+      ['Fecha','Empleado','Tipo','Hora local ajustada','Hora en sistema UTC','Latitud GPS','Longitud GPS','Precisión (m)','ID del registro (evidencia en Supabase)'],
       ...visibleEntries.map(e=>[dayOf(e.at),e.name,e.type,localTime(e.at),e.at,String(e.latitude??''),String(e.longitude??''),String(e.accuracy??''),e.id]),
     ]
     downloadClockWorkbook([{name:'Resumen diario',rows:summary},{name:'Eventos',rows:events}], 'NEDVI_Checador_'+(allDates?'historial':dateFilter)+'.xlsx')
@@ -281,7 +281,7 @@ export default function TimeClockPage() {
             <div className="max-h-[480px] space-y-3 overflow-y-auto">
               {!visibleEntries.length && <p className="rounded-xl border border-[var(--border)] p-4 text-sm text-[var(--muted)]">Todavía no existen registros.</p>}
               {visibleEntries.map(item => <div key={item.id} className="flex items-center justify-between gap-3 rounded-xl border border-[var(--border)] p-3">
-                <div className="min-w-0"><p className="truncate text-sm font-semibold">{item.name}</p><p className="text-xs text-[var(--muted)]">{item.type==='entrada'?'Entrada':'Salida'} · {fmt(item.at)}</p>{item.latitude != null && item.longitude != null && <a className="inline-flex items-center gap-1 text-xs text-[#5496CC] underline" href={`https://www.google.com/maps?q=${item.latitude},${item.longitude}`} target="_blank" rel="noreferrer"><MapPin size={13}/>Ver ubicación GPS (±{Math.round(item.accuracy ?? 0)} m)</a>}</div>
+                <div className="min-w-0"><p className="truncate text-sm font-semibold">{item.name}</p><p className="text-xs text-[var(--muted)]">{item.type==='entrada'?'Entrada':'Salida'} · {fmt(item.at)}{item.originalAt?' · Ajuste administrativo':''}</p>{item.latitude != null && item.longitude != null && <a className="inline-flex items-center gap-1 text-xs text-[#5496CC] underline" href={`https://www.google.com/maps?q=${item.latitude},${item.longitude}`} target="_blank" rel="noreferrer"><MapPin size={13}/>Ver ubicación GPS (±{Math.round(item.accuracy ?? 0)} m)</a>}</div>
                 <div className="flex shrink-0 items-center gap-2">
                   {item.photoUrl ? <ClockPhoto url={item.photoUrl} name={item.name} type={item.type}/> : <span className="text-xs text-[var(--muted)]">Sin foto</span>}
                   {canDelete && entries.find(x => x.userId === item.userId)?.id === item.id && <button type="button" disabled={busy} onClick={() => void deleteEntry(item.id)} aria-label="Anular registro" title="Anular checada (Administración)" className="rounded-lg border border-red-400/30 p-2 text-red-500 hover:bg-red-500/10 disabled:opacity-40"><Trash2 size={16}/></button>}
