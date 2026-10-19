@@ -52,9 +52,10 @@ const PERMISSION_LABELS: Record<ModulePermission, string> = {
   coral: 'Coral AI',
   'client-portal': 'Portal del cliente',
   'developer-panel': 'Panel DEVELOPER',
+  'management-attendance': 'Consulta gerencial de checadas',
 }
 
-const ALL_PERMISSIONS = (Object.keys(PERMISSION_LABELS) as ModulePermission[]).filter(permission => permission !== 'developer-panel')
+const ALL_PERMISSIONS = (Object.keys(PERMISSION_LABELS) as ModulePermission[]).filter(permission => permission !== 'developer-panel' && permission !== 'management-attendance')
 const ROLES: AppRole[] = ['Administración', 'Supervisor', 'Contabilidad', 'Cliente']
 
 type Tab = 'users' | 'requests' | 'passwords'
