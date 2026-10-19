@@ -18,7 +18,7 @@ export async function GET(request: Request) {
       .select('user_id,photo_path').eq('id', id).is('deleted_at', null).maybeSingle()
     if (error) throw error
     if (!entry?.photo_path) return NextResponse.json({ error: 'Fotografía no disponible.' }, { status: 404, headers })
-    const canViewAll = ctx.isAdmin || ctx.isAccountant || ['obra', 'supervisor'].includes(String(ctx.profile.role ?? '').toLowerCase().trim())
+    const canViewAll = ctx.isAdmin || ctx.isAccountant || ['gerente_operativo', 'gerente_comercial', 'gerente_administrativo'].includes(String(ctx.profile.role ?? '').toLowerCase().trim())
     if (!canViewAll && entry.user_id !== ctx.user.id) {
       return NextResponse.json({ error: 'Acceso no autorizado.' }, { status: 403, headers })
     }
