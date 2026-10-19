@@ -2,9 +2,10 @@
 
 import { useEffect, useMemo, useState } from 'react'
 import { Check, Save, ShieldCheck, SlidersHorizontal, X, XCircle } from 'lucide-react'
-import { currentUser } from '@/data/currentUser'
+
 import {
   defaultPermissionsForRole,
+  readAccessSession,
   readAccessUsers,
   writeAccessUsers,
   type AccessUser,
@@ -36,38 +37,34 @@ type ViewerUser = Pick<AccessUser, 'id' | 'name' | 'email' | 'role' | 'permissio
 export function PermissionsCenter() {
   const [open, setOpen] = useState(false)
   const [users, setUsers] = useState<ViewerUser[]>([])
-  const [selectedId, setSelectedId] = useState('principal-admin')
+  const [selectedId, setSelectedId] = useState('')
   const [draftPermissions, setDraftPermissions] = useState<ModulePermission[]>([])
   const [saving, setSaving] = useState(false)
   const [message, setMessage] = useState('')
 
-  function refresh() {
-    const authorized = readAccessUsers()
-    const principal: ViewerUser = {
-      id: 'principal-admin',
-      name: currentUser.name,
-      email: currentUser.email,
-      role: currentUser.role,
-      permissions: defaultPermissionsForRole(currentUser.role),
-      principal: true,
-    }
-    const nextUsers = [
-      principal,
-      ...authorized.filter((user) => user.email.toLowerCase() !== currentUser.email.toLowerCase()),
-    ]
-    setUsers(nextUsers)
+  async function refresh() {
+    const session=readAccessSession()
+    try {
+      const response=await fetch('/api/access/users',{cache:'no-store'})
+      const payload=await response.json() as {users?:AccessUser[];error?:string}
+      if(!response.ok || !payload.users)throw new Error(payload.error||'No se pudieron obtener los usuarios.')
+      const nextUsers:ViewerUser[]=payload.users.map(user=>({
+        id:user.id,name:user.name,email:user.email,role:user.role,
+        permissions:user.permissions,
+        principal:user.role==='DEVELOPER'||user.email.toLowerCase()==='nedviconstructora@gmail.com',
+      }))
+      setUsers(nextUsers)
+      setSelectedId(current=>nextUsers.some(user=>user.id===current)?current:(nextUsers.find(user=>!user.principal)?.id??''))
+      setMessage('')
+    }catch(e){setMessage(e instanceof Error?e.message:'Error cargando usuarios.')}
+    if(!session)setMessage('Inicia sesión para administrar permisos.')
   }
-
-  useEffect(() => {
-    refresh()
-    const sync = () => refresh()
-    window.addEventListener('storage', sync)
-    window.addEventListener('focus', sync)
-    return () => {
-      window.removeEventListener('storage', sync)
-      window.removeEventListener('focus', sync)
-    }
-  }, [])
+  useEffect(()=>{
+    void refresh()
+    const sync=()=>void refresh()
+    window.addEventListener('focus',sync)
+    return ()=>window.removeEventListener('focus',sync)
+  },[])
 
   const selected = users.find((user) => user.id === selectedId) ?? users[0]
 
@@ -150,7 +147,7 @@ export function PermissionsCenter() {
       <button
         type="button"
         onClick={() => {
-          refresh()
+          void refresh()
           setOpen(true)
         }}
         className="inline-flex h-11 items-center gap-2 rounded-xl border border-[#5496CC]/25 bg-[var(--surface)] px-4 text-sm font-bold text-[#5496CC] shadow-sm transition hover:bg-[#5496CC]/5"
@@ -209,7 +206,7 @@ export function PermissionsCenter() {
                         <p className="mt-1 text-sm text-[var(--muted)]">{selected.email} · {selected.role}</p>
                         {selected.principal ? (
                           <p className="mt-2 text-xs text-amber-600">
-                            La cuenta principal de Administración conserva acceso total y está protegida.
+                            La cuenta principal DEVELOPER conserva acceso total y está protegida.
                           </p>
                         ) : (
                           <p className="mt-2 text-xs text-[var(--muted)]">
