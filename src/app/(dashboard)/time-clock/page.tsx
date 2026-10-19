@@ -10,7 +10,7 @@ import { downloadClockWorkbook } from '@/features/time-clock/services/exportXlsx
 
 type ClockEntry = { id:string; userId:string; name:string; type:'entrada'|'salida'; at:string; originalAt?:string|null; photoUrl:string|null; latitude:number|null; longitude:number|null; accuracy:number|null }
 type ExitReview={id:string;employee_name:string;entry_at:string|null;requested_exit_time:string;reason:string;submitted_at:string;status:string;has_photo:boolean;reviewed_at:string|null}
-type Payload = {entries:ClockEntry[]; me:string; canViewAll:boolean; canDelete:boolean; canClock:boolean; resolvedExitEntryIds:string[]; error?:string}
+type Payload = {entries:ClockEntry[]; me:string; canViewAll:boolean; canDelete:boolean; canClock:boolean; canUploadTestPhoto:boolean; resolvedExitEntryIds:string[]; error?:string}
 
 export default function TimeClockPage() {
   const [managerAllowed,setManagerAllowed] = useState(false)
@@ -22,6 +22,8 @@ export default function TimeClockPage() {
   const [canViewAll,setCanViewAll] = useState(false)
   const [canDelete,setCanDelete] = useState(false)
   const [canClock,setCanClock] = useState(true)
+  const [canUploadTestPhoto,setCanUploadTestPhoto] = useState(false)
+  const [photoSource,setPhotoSource] = useState<'camera'|'upload'>('camera')
   const [dateFilter,setDateFilter] = useState('')
   const [allDates,setAllDates] = useState(true)
   const [loading,setLoading] = useState(true)
@@ -52,6 +54,7 @@ export default function TimeClockPage() {
       setCanViewAll(body.canViewAll)
       setCanDelete(body.canDelete)
       setCanClock(body.canClock)
+      setCanUploadTestPhoto(Boolean(body.canUploadTestPhoto))
       setError('')
     } catch (err) { setError(err instanceof Error ? err.message : 'Error al cargar asistencias.') }
     finally {setLoading(false)}
@@ -218,6 +221,7 @@ export default function TimeClockPage() {
       form.set('accuracy',String(position.coords.accuracy))
       form.set('type',nextType)
       form.set('photo',photo)
+      form.set('photoSource',photoSource)
       const res = await fetch('/api/time-clock',{method:'POST',body:form})
       const data = await res.json() as {error?:string}
       if (!res.ok) throw new Error(data.error || 'No se pudo guardar el registro.')
@@ -258,7 +262,7 @@ export default function TimeClockPage() {
             <div className="space-y-3">
               <p className="text-sm font-semibold">Fotografía obligatoria para {nextType}</p>
               <div className="flex flex-wrap gap-2">
-                <label className="inline-flex cursor-pointer items-center gap-2 rounded-xl border border-[var(--border)] px-4 py-3 text-sm font-semibold"><Camera size={17}/>Tomar foto<input className="sr-only" type="file" accept="image/*" capture="user" onChange={choosePhoto}/></label>
+                <label className="inline-flex cursor-pointer items-center gap-2 rounded-xl border border-[var(--border)] px-4 py-3 text-sm font-semibold"><Camera size={17}/>Tomar foto<input className="sr-only" type="file" accept="image/*" capture="user" onChange={e=>{setPhotoSource('camera');choosePhoto(e)}}/></label>{canUploadTestPhoto&&<label className="inline-flex cursor-pointer items-center gap-2 rounded-xl border border-[#5496CC] px-4 py-3 text-sm font-semibold text-[#5496CC]">Cargar foto de prueba · DEVELOPER<input className="sr-only" type="file" accept="image/jpeg,image/png,image/webp" onChange={e=>{setPhotoSource('upload');choosePhoto(e)}}/></label>}
               </div>
               <p className="flex items-center gap-2 text-xs text-[var(--muted)]"><MapPin size={15}/>Al confirmar se solicitará tu ubicación GPS actual. Debes otorgar permiso al navegador.</p>
               {preview && <img src={preview} alt="Vista previa de la evidencia" className="max-h-56 w-full rounded-xl border border-[var(--border)] object-contain" />}
