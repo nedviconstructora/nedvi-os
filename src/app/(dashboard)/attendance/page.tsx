@@ -39,6 +39,8 @@ export default function AttendancePage() {
   const [workers, setWorkers] = useState<Array<{id:string;full_name:string;position:string;entry_time:string}>>([])
   const [crewEntries,setCrewEntries] = useState<Array<{worker_id:string;status:string;check_in:string|null;check_out:string|null;entry_photo_url:string|null;exit_photo_url:string|null}>>([])
   const [photos,setPhotos] = useState<Record<string,File>>({})
+  const [photoSources,setPhotoSources]=useState<Record<string,'camera'|'upload'>>({})
+  const [canUploadPhoto,setCanUploadPhoto]=useState(false)
   const [cameraWorker,setCameraWorker] = useState<string|null>(null)
   const [cameraError,setCameraError] = useState('')
   const [cameraReady,setCameraReady] = useState(false)
@@ -90,6 +92,7 @@ export default function AttendancePage() {
       const file=new File([blob],'asistencia-'+Date.now()+'.jpg',{type:'image/jpeg'})
       if(file.size>5*1024*1024){setCameraError('La fotografía no puede superar 5 MB.');return}
       setPhotos(current=>({...current,[cameraWorker]:file}))
+      setPhotoSources(current=>({...current,[cameraWorker]:'camera'}))
       setCameraWorker(null)
     },'image/jpeg',0.82)
   }
@@ -109,6 +112,7 @@ export default function AttendancePage() {
       const payload=await response.json()
       if(!response.ok) throw new Error(payload.error||'No se pudo cargar la cuadrilla.')
       setWorkers(payload.workers||[])
+      setCanUploadPhoto(Boolean(payload.canUploadPhoto))
       setCrewEntries(payload.entries||[])
     } catch(error) {setSupervisorError(error instanceof Error?error.message:'Error al cargar asistencias.')}
     finally {setSupervisorLoading(false)}
@@ -135,11 +139,12 @@ export default function AttendancePage() {
     try {
       const form=new FormData()
       form.set('workerId',workerId);form.set('crewId',supervisorCrew);form.set('date',supervisorDate);form.set('action',action)
-      if(action!=='ausente')form.set('photo',photos[workerId])
+      if(action!=='ausente'){form.set('photo',photos[workerId]);form.set('photoSource',photoSources[workerId]||'camera')}
       const response=await fetch('/api/crew-attendance',{method:'POST',body:form})
       const payload=await response.json()
       if(!response.ok)throw new Error(payload.error||'No se pudo guardar.')
       setPhotos(current=>{const next={...current};delete next[workerId];return next})
+      setPhotoSources(current=>{const next={...current};delete next[workerId];return next})
       await reloadSupervisor(supervisorCrew,supervisorDate)
     } catch(error) {setSupervisorError(error instanceof Error?error.message:'Error al registrar.')}
     finally {setSupervisorBusy('')}
@@ -272,7 +277,7 @@ export default function AttendancePage() {
                 <div><span className="text-[var(--muted)]">Entrada</span><p className="font-semibold">{time(record?.check_in)}</p></div>
                 <div><span className="text-[var(--muted)]">Salida</span><p className="font-semibold">{time(record?.check_out)}</p></div>
               </div>
-              <button type="button" onClick={()=>setCameraWorker(w.id)} className="flex min-h-11 w-full items-center justify-center rounded-lg border border-[var(--border)] px-3 py-2 text-xs font-semibold">📷 {photos[w.id]?'Foto lista · Volver a tomar':'Abrir cámara y tomar foto'}</button><label className="flex min-h-11 cursor-pointer items-center justify-center rounded-lg border border-[var(--border)] px-3 py-2 text-xs font-semibold">Cargar foto del trabajador<input type="file" accept="image/jpeg,image/png,image/webp" className="sr-only" onChange={e=>{selectWorkerPhoto(w.id,e.target.files?.[0]);e.target.value=""}}/></label><p className="text-xs text-[var(--muted)]">Expediente seleccionado: {w.full_name} · {w.position||"Puesto no registrado"}. La foto se asocia a este trabajador al confirmar.</p>
+              <button type="button" onClick={()=>setCameraWorker(w.id)} className="flex min-h-11 w-full items-center justify-center rounded-lg border border-[var(--border)] px-3 py-2 text-xs font-semibold">📷 {photos[w.id]?'Foto lista · Volver a tomar':'Abrir cámara y tomar foto'}</button>{canUploadPhoto && <label className="flex min-h-11 cursor-pointer items-center justify-center rounded-lg border border-[var(--border)] px-3 py-2 text-xs font-semibold">Cargar foto del trabajador<input type="file" accept="image/jpeg,image/png,image/webp" className="sr-only" onChange={e=>{selectWorkerPhoto(w.id,e.target.files?.[0]);e.target.value=""}}/></label>}}<p className="text-xs text-[var(--muted)]">Expediente seleccionado: {w.full_name} · {w.position||"Puesto no registrado"}. La foto se asocia a este trabajador al confirmar.</p>
               <div className="grid grid-cols-3 gap-2">
                 <button type="button" disabled={busy||!photos[w.id]||!!record?.check_in||record?.status==='Ausente'} onClick={()=>void registerSupervisor(w.id,'entrada')} className="min-h-11 rounded-lg bg-[#5496CC] px-1 text-xs font-semibold text-white disabled:opacity-40"><LogIn size={13} className="inline"/> Entrada</button>
                 <button type="button" disabled={busy||!photos[w.id]||!record?.check_in||!!record?.check_out} onClick={()=>void registerSupervisor(w.id,'salida')} className="min-h-11 rounded-lg bg-emerald-600 px-1 text-xs font-semibold text-white disabled:opacity-40"><LogOut size={13} className="inline"/> Salida</button>
@@ -285,7 +290,7 @@ export default function AttendancePage() {
             const record=crewEntries.find(e=>e.worker_id===w.id)
             const time=(v:string|null|undefined)=>v?new Intl.DateTimeFormat('es-MX',{timeZone:'America/Tijuana',hour:'2-digit',minute:'2-digit'}).format(new Date(v)):'—'
             const busy=!!supervisorBusy || supervisorLoading
-            return <tr key={w.id} className="border-b border-[var(--border)]"><td className="p-3"><p className="font-semibold">{w.full_name}</p><p className="text-xs text-[var(--muted)]">{w.position}</p></td><td className="p-3">{record?.status||'Pendiente'}</td><td className="p-3">{time(record?.check_in)}</td><td className="p-3">{time(record?.check_out)}</td><td className="p-3"><div className="space-y-2"><button type="button" onClick={()=>setCameraWorker(w.id)} className="inline-flex min-h-10 items-center gap-2 rounded-lg border border-[var(--border)] px-3 py-2 text-xs">📷 {photos[w.id]?'Foto lista · Repetir':'Abrir cámara'}</button><label className="ml-2 inline-flex min-h-10 cursor-pointer items-center rounded-lg border border-[var(--border)] px-3 py-2 text-xs">Cargar foto<input type="file" accept="image/jpeg,image/png,image/webp" className="sr-only" onChange={e=>{selectWorkerPhoto(w.id,e.target.files?.[0]);e.target.value=""}}/></label><div className="flex flex-wrap gap-2"><button type="button" disabled={busy||!photos[w.id]||!!record?.check_in||record?.status==='Ausente'} onClick={()=>void registerSupervisor(w.id,'entrada')} className="rounded-lg bg-[#5496CC] px-3 py-2 text-xs font-semibold text-white disabled:opacity-40"><LogIn size={13} className="inline"/> Entrada</button><button type="button" disabled={busy||!photos[w.id]||!record?.check_in||!!record?.check_out} onClick={()=>void registerSupervisor(w.id,'salida')} className="rounded-lg bg-emerald-600 px-3 py-2 text-xs font-semibold text-white disabled:opacity-40"><LogOut size={13} className="inline"/> Salida</button><button type="button" disabled={busy||!!record?.check_in||record?.status==='Ausente'} onClick={()=>void registerSupervisor(w.id,'ausente')} className="rounded-lg border border-red-500/40 px-3 py-2 text-xs text-red-500 disabled:opacity-40">Ausente</button></div><div className="flex gap-3 text-xs">{record?.entry_photo_url&&<a className="text-[#5496CC] underline" target="_blank" rel="noreferrer" href={record.entry_photo_url}>Ver foto entrada</a>}{record?.exit_photo_url&&<a className="text-[#5496CC] underline" target="_blank" rel="noreferrer" href={record.exit_photo_url}>Ver foto salida</a>}</div></div></td></tr>
+            return <tr key={w.id} className="border-b border-[var(--border)]"><td className="p-3"><p className="font-semibold">{w.full_name}</p><p className="text-xs text-[var(--muted)]">{w.position}</p></td><td className="p-3">{record?.status||'Pendiente'}</td><td className="p-3">{time(record?.check_in)}</td><td className="p-3">{time(record?.check_out)}</td><td className="p-3"><div className="space-y-2"><button type="button" onClick={()=>setCameraWorker(w.id)} className="inline-flex min-h-10 items-center gap-2 rounded-lg border border-[var(--border)] px-3 py-2 text-xs">📷 {photos[w.id]?'Foto lista · Repetir':'Abrir cámara'}</button>{canUploadPhoto && <label className="ml-2 inline-flex min-h-10 cursor-pointer items-center rounded-lg border border-[var(--border)] px-3 py-2 text-xs">Cargar foto<input type="file" accept="image/jpeg,image/png,image/webp" className="sr-only" onChange={e=>{selectWorkerPhoto(w.id,e.target.files?.[0]);e.target.value=""}}/></label><div className="flex flex-wrap gap-2"><button type="button" disabled={busy||!photos[w.id]||!!record?.check_in||record?.status==='Ausente'} onClick={()=>void registerSupervisor(w.id,'entrada')} className="rounded-lg bg-[#5496CC] px-3 py-2 text-xs font-semibold text-white disabled:opacity-40"><LogIn size={13} className="inline"/> Entrada</button><button type="button" disabled={busy||!photos[w.id]||!record?.check_in||!!record?.check_out} onClick={()=>void registerSupervisor(w.id,'salida')} className="rounded-lg bg-emerald-600 px-3 py-2 text-xs font-semibold text-white disabled:opacity-40"><LogOut size={13} className="inline"/> Salida</button><button type="button" disabled={busy||!!record?.check_in||record?.status==='Ausente'} onClick={()=>void registerSupervisor(w.id,'ausente')} className="rounded-lg border border-red-500/40 px-3 py-2 text-xs text-red-500 disabled:opacity-40">Ausente</button></div><div className="flex gap-3 text-xs">{record?.entry_photo_url&&<a className="text-[#5496CC] underline" target="_blank" rel="noreferrer" href={record.entry_photo_url}>Ver foto entrada</a>}{record?.exit_photo_url&&<a className="text-[#5496CC] underline" target="_blank" rel="noreferrer" href={record.exit_photo_url}>Ver foto salida</a>}</div></div></td></tr>
           })}</tbody></table></div>}
         </section>
 
