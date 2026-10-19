@@ -78,7 +78,7 @@ export default function AttendancePage() {
       setSupervisorError('Selecciona una fotografía JPG, PNG o WebP de máximo 5 MB.')
       return
     }
-    if(!canUploadPhoto){setSupervisorError('Solo Administración puede cargar imágenes. Usa la cámara.');return}
+    if(!canUploadPhoto){setSupervisorError('Solo DEVELOPER puede cargar fotos de prueba. Usa la cámara.');return}
     setSupervisorError('')
     setPhotos(current=>({...current,[workerId]:file}))
     setPhotoSources(current=>({...current,[workerId]:'upload'}))
@@ -321,7 +321,7 @@ export default function AttendancePage() {
                 {activeWorker?<><div className="flex items-start justify-between gap-2"><div><h3 className="font-bold">{activeWorker.full_name}</h3><p className="text-xs text-[var(--muted)]">{activeWorker.position||'Sin puesto'}</p></div><span className="rounded-full border border-[var(--border)] px-2 py-1 text-xs">{activeRecord?.status||'Pendiente'}</span></div>
                   <div className="grid grid-cols-2 gap-2 rounded-xl bg-[var(--surface)] p-3 text-sm"><div><p className="text-xs text-[var(--muted)]">Entrada</p><strong>{fmtCrewTime(activeRecord?.check_in)}</strong></div><div><p className="text-xs text-[var(--muted)]">Salida</p><strong>{fmtCrewTime(activeRecord?.check_out)}</strong></div></div>
                   <button type="button" onClick={()=>setCameraWorker(activeWorker.id)} className="w-full rounded-lg border border-[var(--border)] p-3 text-sm font-semibold">📷 {photos[activeWorker.id]?'Foto lista · Volver a tomar':'Abrir cámara y tomar foto'}</button>
-                  {canUploadPhoto&&<label className="block cursor-pointer rounded-lg border border-[var(--border)] p-3 text-center text-sm font-semibold">Cargar foto (Administración)<input type="file" accept="image/jpeg,image/png,image/webp" className="sr-only" onChange={e=>{selectWorkerPhoto(activeWorker.id,e.target.files?.[0]);e.target.value=''}}/></label>}
+                  {canUploadPhoto&&<label className="block cursor-pointer rounded-lg border border-[var(--border)] p-3 text-center text-sm font-semibold">Cargar foto de prueba · DEVELOPER<input type="file" accept="image/jpeg,image/png,image/webp" className="sr-only" onChange={e=>{selectWorkerPhoto(activeWorker.id,e.target.files?.[0]);e.target.value=''}}/></label>}
                   {photos[activeWorker.id]&&<p className="text-center text-xs text-emerald-500">Fotografía lista para registrar</p>}
                   <div className="grid grid-cols-3 gap-2">
                     <button type="button" disabled={workerBusy||!photos[activeWorker.id]||!!activeRecord?.check_in||activeRecord?.status==='Ausente'} onClick={()=>void registerSupervisor(activeWorker.id,'entrada')} className="rounded-lg bg-[#317FC1] p-3 text-xs font-semibold text-white disabled:opacity-40"><LogIn size={15} className="inline"/> Entrada</button>
