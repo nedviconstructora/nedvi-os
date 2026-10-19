@@ -1,4 +1,4 @@
-export type AppRole = 'DEVELOPER' | 'Administración' | 'Supervisor' | 'Contabilidad' | 'Cliente'
+export type AppRole = 'Administración' | 'Supervisor' | 'Contabilidad' | 'Cliente'
 
 export type ModulePermission =
   | 'dashboard'
@@ -16,7 +16,6 @@ export type ModulePermission =
   | 'client-portal'
 
 export const ROLE_LABELS: Record<AppRole, string> = {
-  DEVELOPER: 'DEVELOPER',
   Administración: 'ADMIN',
   Supervisor: 'SUPERVISOR / OBRA',
   Contabilidad: 'CONTABILIDAD',
@@ -24,7 +23,6 @@ export const ROLE_LABELS: Record<AppRole, string> = {
 }
 
 export const ROLE_PERMISSIONS: Record<AppRole, readonly ModulePermission[]> = {
-  DEVELOPER: ['dashboard','commercial','projects','purchasing','operations','agenda','time-clock','human-resources','finance','indicators','settings','coral'],
   Administración: [
     'dashboard',
     'commercial',
@@ -55,7 +53,6 @@ export const ROLE_PERMISSIONS: Record<AppRole, readonly ModulePermission[]> = {
 }
 
 export const ROLE_DESCRIPTIONS: Record<AppRole, string> = {
-  DEVELOPER: 'Administración técnica completa de NEDVI OS y gestión de roles y permisos.',
   Administración:
     'Acceso total a NEDVI OS, incluidos usuarios y permisos, Recursos Humanos, nómina, finanzas y configuración administrativa.',
   Supervisor:
