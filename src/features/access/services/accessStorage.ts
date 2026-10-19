@@ -115,7 +115,7 @@ export function readAccessSession(): AccessSession | null {
     if (!raw) return null
     const session = JSON.parse(raw) as AccessSession
     // Preserve existing internal users' Checador access after splitting it from Agenda.
-    if ((session.role === 'Administración' || session.role === 'Supervisor') && session.permissions?.includes('agenda') && !session.permissions.includes('time-clock')) {
+    if ((session.role === 'DEVELOPER' || session.role === 'Administración' || session.role === 'Supervisor') && session.permissions?.includes('agenda') && !session.permissions.includes('time-clock')) {
       session.permissions = [...session.permissions, 'time-clock']
     }
     // Supervisores conservan acceso operativo a asistencias y cuadrillas incluso
