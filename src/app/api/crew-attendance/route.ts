@@ -14,7 +14,7 @@ async function context() {
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL
   const key = process.env.SUPABASE_SERVICE_ROLE_KEY
   if (!url || !key) throw new Error('Configuración de servidor incompleta')
-  return {user, admin:createAdminClient(url,key,{auth:{persistSession:false,autoRefreshToken:false}})}
+  return {user, role:String(profile.role).trim().toLowerCase(), admin:createAdminClient(url,key,{auth:{persistSession:false,autoRefreshToken:false}})}
 }
 const validDate = (v:unknown):v is string => typeof v === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(v) && !Number.isNaN(Date.parse(v+'T12:00:00Z'))
 const validId = (v:unknown):v is string => typeof v === 'string' && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(v)
@@ -32,7 +32,7 @@ export async function GET(request:Request) {
   const {data:entries,error:ae}=await ctx.admin.from('crew_attendance').select('id,worker_id,status,check_in,check_out,recorded_by,entry_photo_path,exit_photo_path').eq('crew_id',crewId).eq('work_date',date)
   if(ae) throw ae
   const signed=await Promise.all((entries||[]).map(async e=>{const urls=await Promise.all([e.entry_photo_path,e.exit_photo_path].map(async path=>path?(await ctx.admin.storage.from('nedvi-crew-attendance').createSignedUrl(path,300)).data?.signedUrl||null:null));return {id:e.id,worker_id:e.worker_id,status:e.status,check_in:e.check_in,check_out:e.check_out,entry_photo_url:urls[0],exit_photo_url:urls[1]}}))
-  return NextResponse.json({workers:workers||[],entries:signed,date},{headers:{'Cache-Control':'no-store'}})
+  return NextResponse.json({workers:workers||[],entries:signed,date,canUploadPhoto:['administracion','administrador','admin'].includes(ctx.role)},{headers:{'Cache-Control':'no-store'}})
  } catch(error) {console.error('Crew attendance read failed',error);return NextResponse.json({error:'No se pudieron cargar las asistencias.'},{status:500})}
 }
 export async function POST(request:Request) {
@@ -45,6 +45,9 @@ export async function POST(request:Request) {
     return NextResponse.json({error:'Solicitud inválida.'},{status:400})
   if(date!==localDay()) return NextResponse.json({error:'Solo se pueden registrar eventos de hoy.'},{status:400})
   const photo=form.get('photo')
+  const photoSource=String(form.get('photoSource')||'')
+  if(action!=='ausente' && !['camera','upload'].includes(photoSource))return NextResponse.json({error:'Indica el origen de la fotografía.'},{status:400})
+  if(photoSource==='upload'&&!['administracion','administrador','admin'].includes(ctx.role))return NextResponse.json({error:'Solo Administración puede cargar fotografías desde archivos. Utiliza la cámara.'},{status:403})
   if(action!=='ausente' && (!(photo instanceof File)||photo.size<100||photo.size>5*1024*1024||!['image/jpeg','image/png','image/webp'].includes(photo.type)))
     return NextResponse.json({error:'Se requiere una fotografía JPG, PNG o WebP de hasta 5 MB para la entrada y la salida.'},{status:400})
   const {data:worker,error:we}=await ctx.admin.from('crew_workers').select('id,crew_id,entry_time').eq('id',workerId).eq('crew_id',crewId).maybeSingle()
