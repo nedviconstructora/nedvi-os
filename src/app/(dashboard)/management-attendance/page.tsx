@@ -1,10 +1,11 @@
 'use client'
 
 import { useEffect, useMemo, useState } from 'react'
+import Image from 'next/image'
 import { AppShell } from '@/components/layout/AppShell'
-import { CalendarDays, Download, RefreshCw, ShieldCheck } from 'lucide-react'
+import { CalendarDays, Download, RefreshCw, ShieldCheck, X, ImageIcon } from 'lucide-react'
 
-type Entry={id:string;userId:string;name:string;type:'entrada'|'salida';at:string}
+type Entry={id:string;userId:string;name:string;type:'entrada'|'salida';at:string;photoUrl:string|null}
 const tz='America/Tijuana'
 function localDay(value:string){return new Intl.DateTimeFormat('en-CA',{timeZone:tz,year:'numeric',month:'2-digit',day:'2-digit'}).format(new Date(value))}
 function localTime(value:string){return new Intl.DateTimeFormat('es-MX',{timeZone:tz,hour:'2-digit',minute:'2-digit'}).format(new Date(value))}
@@ -22,6 +23,7 @@ export default function ManagementAttendancePage(){
  const [date,setDate]=useState(today)
  const [history,setHistory]=useState(false)
  const [search,setSearch]=useState('')
+ const [photoViewer,setPhotoViewer]=useState<Entry|null>(null)
  async function refresh(){
   setLoading(true);setError('')
   try{
@@ -58,11 +60,17 @@ export default function ManagementAttendancePage(){
    <div className="mt-5 grid gap-4 lg:grid-cols-2">
     {(['entrada','salida'] as const).map(kind=><div key={kind} className="rounded-xl border border-[var(--border)] p-3">
       <div className="mb-3 flex justify-between gap-2"><h2 className="font-bold">{kind==='entrada'?'Entradas':'Salidas'}</h2><span className="text-xs text-[var(--muted)]">{visible.filter(x=>x.type===kind).length} registros</span></div>
-      <div className="max-h-[480px] space-y-2 overflow-y-auto">{visible.filter(item=>item.type===kind).map(item=><div key={item.id} className="rounded-lg border border-[var(--border)] bg-[var(--surface-soft)] p-3"><p className="text-sm font-semibold">{item.name}</p><p className="mt-1 text-xs text-[var(--muted)]">{localDay(item.at)} · {localTime(item.at)}</p></div>)}
+      <div className="max-h-[480px] space-y-2 overflow-y-auto">{visible.filter(item=>item.type===kind).map(item=><div key={item.id} className="flex items-center justify-between gap-3 rounded-lg border border-[var(--border)] bg-[var(--surface-soft)] p-3">
+        <div className="min-w-0"><p className="break-words text-sm font-semibold">{item.name}</p><p className="mt-1 text-xs text-[var(--muted)]">{localDay(item.at)} · {localTime(item.at)}</p></div>
+        <div className="flex shrink-0 flex-col items-center gap-1">
+          {item.photoUrl ? <><button type="button" onClick={()=>setPhotoViewer(item)} aria-label={`Ver foto de ${item.name}`} className="overflow-hidden rounded-lg border border-[var(--border)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-[#5496CC]"><Image unoptimized src={item.photoUrl} alt={`Foto de checada de ${item.name}`} width={64} height={64} className="h-16 w-16 object-cover"/></button><button type="button" onClick={()=>setPhotoViewer(item)} className="text-xs font-semibold text-[#5496CC] underline">Ver foto</button></> : <span className="flex items-center gap-1 text-xs text-[var(--muted)]"><ImageIcon size={14}/>Sin foto</span>}
+        </div>
+      </div>)}
       {!visible.some(item=>item.type===kind)&&<p className="p-4 text-sm text-[var(--muted)]">No hay registros para este filtro.</p>}</div>
     </div>)}
    </div>
   </section>
  </div>
+ {photoViewer && photoViewer.photoUrl && <div className="fixed inset-0 z-[200] flex items-center justify-center bg-black/80 p-4" role="dialog" aria-modal="true" aria-label={`Fotografía de checada de ${photoViewer.name}`} onClick={()=>setPhotoViewer(null)}><div className="relative flex w-full max-w-xl flex-col items-center gap-3 rounded-2xl bg-[var(--surface)] p-5 shadow-2xl" onClick={event=>event.stopPropagation()}><button type="button" onClick={()=>setPhotoViewer(null)} aria-label="Cerrar fotografía" title="Cerrar fotografía" className="absolute right-3 top-3 z-10 rounded-full bg-[var(--background)] p-2 text-[var(--foreground)] shadow-lg hover:bg-[var(--surface-soft)]"><X size={22}/></button><h2 className="w-full pr-12 text-base font-bold">{photoViewer.name} · {photoViewer.type==='entrada'?'Entrada':'Salida'}</h2><p className="w-full text-xs text-[var(--muted)]">{localDay(photoViewer.at)} · {localTime(photoViewer.at)}</p><Image unoptimized src={photoViewer.photoUrl} width={900} height={900} alt={`Evidencia de ${photoViewer.name}`} className="max-h-[65vh] w-auto max-w-full rounded-xl object-contain"/><button type="button" onClick={()=>setPhotoViewer(null)} className="rounded-lg border border-[var(--border)] px-5 py-2 text-sm font-semibold">Cerrar foto</button></div></div>}
  </AppShell>
 }
