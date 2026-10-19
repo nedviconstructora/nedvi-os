@@ -28,7 +28,7 @@ function normalizeRole(value: unknown) {
 
 function canManageClientAccess(role: unknown) {
   const normalizedRole = normalizeRole(role)
-  return ['administracion', 'administrador', 'admin', 'obra', 'supervisor'].includes(normalizedRole)
+  return ['developer', 'gerente_operativo', 'gerente_comercial', 'gerente_administrativo', 'administracion', 'administrador', 'admin', 'supervisor_obra', 'obra', 'supervisor'].includes(normalizedRole)
 }
 
 export async function POST(request: Request) {
