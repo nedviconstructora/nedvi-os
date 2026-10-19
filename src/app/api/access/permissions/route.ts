@@ -41,7 +41,7 @@ function normalizeRole(value: unknown) {
 }
 
 function canManagePermissions(role: unknown) {
-  return ['administracion', 'administrador', 'admin'].includes(normalizeRole(role))
+  return ['developer', 'administracion', 'administrador', 'admin'].includes(normalizeRole(role))
 }
 
 async function findUserByEmail(admin: ReturnType<typeof getAdminClient>, email: string) {
@@ -73,7 +73,7 @@ export async function POST(request: Request) {
       .maybeSingle()
 
     if (!currentProfile?.active || !canManagePermissions(currentProfile.role)) {
-      return NextResponse.json({ error: 'Solo Administración puede cambiar permisos.' }, { status: 403 })
+      return NextResponse.json({ error: 'Solo DEVELOPER o Administración pueden cambiar permisos.' }, { status: 403 })
     }
 
     const body = (await request.json()) as {
@@ -109,6 +109,7 @@ export async function POST(request: Request) {
     const { data: targetProfile, error: targetProfileError } = await admin
       .from('profiles').select('role').eq('id',targetUser.id).maybeSingle()
     if (targetProfileError) throw targetProfileError
+    if (normalizeRole(targetProfile?.role) === 'developer') return NextResponse.json({error:'Los permisos de la cuenta DEVELOPER están protegidos.'},{status:403})
     if (normalizeRole(targetProfile?.role) === 'contabilidad' &&
         (permissions.length !== 1 || !permissions.includes('time-clock'))) {
       return NextResponse.json({error:'Contabilidad solo puede consultar Dashboard y Checador.'},{status:403})
