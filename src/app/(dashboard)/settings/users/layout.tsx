@@ -1,147 +1,80 @@
 'use client'
 
 import { useEffect, useState, type ReactNode } from 'react'
-import { ShieldCheck, UserRoundCog, X } from 'lucide-react'
-import { currentUser } from '@/data/currentUser'
-import { defaultPermissionsForRole, readAccessUsers, writeAccessUsers } from '@/features/access/services/accessStorage'
+import { Save, ShieldCheck, UserRoundCog, X } from 'lucide-react'
+
+import { defaultPermissionsForRole } from '@/features/access/services/accessStorage'
 import { PasswordRecoveryCenter } from '@/features/access/components/PasswordRecoveryCenter'
 import { PermissionsCenter } from '@/features/access/components/PermissionsCenter'
 
-type DbRole = 'administracion' | 'obra' | 'cliente'
-type UiRole = 'Administración' | 'Supervisor' | 'Cliente'
-
-type RoleUser = {
-  id: string
-  name: string
-  email?: string
-  role: DbRole
-  active: boolean
-  source: 'principal' | 'authorized'
-}
-
-const ROLE_OPTIONS: Array<{ value: DbRole; label: string; description: string }> = [
-  { value: 'administracion', label: 'ADMIN', description: 'Acceso total a NEDVI OS.' },
-  { value: 'obra', label: 'SUPERVISOR / OBRA', description: 'Operación, clientes, levantamientos, cotizaciones, proyectos y obra; sin RH, nómina ni administración sensible.' },
-  { value: 'cliente', label: 'CLIENTE', description: 'Solo consulta sus proyectos y avances autorizados.' },
+type DbRole = 'developer' | 'gerente_comercial' | 'gerente_administrativo' | 'gerente_operativo' | 'supervisor_obra' | 'supervisor_administrativo' | 'administracion' | 'obra' | 'contabilidad' | 'cliente'
+type UiRole = 'DEVELOPER' | 'Gerente Comercial' | 'Gerente Administrativo' | 'Gerente Operativo' | 'Supervisor de Obra' | 'Supervisor Administrativo' | 'Administración' | 'Supervisor' | 'Contabilidad' | 'Cliente'
+type RoleUser = { id:string; name:string; email:string; role:DbRole; active:boolean; source:'principal'|'authorized' }
+const ROLE_OPTIONS: Array<{value:DbRole;label:string;description:string}> = [
+ {value:'developer',label:'DEVELOPER',description:'Cuenta técnica principal protegida.'},
+ {value:'gerente_comercial',label:'GERENTE COMERCIAL',description:'Acceso empresarial, sin herramientas exclusivas DEVELOPER.'},
+ {value:'gerente_administrativo',label:'GERENTE ADMINISTRATIVO',description:'Acceso empresarial, sin herramientas exclusivas DEVELOPER.'},
+ {value:'gerente_operativo',label:'GERENTE OPERATIVO',description:'Acceso empresarial, sin herramientas exclusivas DEVELOPER.'},
+ {value:'supervisor_obra',label:'SUPERVISOR DE OBRA',description:'Clientes, cotizaciones, proyectos y operaciones.'},
+ {value:'supervisor_administrativo',label:'SUPERVISOR ADMINISTRATIVO',description:'Acceso preventivamente restringido hasta completar la lectura por proyecto.'},
+ {value:'administracion',label:'ADMIN (ANTERIOR)',description:'Rol anterior de administración.'},
+ {value:'obra',label:'SUPERVISOR / OBRA (ANTERIOR)',description:'Rol anterior de supervisor.'},
+ {value:'contabilidad',label:'CONTABILIDAD',description:'Consulta de checadas.'},
+ {value:'cliente',label:'CLIENTE',description:'Portal del cliente.'},
 ]
-
-function toDbRole(role: string): DbRole {
-  if (role === 'Administración' || role === 'administracion') return 'administracion'
-  if (role === 'Supervisor' || role === 'obra') return 'obra'
-  return 'cliente'
+const uiRoles: Record<DbRole,UiRole> = {
+ developer:'DEVELOPER',gerente_comercial:'Gerente Comercial',gerente_administrativo:'Gerente Administrativo',
+ gerente_operativo:'Gerente Operativo',supervisor_obra:'Supervisor de Obra',
+ supervisor_administrativo:'Supervisor Administrativo',administracion:'Administración',
+ obra:'Supervisor',contabilidad:'Contabilidad',cliente:'Cliente'
 }
-
-function toUiRole(role: DbRole): UiRole {
-  if (role === 'administracion') return 'Administración'
-  if (role === 'obra') return 'Supervisor'
-  return 'Cliente'
-}
-
+const dbRoles: Record<UiRole,DbRole> = Object.fromEntries(Object.entries(uiRoles).map(([k,v])=>[v,k])) as Record<UiRole,DbRole>
+function toDbRole(role:string):DbRole {return dbRoles[role as UiRole] ?? (role in uiRoles ? role as DbRole : 'cliente')}
+function toUiRole(role:DbRole):UiRole {return uiRoles[role]}
 export default function UsersSettingsLayout({ children }: { children: ReactNode }) {
   const [open, setOpen] = useState(false)
   const [users, setUsers] = useState<RoleUser[]>([])
   const [savingId, setSavingId] = useState<string | null>(null)
   const [message, setMessage] = useState('')
 
-  function loadUsers() {
-    const authorized = readAccessUsers()
-    const principal: RoleUser = {
-      id: 'principal-admin',
-      name: currentUser.name,
-      email: currentUser.email,
-      role: toDbRole(currentUser.role),
-      active: true,
-      source: 'principal',
-    }
-
-    const rest: RoleUser[] = authorized
-      .filter((user) => user.email.toLowerCase() !== currentUser.email.toLowerCase())
-      .map((user) => ({
-        id: user.id,
-        name: user.name,
-        email: user.email,
-        role: toDbRole(user.role),
-        active: user.status === 'Activo',
-        source: 'authorized' as const,
-      }))
-
-    setUsers([principal, ...rest])
-  }
-
-  useEffect(() => {
-    if (open) {
-      setMessage('')
-      loadUsers()
-    }
-  }, [open])
-
-  async function changeRole(user: RoleUser, role: DbRole) {
-    if (user.role === role) return
-    if (user.source === 'principal') {
-      setMessage('La cuenta principal de Administración está protegida y no puede cambiarse desde aquí.')
-      return
-    }
-
-    setSavingId(user.id)
-    setMessage('')
-
+  const [pending,setPending]=useState<Record<string,DbRole>>({})
+  const [loadingUsers,setLoadingUsers]=useState(false)
+  async function loadUsers() {
+    setLoadingUsers(true)
     try {
-      const uiRole = toUiRole(role)
-      const permissions = defaultPermissionsForRole(uiRole)
-
-      const response = await fetch('/api/access/users', {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        cache: 'no-store',
-        body: JSON.stringify({
-          userId: user.id,
-          role: uiRole,
-          permissions,
-        }),
-      })
-
-      const result = (await response.json()) as {
-        userId?: string
-        role?: UiRole
-        permissions?: ReturnType<typeof defaultPermissionsForRole>
-        error?: string
+      const response=await fetch('/api/access/users',{cache:'no-store'})
+      const body=await response.json() as {users?: Array<{id:string;name:string;email:string;role:string;status:string}>;error?:string}
+      if(!response.ok || !body.users) throw new Error(body.error||'No se pudieron cargar los usuarios.')
+      setUsers(body.users.map(u=>({id:u.id,name:u.name,email:u.email,role:toDbRole(u.role),active:u.status==='Activo',source:u.role==='DEVELOPER'?'principal':'authorized'})))
+      setPending({})
+    } catch(e) {setMessage(e instanceof Error?e.message:'No fue posible cargar los roles.')}
+    finally {setLoadingUsers(false)}
+  }
+  useEffect(()=>{if(open){setMessage('');void loadUsers()}},[open])
+  const pendingCount=Object.keys(pending).length
+  async function saveChanges(){
+    if(!pendingCount || savingId)return
+    setMessage('')
+    let saved=0
+    try {
+      for(const [id,role] of Object.entries(pending)){
+        const user=users.find(u=>u.id===id)
+        if(!user || user.source==='principal' || role==='developer')throw new Error('Intento de modificar una cuenta protegida.')
+        setSavingId(id)
+        const response=await fetch('/api/access/users',{
+          method:'PATCH',headers:{'Content-Type':'application/json'},cache:'no-store',
+          body:JSON.stringify({userId:id,role:toUiRole(role),permissions:defaultPermissionsForRole(toUiRole(role))})
+        })
+        const body=await response.json() as {role?:string;error?:string}
+        if(!response.ok || body.role!==toUiRole(role))throw new Error(body.error||'No se confirmó el cambio en Supabase.')
+        saved++
       }
-
-      if (!response.ok || !result.userId || !result.role) {
-        throw new Error(result.error || 'No pudimos guardar el cambio de rol.')
-      }
-
-      const authorized = readAccessUsers()
-      const nextAuthorized = authorized.map((item) =>
-        item.id === user.id
-          ? {
-              ...item,
-              role: result.role!,
-              permissions: result.permissions ?? permissions,
-            }
-          : item,
-      )
-      writeAccessUsers(nextAuthorized)
-
-      setUsers((current) =>
-        current.map((item) =>
-          item.id === user.id ? { ...item, role: toDbRole(result.role!) } : item,
-        ),
-      )
-
-      setMessage(
-        `Rol de ${user.name} actualizado a ${ROLE_OPTIONS.find((item) => item.value === role)?.label ?? role} y guardado en Supabase.`,
-      )
-    } catch (error) {
-      console.error('Error actualizando rol:', error)
-      setMessage(
-        error instanceof Error
-          ? error.message
-          : 'No pudimos guardar el cambio de rol.',
-      )
-    } finally {
-      setSavingId(null)
-    }
+      await loadUsers()
+      setMessage(`Se guardaron ${saved} cambios de rol en Supabase. Los usuarios deben volver a iniciar sesión.`)
+    } catch(e){
+      await loadUsers()
+      setMessage(`Se guardaron ${saved} cambios. ${e instanceof Error?e.message:'Error al guardar.'} Revisa los roles antes de volver a intentar.`)
+    }finally{setSavingId(null)}
   }
 
   return (
@@ -188,17 +121,18 @@ export default function UsersSettingsLayout({ children }: { children: ReactNode 
                       </p>
                     </div>
                     <select
-                      value={user.role}
-                      disabled={savingId === user.id || user.source === 'principal'}
-                      onChange={(event) => void changeRole(user, event.target.value as DbRole)}
+                      value={pending[user.id] ?? user.role}
+                      disabled={!!savingId || user.source === 'principal'}
+                      onChange={(event) => {const next=event.target.value as DbRole;setPending(current=>{const draft={...current};if(next===user.role)delete draft[user.id];else draft[user.id]=next;return draft});setMessage('')}}
                       className="h-11 w-full rounded-xl border border-[var(--border)] bg-[var(--surface)] px-3 text-sm font-bold text-[var(--foreground)] outline-none focus:border-[#5496CC] disabled:cursor-not-allowed disabled:opacity-60"
                     >
-                      {ROLE_OPTIONS.map((role) => <option key={role.value} value={role.value}>{role.label}</option>)}
+                      {ROLE_OPTIONS.filter(role=>role.value!=='developer' || user.source==='principal').map((role) => <option key={role.value} value={role.value}>{role.label}</option>)}
                     </select>
                   </div>
                 ))}
               </div>
 
+              {loadingUsers ? <p className="mt-3 text-sm text-[var(--muted)]">Cargando roles desde Supabase...</p> : null}
               {message ? <p className="mt-4 rounded-xl border border-[#5496CC]/20 bg-[#5496CC]/10 p-3 text-sm text-[var(--foreground)]">{message}</p> : null}
 
               <div className="mt-5 grid gap-2 md:grid-cols-3">
@@ -209,6 +143,10 @@ export default function UsersSettingsLayout({ children }: { children: ReactNode 
                   </div>
                 ))}
               </div>
+            </div>
+            <div className="flex flex-wrap items-center justify-between gap-3 border-t border-[var(--border)] bg-[var(--surface)] p-4">
+              <p className="text-xs text-[var(--muted)]">{pendingCount ? `${pendingCount} cambio(s) pendientes de guardar` : 'Los cambios se guardan en Supabase al confirmar.'}</p>
+              <button type="button" onClick={()=>void saveChanges()} disabled={!pendingCount || !!savingId || loadingUsers} className="inline-flex h-11 items-center justify-center gap-2 rounded-xl bg-[#7DC6FF] px-5 text-sm font-bold text-black disabled:cursor-not-allowed disabled:opacity-50"><Save size={17}/>{savingId?'Guardando...':'Guardar cambios'}</button>
             </div>
           </div>
         </div>
