@@ -89,6 +89,7 @@ export async function POST(request: Request) {
     const permissions = body.permissions.filter((permission): permission is ModulePermission =>
       ALLOWED_PERMISSIONS.includes(permission as ModulePermission),
     )
+    if (permissions.length !== body.permissions.length) return NextResponse.json({error:'Hay permisos no reconocidos o reservados en la solicitud.'},{status:400})
 
     const admin = getAdminClient()
     let targetUser = null
@@ -109,7 +110,10 @@ export async function POST(request: Request) {
     const { data: targetProfile, error: targetProfileError } = await admin
       .from('profiles').select('role').eq('id',targetUser.id).maybeSingle()
     if (targetProfileError) throw targetProfileError
+    if (!targetProfile) return NextResponse.json({error:'Perfil de destino no encontrado.'},{status:404})
     if (normalizeRole(targetProfile?.role) === 'developer') return NextResponse.json({error:'Los permisos de la cuenta DEVELOPER están protegidos.'},{status:403})
+    if (normalizeRole(targetProfile?.role) === 'supervisor_administrativo' && permissions.some(permission=>permission!=='dashboard')) return NextResponse.json({error:'Supervisor Administrativo tiene acceso restringido hasta configurar sus proyectos autorizados.'},{status:403})
+    if (normalizeRole(targetProfile?.role) === 'cliente' && permissions.some(permission=>permission!=='client-portal')) return NextResponse.json({error:'Un cliente solo puede tener acceso al Portal del Cliente.'},{status:403})
     if (normalizeRole(targetProfile?.role) === 'contabilidad' &&
         (permissions.length !== 1 || !permissions.includes('time-clock'))) {
       return NextResponse.json({error:'Contabilidad solo puede consultar Dashboard y Checador.'},{status:403})
