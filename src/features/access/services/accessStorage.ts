@@ -123,6 +123,7 @@ export function readAccessSession(): AccessSession | null {
     if (session.role === 'Supervisor' && !session.permissions?.includes('operations')) {
       session.permissions = [...(session.permissions ?? []), 'operations']
     }
+    if (session.role === 'DEVELOPER') session.permissions = defaultPermissionsForRole('DEVELOPER')
     if (session.role === 'Contabilidad') session.permissions = ['time-clock']
     return session
   } catch {
