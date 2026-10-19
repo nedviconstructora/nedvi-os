@@ -228,7 +228,7 @@ export async function POST(request: Request) {
       .eq('id', currentUser.id)
       .maybeSingle()
 
-    if (!currentProfile?.active || normalizeRole(currentProfile.role) !== 'administracion') {
+    if (!currentProfile?.active || !['developer','administracion'].includes(normalizeRole(currentProfile.role))) {
       return NextResponse.json(
         { error: 'Solo Administración puede aprobar usuarios.' },
         { status: 403 },
@@ -406,7 +406,7 @@ export async function PATCH(request: Request) {
       .eq('id', currentUser.id)
       .maybeSingle()
 
-    if (!currentProfile?.active || normalizeRole(currentProfile.role) !== 'administracion') {
+    if (!currentProfile?.active || !['developer','administracion'].includes(normalizeRole(currentProfile.role))) {
       return NextResponse.json(
         { error: 'Solo Administración puede modificar usuarios.' },
         { status: 403 },
@@ -568,7 +568,7 @@ export async function DELETE(request: Request) {
       .eq('id', currentUser.id)
       .maybeSingle()
 
-    if (!currentProfile?.active || normalizeRole(currentProfile.role) !== 'administracion') {
+    if (!currentProfile?.active || !['developer','administracion'].includes(normalizeRole(currentProfile.role))) {
       return NextResponse.json(
         { error: 'Solo Administración puede eliminar usuarios.' },
         { status: 403 },
