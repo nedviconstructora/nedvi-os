@@ -3,7 +3,7 @@ import { createClient as createAdminClient } from '@supabase/supabase-js'
 import { createClient as createServerClient } from '@/utils/supabase/server'
 
 export const dynamic = 'force-dynamic'
-const allowed = new Set(['developer','administracion','administrador','admin','supervisor','obra'])
+const allowed = new Set(['developer','gerente_comercial','gerente_administrativo','gerente_operativo','administracion','administrador','admin','supervisor','supervisor_obra','obra'])
 
 async function context() {
   const server = await createServerClient()
