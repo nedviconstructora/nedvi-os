@@ -24,9 +24,9 @@ async function context() {
 async function access(ctx: NonNullable<Awaited<ReturnType<typeof context>>>, projectId:string) {
   const {data: project}=await ctx.db.from('projects').select('id,customer_id').eq('id',projectId).maybeSingle()
   if (!project?.customer_id) return null
-  const staff=ctx.role==='administracion' || ctx.role==='obra'
+  const staff=['developer','gerente_operativo','gerente_comercial','gerente_administrativo','administracion','supervisor_obra','obra'].includes(ctx.role)
   const {data: member}=await ctx.db.from('project_members').select('user_id').eq('project_id',projectId).eq('user_id',ctx.user.id).maybeSingle()
-  const manage=ctx.role==='administracion' || (ctx.role==='obra' && !!member)
+  const manage=['developer','gerente_operativo','gerente_comercial','gerente_administrativo','administracion'].includes(ctx.role) || (['supervisor_obra','obra'].includes(ctx.role) && !!member)
   const {data: linked}=await ctx.db.from('customer_users').select('user_id').eq('customer_id',project.customer_id).eq('user_id',ctx.user.id).maybeSingle()
   const client=ctx.role==='cliente' && !!linked
   return { project, manage, view:manage || (staff && !!member) || client, client }
