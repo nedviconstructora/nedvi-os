@@ -18,7 +18,7 @@ function downloadCsv(rows:string[][]){
  const anchor=document.createElement('a');anchor.href=url;anchor.download='NEDVI_consulta_gerencial_checadas.csv';anchor.click();URL.revokeObjectURL(url)
 }
 
-export default function ManagementAttendancePage(){
+export function ManagementAttendanceContent(){
  const [entries,setEntries]=useState<Entry[]>([])
  const [loading,setLoading]=useState(true)
  const [error,setError]=useState('')
@@ -41,7 +41,7 @@ export default function ManagementAttendancePage(){
  const inCount=visible.filter(item=>item.type==='entrada').length
  const outCount=visible.filter(item=>item.type==='salida').length
  const employees=new Set(visible.map(item=>item.userId)).size
- return <AppShell>
+ return <>
  <div className="mx-auto max-w-6xl space-y-6">
   <header className="rounded-2xl border border-[var(--border)] bg-[var(--surface)] p-6">
    <p className="flex items-center gap-2 text-xs font-bold uppercase tracking-widest text-[#5496CC]"><ShieldCheck size={16}/>Consulta exclusiva de Gerencia</p>
@@ -74,5 +74,9 @@ export default function ManagementAttendancePage(){
   </section>
  </div>
  {photoViewer && photoViewer.photoUrl && <div className="fixed inset-0 z-[200] flex items-center justify-center bg-black/80 p-4" role="dialog" aria-modal="true" aria-label={`Fotografía de checada de ${photoViewer.name}`} onClick={()=>setPhotoViewer(null)}><div className="relative flex w-full max-w-xl flex-col items-center gap-3 rounded-2xl bg-[var(--surface)] p-5 shadow-2xl" onClick={event=>event.stopPropagation()}><button type="button" onClick={()=>setPhotoViewer(null)} aria-label="Cerrar fotografía" title="Cerrar fotografía" className="absolute right-3 top-3 z-10 rounded-full bg-[var(--background)] p-2 text-[var(--foreground)] shadow-lg hover:bg-[var(--surface-soft)]"><X size={22}/></button><h2 className="w-full pr-12 text-base font-bold">{photoViewer.name} · {photoViewer.type==='entrada'?'Entrada':'Salida'}</h2><p className="w-full text-xs text-[var(--muted)]">{localDay(photoViewer.at)} · {localTime(photoViewer.at)}</p><Image unoptimized src={photoViewer.photoUrl} width={900} height={900} alt={`Evidencia de ${photoViewer.name}`} className="max-h-[65vh] w-auto max-w-full rounded-xl object-contain"/>{hasLocation(photoViewer)?<a href={mapLink(photoViewer)} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-2 rounded-lg bg-[#317FC1] px-4 py-2 text-sm font-semibold text-white"><MapPin size={17}/>Abrir ubicación de la checada en Maps{photoViewer.accuracy!=null?` (±${Math.round(photoViewer.accuracy)} m)`:''}</a>:<p className="text-xs text-[var(--muted)]">Esta checada no tiene coordenadas GPS disponibles.</p>}<button type="button" onClick={()=>setPhotoViewer(null)} className="rounded-lg border border-[var(--border)] px-5 py-2 text-sm font-semibold">Cerrar foto</button></div></div>}
- </AppShell>
+ </>
+}
+
+export default function ManagementAttendancePage(){
+ return <AppShell><ManagementAttendanceContent /></AppShell>
 }
