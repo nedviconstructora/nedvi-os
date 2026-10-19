@@ -52,7 +52,7 @@ export default function AttendancePage() {
     async function startCamera(){
       try{
         if(!navigator.mediaDevices?.getUserMedia)throw new Error('La cámara no está disponible en este navegador. Abre NEDVI OS desde HTTPS y concede permiso a la cámara.')
-        const stream=await navigator.mediaDevices.getUserMedia({audio:false,video:{facingMode:{ideal:'environment'}}})
+        const stream=await navigator.mediaDevices.getUserMedia({audio:false,video:{facingMode:{ideal:'user'}}})
         if(cancelled){stream.getTracks().forEach(track=>track.stop());return}
         cameraStream.current=stream
         const video=cameraVideo.current
@@ -67,6 +67,15 @@ export default function AttendancePage() {
     void startCamera()
     return ()=>{cancelled=true;cameraStream.current?.getTracks().forEach(track=>track.stop());cameraStream.current=null}
   },[cameraWorker])
+  const selectWorkerPhoto=(workerId:string,file:File|undefined)=>{
+    if(!file)return
+    if(!['image/jpeg','image/png','image/webp'].includes(file.type)||file.size>5*1024*1024){
+      setSupervisorError('Selecciona una fotografía JPG, PNG o WebP de máximo 5 MB.')
+      return
+    }
+    setSupervisorError('')
+    setPhotos(current=>({...current,[workerId]:file}))
+  }
   const takeCameraPhoto=()=>{
     const video=cameraVideo.current
     if(!cameraWorker||!video||!video.videoWidth)return
@@ -263,7 +272,7 @@ export default function AttendancePage() {
                 <div><span className="text-[var(--muted)]">Entrada</span><p className="font-semibold">{time(record?.check_in)}</p></div>
                 <div><span className="text-[var(--muted)]">Salida</span><p className="font-semibold">{time(record?.check_out)}</p></div>
               </div>
-              <button type="button" onClick={()=>setCameraWorker(w.id)} className="flex min-h-11 w-full items-center justify-center rounded-lg border border-[var(--border)] px-3 py-2 text-xs font-semibold">📷 {photos[w.id]?'Foto lista · Volver a tomar':'Abrir cámara y tomar foto'}</button>
+              <button type="button" onClick={()=>setCameraWorker(w.id)} className="flex min-h-11 w-full items-center justify-center rounded-lg border border-[var(--border)] px-3 py-2 text-xs font-semibold">📷 {photos[w.id]?'Foto lista · Volver a tomar':'Abrir cámara y tomar foto'}</button><label className="flex min-h-11 cursor-pointer items-center justify-center rounded-lg border border-[var(--border)] px-3 py-2 text-xs font-semibold">Cargar foto del trabajador<input type="file" accept="image/jpeg,image/png,image/webp" className="sr-only" onChange={e=>{selectWorkerPhoto(w.id,e.target.files?.[0]);e.target.value=""}}/></label><p className="text-xs text-[var(--muted)]">Expediente seleccionado: {w.full_name} · {w.position||"Puesto no registrado"}. La foto se asocia a este trabajador al confirmar.</p>
               <div className="grid grid-cols-3 gap-2">
                 <button type="button" disabled={busy||!photos[w.id]||!!record?.check_in||record?.status==='Ausente'} onClick={()=>void registerSupervisor(w.id,'entrada')} className="min-h-11 rounded-lg bg-[#5496CC] px-1 text-xs font-semibold text-white disabled:opacity-40"><LogIn size={13} className="inline"/> Entrada</button>
                 <button type="button" disabled={busy||!photos[w.id]||!record?.check_in||!!record?.check_out} onClick={()=>void registerSupervisor(w.id,'salida')} className="min-h-11 rounded-lg bg-emerald-600 px-1 text-xs font-semibold text-white disabled:opacity-40"><LogOut size={13} className="inline"/> Salida</button>
@@ -276,7 +285,7 @@ export default function AttendancePage() {
             const record=crewEntries.find(e=>e.worker_id===w.id)
             const time=(v:string|null|undefined)=>v?new Intl.DateTimeFormat('es-MX',{timeZone:'America/Tijuana',hour:'2-digit',minute:'2-digit'}).format(new Date(v)):'—'
             const busy=!!supervisorBusy || supervisorLoading
-            return <tr key={w.id} className="border-b border-[var(--border)]"><td className="p-3"><p className="font-semibold">{w.full_name}</p><p className="text-xs text-[var(--muted)]">{w.position}</p></td><td className="p-3">{record?.status||'Pendiente'}</td><td className="p-3">{time(record?.check_in)}</td><td className="p-3">{time(record?.check_out)}</td><td className="p-3"><div className="space-y-2"><button type="button" onClick={()=>setCameraWorker(w.id)} className="inline-flex min-h-10 items-center gap-2 rounded-lg border border-[var(--border)] px-3 py-2 text-xs">📷 {photos[w.id]?'Foto lista · Repetir':'Abrir cámara'}</button><div className="flex flex-wrap gap-2"><button type="button" disabled={busy||!photos[w.id]||!!record?.check_in||record?.status==='Ausente'} onClick={()=>void registerSupervisor(w.id,'entrada')} className="rounded-lg bg-[#5496CC] px-3 py-2 text-xs font-semibold text-white disabled:opacity-40"><LogIn size={13} className="inline"/> Entrada</button><button type="button" disabled={busy||!photos[w.id]||!record?.check_in||!!record?.check_out} onClick={()=>void registerSupervisor(w.id,'salida')} className="rounded-lg bg-emerald-600 px-3 py-2 text-xs font-semibold text-white disabled:opacity-40"><LogOut size={13} className="inline"/> Salida</button><button type="button" disabled={busy||!!record?.check_in||record?.status==='Ausente'} onClick={()=>void registerSupervisor(w.id,'ausente')} className="rounded-lg border border-red-500/40 px-3 py-2 text-xs text-red-500 disabled:opacity-40">Ausente</button></div><div className="flex gap-3 text-xs">{record?.entry_photo_url&&<a className="text-[#5496CC] underline" target="_blank" rel="noreferrer" href={record.entry_photo_url}>Ver foto entrada</a>}{record?.exit_photo_url&&<a className="text-[#5496CC] underline" target="_blank" rel="noreferrer" href={record.exit_photo_url}>Ver foto salida</a>}</div></div></td></tr>
+            return <tr key={w.id} className="border-b border-[var(--border)]"><td className="p-3"><p className="font-semibold">{w.full_name}</p><p className="text-xs text-[var(--muted)]">{w.position}</p></td><td className="p-3">{record?.status||'Pendiente'}</td><td className="p-3">{time(record?.check_in)}</td><td className="p-3">{time(record?.check_out)}</td><td className="p-3"><div className="space-y-2"><button type="button" onClick={()=>setCameraWorker(w.id)} className="inline-flex min-h-10 items-center gap-2 rounded-lg border border-[var(--border)] px-3 py-2 text-xs">📷 {photos[w.id]?'Foto lista · Repetir':'Abrir cámara'}</button><label className="ml-2 inline-flex min-h-10 cursor-pointer items-center rounded-lg border border-[var(--border)] px-3 py-2 text-xs">Cargar foto<input type="file" accept="image/jpeg,image/png,image/webp" className="sr-only" onChange={e=>{selectWorkerPhoto(w.id,e.target.files?.[0]);e.target.value=""}}/></label><div className="flex flex-wrap gap-2"><button type="button" disabled={busy||!photos[w.id]||!!record?.check_in||record?.status==='Ausente'} onClick={()=>void registerSupervisor(w.id,'entrada')} className="rounded-lg bg-[#5496CC] px-3 py-2 text-xs font-semibold text-white disabled:opacity-40"><LogIn size={13} className="inline"/> Entrada</button><button type="button" disabled={busy||!photos[w.id]||!record?.check_in||!!record?.check_out} onClick={()=>void registerSupervisor(w.id,'salida')} className="rounded-lg bg-emerald-600 px-3 py-2 text-xs font-semibold text-white disabled:opacity-40"><LogOut size={13} className="inline"/> Salida</button><button type="button" disabled={busy||!!record?.check_in||record?.status==='Ausente'} onClick={()=>void registerSupervisor(w.id,'ausente')} className="rounded-lg border border-red-500/40 px-3 py-2 text-xs text-red-500 disabled:opacity-40">Ausente</button></div><div className="flex gap-3 text-xs">{record?.entry_photo_url&&<a className="text-[#5496CC] underline" target="_blank" rel="noreferrer" href={record.entry_photo_url}>Ver foto entrada</a>}{record?.exit_photo_url&&<a className="text-[#5496CC] underline" target="_blank" rel="noreferrer" href={record.exit_photo_url}>Ver foto salida</a>}</div></div></td></tr>
           })}</tbody></table></div>}
         </section>
 
@@ -295,11 +304,11 @@ export default function AttendancePage() {
 
       {cameraWorker && <div role="dialog" aria-modal="true" aria-label="Tomar fotografía de asistencia" className="fixed inset-0 z-[100] flex items-center justify-center bg-black/85 p-3">
         <div className="w-full max-w-lg space-y-3 rounded-2xl bg-[var(--surface)] p-4 text-[var(--foreground)]">
-          <div className="flex items-center justify-between gap-3"><h2 className="text-base font-bold">Cámara · Evidencia de asistencia</h2><button type="button" aria-label="Cerrar cámara" onClick={()=>setCameraWorker(null)} className="rounded-lg border border-[var(--border)] px-3 py-2"><X size={18}/></button></div>
+          <div className="flex items-center justify-between gap-3"><h2 className="text-base font-bold">Cámara · {workers.find(w=>w.id===cameraWorker)?.full_name||'Trabajador seleccionado'}</h2><button type="button" aria-label="Cerrar cámara" onClick={()=>setCameraWorker(null)} className="rounded-lg border border-[var(--border)] px-3 py-2"><X size={18}/></button></div>
           <video ref={cameraVideo} playsInline autoPlay muted className="aspect-[3/4] max-h-[65dvh] w-full rounded-xl bg-black object-contain"/>
           {cameraError && <p role="alert" className="rounded-lg bg-red-500/10 p-3 text-sm text-red-500">{cameraError}</p>}
           <button type="button" disabled={!cameraReady} onClick={takeCameraPhoto} className="min-h-12 w-full rounded-xl bg-[#5496CC] px-4 font-semibold text-white disabled:opacity-40">📷 Capturar fotografía</button>
-          <p className="text-center text-xs text-[var(--muted)]">Autoriza el acceso a la cámara cuando tu teléfono lo solicite. No se abrirá la galería.</p>
+          <p className="text-center text-xs text-[var(--muted)]">La cámara se orienta hacia el rostro. Confirma el nombre del trabajador antes de registrar su asistencia.</p>
         </div>
       </div>}
       {open ? <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/55 p-4"><div className="max-h-[92vh] w-full max-w-2xl overflow-y-auto rounded-2xl bg-[var(--surface)] p-6 shadow-2xl"><div className="mb-5 flex items-center justify-between"><div><p className="text-xs font-semibold uppercase tracking-wide text-[#5496CC]">Control de personal</p><h2 className="text-xl font-bold">Registrar asistencia</h2></div><button onClick={() => setOpen(false)}><X size={18} /></button></div><form onSubmit={save} className="space-y-4">
