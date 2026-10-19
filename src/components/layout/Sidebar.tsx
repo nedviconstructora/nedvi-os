@@ -25,6 +25,7 @@ import {
   LogOut,
   Ruler,
   Search,
+  ShieldCheck,
   Settings2,
   ShoppingCart,
   Truck,
@@ -299,6 +300,13 @@ export function Sidebar({
           <Link href="/time-clock" title={collapsed ? 'Checador' : undefined} onClick={onCloseMobile} className={`${primaryItemClasses(isPathActive('/time-clock'))} mt-2`}>
             <Clock3 size={18} className="shrink-0 text-white"/>
             <span className={`whitespace-nowrap transition-opacity duration-200 ${collapsed ? 'lg:hidden' : 'opacity-100'}`}>Checador · Equipo NEDVI</span>
+          </Link>
+        ) : null}
+
+        {user.role === 'DEVELOPER' ? (
+          <Link href="/developer" title={collapsed ? 'Panel DEVELOPER' : undefined} onClick={onCloseMobile} className={`${primaryItemClasses(isPathActive('/developer'))} mt-2`}>
+            <ShieldCheck size={18} className="shrink-0" />
+            <span className={`whitespace-nowrap transition-opacity duration-200 ${collapsed ? 'lg:hidden' : 'opacity-100'}`}>Panel DEVELOPER</span>
           </Link>
         ) : null}
 
