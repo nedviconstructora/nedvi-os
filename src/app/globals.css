@@ -942,3 +942,41 @@ textarea {
 }
 .theme-dark .nedvi-main-content .nedvi-quick-action-label { color: #fff !important; }
 .theme-light .nedvi-main-content .nedvi-quick-action-label { color: #183e60 !important; }
+
+/* Executive Premium v4: consistent richer blues, translucent dark panels. */
+.nedvi-app-header {
+  background: linear-gradient(110deg,#235D92 0%,#24669D 52%,#1E5488 100%) !important;
+  border-bottom-color: rgba(187,226,255,.21) !important;
+}
+.theme-dark {
+  --card: rgba(17,34,54,.78);
+  --surface: rgba(20,39,60,.84);
+  --surface-soft: rgba(31,54,79,.86);
+  --border: rgba(120,163,198,.37);
+}
+.theme-dark .nedvi-main-content {
+  background-color: #152b43 !important;
+  background-image:
+    linear-gradient(105deg,rgba(19,40,64,.63),rgba(24,50,77,.60)),
+    url('/construction-premium-pattern.svg') !important;
+  background-size: auto, 560px 420px;
+}
+.theme-dark .nedvi-main-content .nedvi-card {
+  background: rgba(17,34,54,.77) !important;
+  border-color: rgba(112,161,202,.43) !important;
+  box-shadow: 0 12px 28px rgba(4,18,34,.13) !important;
+  backdrop-filter: blur(5px);
+}
+.theme-dark .nedvi-main-content .nedvi-dashboard-hero {
+  background: linear-gradient(115deg,rgba(23,48,77,.79),rgba(20,41,66,.75)) !important;
+  border-color: rgba(119,171,215,.38) !important;
+  backdrop-filter: blur(5px);
+}
+/* Keep smaller action buttons readable over the textured dashboard. */
+.theme-dark .nedvi-main-content .nedvi-quick-action {
+  background: rgba(44,87,124,.86) !important;
+  border-color: #739dc0 !important;
+}
+.theme-dark .nedvi-main-content .nedvi-quick-action:hover {
+  background: rgba(57,108,150,.96) !important;
+}
