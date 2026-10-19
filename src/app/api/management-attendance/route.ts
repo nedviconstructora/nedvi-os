@@ -15,13 +15,13 @@ export async function GET() {
     const url=process.env.NEXT_PUBLIC_SUPABASE_URL, key=process.env.SUPABASE_SERVICE_ROLE_KEY
     if(!url || !key) return NextResponse.json({error:'Servicio no configurado.'},{status:500})
     const admin=createAdminClient(url,key,{auth:{persistSession:false,autoRefreshToken:false}})
-    const {data,error}=await admin.from('time_clock_entries').select('id,user_id,employee_name,event_type,occurred_at,photo_path').is('deleted_at',null).order('occurred_at',{ascending:false}).limit(3000)
+    const {data,error}=await admin.from('time_clock_entries').select('id,user_id,employee_name,event_type,occurred_at,photo_path,latitude,longitude,location_accuracy_m').is('deleted_at',null).order('occurred_at',{ascending:false}).limit(3000)
     if(error)throw error
     const ids=(data??[]).map(x=>x.id)
     const {data:adjustments,error:adjustmentError}=await admin.from('time_clock_adjustments').select('entry_id,adjusted_at').in('entry_id',ids.length?ids:['00000000-0000-0000-0000-000000000000'])
     if(adjustmentError)throw adjustmentError
     const dates=new Map((adjustments??[]).map(item=>[item.entry_id,item.adjusted_at]))
-    return NextResponse.json({entries:(data??[]).map(item=>({id:item.id,userId:item.user_id,name:item.employee_name,type:item.event_type,at:dates.get(item.id)??item.occurred_at,photoUrl:item.photo_path?'/api/time-clock/photo?id='+encodeURIComponent(item.id):null}))},{headers:{'Cache-Control':'no-store'}})
+    return NextResponse.json({entries:(data??[]).map(item=>({id:item.id,userId:item.user_id,name:item.employee_name,type:item.event_type,at:dates.get(item.id)??item.occurred_at,photoUrl:item.photo_path?'/api/time-clock/photo?id='+encodeURIComponent(item.id):null,latitude:item.latitude,longitude:item.longitude,accuracy:item.location_accuracy_m}))},{headers:{'Cache-Control':'no-store'}})
   }catch(error){
     console.error('Manager attendance read failed',error)
     return NextResponse.json({error:'No fue posible consultar el historial.'},{status:500})
