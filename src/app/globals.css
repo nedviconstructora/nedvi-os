@@ -879,3 +879,28 @@ textarea {
   background: linear-gradient(115deg,rgba(42,69,98,.94),rgba(26,44,67,.94)) !important;
   border-color: rgba(149,193,229,.22);
 }
+
+/* Quick actions: explicit themed CSS instead of relying on Tailwind dark variant. */
+.theme-light .nedvi-quick-action, :root:not(.theme-dark) .nedvi-quick-action {
+  background: #e8f2fc !important;
+  border: 1px solid #bad2e8 !important;
+  color: #1b466e !important;
+}
+.theme-dark .nedvi-quick-action {
+  background: linear-gradient(135deg,#345b7c,#2b4b6b) !important;
+  border: 1px solid #5783a6 !important;
+  color: #f2f8ff !important;
+  box-shadow: 0 4px 14px rgba(4,17,32,.12);
+}
+.theme-dark .nedvi-quick-action:hover {
+  background: linear-gradient(135deg,#427098,#335b7d) !important;
+  border-color: #94c9f0 !important;
+}
+.theme-light .nedvi-quick-action:hover {
+  background: #d8eafa !important;
+  border-color: #68a5d7 !important;
+}
+.theme-dark .nedvi-quick-action-icon { background: #457ca7 !important; color: #fff !important; }
+.theme-light .nedvi-quick-action-icon { background: #c9e2f8 !important; color: #1c629b !important; }
+.theme-dark .nedvi-quick-action-label { color: #f5f9ff !important; }
+.theme-light .nedvi-quick-action-label { color: #173d60 !important; }
