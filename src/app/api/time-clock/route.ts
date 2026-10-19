@@ -7,7 +7,7 @@ export async function GET() {
   try {
     const ctx = await getTimeClockContext()
     if (!ctx) return NextResponse.json({error:'Sesión no autorizada.'},{status:401})
-    const canViewAll = ctx.isAdmin || ctx.isAccountant || ['obra','supervisor'].includes(String(ctx.profile.role ?? '').toLowerCase().trim())
+    const canViewAll = ctx.isAdmin || ctx.isAccountant
     let query = ctx.admin.from('time_clock_entries')
       .select('id,user_id,employee_name,event_type,occurred_at,photo_path,latitude,longitude,location_accuracy_m')
       .is('deleted_at',null).order('occurred_at',{ascending:false}).limit(3000)
