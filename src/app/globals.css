@@ -904,3 +904,41 @@ textarea {
 .theme-light .nedvi-quick-action-icon { background: #c9e2f8 !important; color: #1c629b !important; }
 .theme-dark .nedvi-quick-action-label { color: #f5f9ff !important; }
 .theme-light .nedvi-quick-action-label { color: #173d60 !important; }
+
+/* Dashboard color harmonization v3 — one source of truth. */
+.theme-dark .nedvi-main-content .nedvi-card {
+  background: rgba(38, 59, 81, .96) !important;
+  border-color: #486783 !important;
+}
+.theme-light .nedvi-main-content .nedvi-card {
+  background: rgba(255,255,255,.96) !important;
+  border-color: #d9e5ef !important;
+}
+.theme-dark .nedvi-main-content .nedvi-quick-action {
+  background: #385e80 !important;
+  border-color: #6b98ba !important;
+  box-shadow: 0 4px 16px rgba(12,31,51,.16) !important;
+}
+.theme-dark .nedvi-main-content .nedvi-quick-action:hover {
+  background: #47759b !important;
+  border-color: #a0d1f5 !important;
+}
+.theme-light .nedvi-main-content .nedvi-quick-action {
+  background: #e6f2fc !important;
+  border-color: #b4d2e9 !important;
+  box-shadow: 0 4px 16px rgba(37,85,126,.07) !important;
+}
+.theme-light .nedvi-main-content .nedvi-quick-action:hover {
+  background: #d2e9fc !important;
+  border-color: #68a8da !important;
+}
+.theme-dark .nedvi-main-content .nedvi-quick-action-icon {
+  background: #4b80ae !important;
+  color: #eff9ff !important;
+}
+.theme-light .nedvi-main-content .nedvi-quick-action-icon {
+  background: #c9e4f8 !important;
+  color: #20629a !important;
+}
+.theme-dark .nedvi-main-content .nedvi-quick-action-label { color: #fff !important; }
+.theme-light .nedvi-main-content .nedvi-quick-action-label { color: #183e60 !important; }
