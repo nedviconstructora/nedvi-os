@@ -296,16 +296,10 @@ export function Sidebar({
           </Link>
         ) : null}
 
-        {['DEVELOPER','Gerente Operativo','Gerente Comercial','Gerente Administrativo'].includes(user.role) ? (
-          <Link href="/management-attendance" onClick={onCloseMobile} title={collapsed ? 'Consulta Gerencial de Checadas' : undefined} className={`${primaryItemClasses(isPathActive('/management-attendance'))} mt-2`}>
-            <Clock3 size={18} className="shrink-0"/>
-            <span className={`whitespace-nowrap transition-opacity duration-200 ${collapsed ? 'lg:hidden' : 'opacity-100'}`}>Checadas · Gerencia</span>
-          </Link>
-        ) : null}
-        {canUse('time-clock') ? (
-          <Link href="/time-clock" title={collapsed ? 'Checador' : undefined} onClick={onCloseMobile} className={`${primaryItemClasses(isPathActive('/time-clock'))} mt-2`}>
+        {(canUse('time-clock') || ['DEVELOPER','Gerente Operativo','Gerente Comercial','Gerente Administrativo'].includes(user.role)) ? (
+          <Link href="/time-clock" title={collapsed ? 'Centro de Asistencia' : undefined} onClick={onCloseMobile} className={`${primaryItemClasses(isPathActive('/time-clock') || isPathActive('/management-attendance'))} mt-2`}>
             <Clock3 size={18} className="shrink-0 text-white"/>
-            <span className={`whitespace-nowrap transition-opacity duration-200 ${collapsed ? 'lg:hidden' : 'opacity-100'}`}>Checador · Equipo NEDVI</span>
+            <span className={`whitespace-nowrap transition-opacity duration-200 ${collapsed ? 'lg:hidden' : 'opacity-100'}`}>Centro de Asistencia</span>
           </Link>
         ) : null}
 
