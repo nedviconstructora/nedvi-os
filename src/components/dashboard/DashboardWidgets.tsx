@@ -303,12 +303,12 @@ export function QuickActions() {
           <Link
             href={href}
             key={label}
-            className="nedvi-quick-action group flex min-h-24 flex-col items-start justify-between rounded-xl border border-[#cedeed] bg-[#edf5fd] p-4 text-left shadow-[0_2px_8px_rgba(25,75,115,0.06)] transition hover:-translate-y-0.5 hover:border-[#68a7dc] hover:bg-[#e1effb] hover:shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#5496CC]/50 dark:border-[#426486] dark:bg-[#2b4662] dark:hover:border-[#78b6e7] dark:hover:bg-[#355775]"
+            className="nedvi-quick-action group flex min-h-24 flex-col items-start justify-between rounded-xl border p-4 text-left transition duration-200 hover:-translate-y-0.5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#7ab6ed]/60"
           >
-            <span className="nedvi-quick-action-icon flex h-9 w-9 items-center justify-center rounded-lg bg-[#d3e7fa] text-[#236eae] transition group-hover:bg-[#c1dffa] dark:bg-[#365f87] dark:text-[#a6d8ff] dark:group-hover:bg-[#40729f]">
+            <span className="nedvi-quick-action-icon flex h-9 w-9 items-center justify-center rounded-lg transition">
               <Icon size={16} strokeWidth={1.8} />
             </span>
-            <span className="nedvi-quick-action-label text-xs font-semibold text-[#24415e] dark:text-[#f0f7ff]">{label}</span>
+            <span className="nedvi-quick-action-label text-xs font-semibold">{label}</span>
           </Link>
         ))}
       </div>
