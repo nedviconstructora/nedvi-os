@@ -23,7 +23,7 @@ export default function TimeClockPage() {
   const [canDelete,setCanDelete] = useState(false)
   const [canClock,setCanClock] = useState(true)
   const [dateFilter,setDateFilter] = useState('')
-  const [allDates,setAllDates] = useState(false)
+  const [allDates,setAllDates] = useState(true)
   const [loading,setLoading] = useState(true)
   const [busy,setBusy] = useState(false)
   const [locationBusy,setLocationBusy] = useState(false)
@@ -274,7 +274,7 @@ export default function TimeClockPage() {
           </section>}
           <section className="space-y-4 rounded-2xl border border-[var(--border)] bg-[var(--surface)] p-5 shadow-sm">
             <div className="flex items-center gap-2"><Clock3 size={20} className="text-[#5496CC]"/><h2 className="text-xl font-semibold">{canViewAll ? 'Historial del personal' : 'Mis registros'}</h2></div>
-            <p className="text-sm text-[var(--muted)]">Vista previa de entradas y salidas del día. Usa «Ver historial completo» para desplegar registros anteriores en las mismas ventanas. Horario de Tijuana; fotografías privadas.</p>
+            <p className="text-sm text-[var(--muted)]">Consulta tu historial de checadas aquí mismo, con fotografías y ubicación GPS. Puedes filtrar por fecha. Horario de Tijuana.</p>
             <div className="flex flex-wrap items-end gap-2">
               <label className="text-xs font-semibold text-[var(--muted)]"><span className="mb-1 flex items-center gap-1"><CalendarDays size={14}/>Fecha</span><input type="date" value={dateFilter} onChange={e=>{setDateFilter(e.target.value);setAllDates(false)}} className="block rounded-lg border border-[var(--border)] bg-[var(--background)] px-3 py-2 text-sm text-[var(--foreground)]"/></label>
               <button type="button" onClick={()=>setAllDates(v=>!v)} className="rounded-lg border border-[var(--border)] px-3 py-2 text-sm">{allDates?'Mostrar solo la fecha':'Ver historial completo'}</button>
@@ -285,26 +285,23 @@ export default function TimeClockPage() {
               <tbody>{dailyRows.map(row=><tr key={row.userId+row.date} className="border-t border-[var(--border)]"><td className="p-2">{row.date}</td><td className="p-2">{row.name}</td><td className="p-2">{row.start?new Intl.DateTimeFormat('es-MX',{timeZone:'America/Tijuana',hour:'2-digit',minute:'2-digit'}).format(new Date(row.start)):'—'}</td><td className="p-2">{row.end?new Intl.DateTimeFormat('es-MX',{timeZone:'America/Tijuana',hour:'2-digit',minute:'2-digit'}).format(new Date(row.end)):'—'}</td><td className="p-2">{(row.totalMinutes/60).toFixed(2)} h{row.open?' · En turno':''}</td></tr>)}</tbody></table>
               {!dailyRows.length && <p className="p-4 text-sm text-[var(--muted)]">No hay checadas para esta fecha.</p>}
             </div>
-            <div className="grid gap-4 lg:grid-cols-2">
-              {(['entrada','salida'] as const).map(kind=>{
-                const matching=visibleEntries.filter(item=>item.type===kind)
-                return <div key={kind} className="min-w-0 rounded-xl border border-[var(--border)] bg-[var(--background)] p-3">
-                  <div className="mb-3 flex items-center justify-between gap-2">
-                    <h3 className="flex items-center gap-2 text-base font-bold">{kind==='entrada'?<LogIn size={18} className="text-[#5496CC]"/>:<LogOut size={18} className="text-emerald-500"/>}{kind==='entrada'?'Entradas':'Salidas'}</h3>
-                    <span className="rounded-full bg-[var(--surface-soft)] px-2 py-1 text-xs text-[var(--muted)]">{matching.length} registros</span>
+            
+            <div className="rounded-xl border border-[var(--border)] bg-[var(--background)] p-3">
+              <div className="mb-3 flex items-center justify-between gap-2"><h3 className="font-bold">Historial de checadas</h3><span className="text-xs text-[var(--muted)]">{visibleEntries.length} registros</span></div>
+              <div className="max-h-[500px] space-y-2 overflow-y-auto">
+                {!visibleEntries.length && <p className="p-4 text-sm text-[var(--muted)]">No hay checadas registradas para el filtro seleccionado.</p>}
+                {visibleEntries.map(item=><div key={item.id} className="flex min-w-0 items-center justify-between gap-3 rounded-xl border border-[var(--border)] bg-[var(--surface)] p-3">
+                  <div className="min-w-0">
+                    <p className="flex items-center gap-2 text-sm font-semibold">{item.type==='entrada'?<LogIn size={16} className="text-[#5496CC]"/>:<LogOut size={16} className="text-emerald-500"/>}{item.type==='entrada'?'Entrada':'Salida'} · {item.name}</p>
+                    <p className="mt-1 text-xs text-[var(--muted)]">{fmt(item.at)}{item.originalAt?' · Ajuste administrativo':''}</p>
+                    {item.latitude!=null&&item.longitude!=null&&<a className="inline-flex items-center gap-1 text-xs text-[#5496CC] underline" href={`https://www.google.com/maps?q=${item.latitude},${item.longitude}`} target="_blank" rel="noreferrer"><MapPin size={13}/>Ver ubicación GPS</a>}
                   </div>
-                  <div className="max-h-[450px] space-y-3 overflow-y-auto">
-                    {!matching.length && <p className="rounded-lg border border-[var(--border)] p-4 text-sm text-[var(--muted)]">No hay {kind==='entrada'?'entradas':'salidas'} {allDates?'registradas':'en esta fecha'}.</p>}
-                    {matching.map(item=><div key={item.id} className="flex min-w-0 items-center justify-between gap-2 rounded-xl border border-[var(--border)] bg-[var(--surface)] p-3">
-                      <div className="min-w-0"><p className="break-words text-sm font-semibold">{item.name}</p><p className="text-xs text-[var(--muted)]">{fmt(item.at)}{item.originalAt?' · Ajuste administrativo':''}</p>{item.latitude!=null&&item.longitude!=null&&<a className="inline-flex items-center gap-1 text-xs text-[#5496CC] underline" href={`https://www.google.com/maps?q=${item.latitude},${item.longitude}`} target="_blank" rel="noreferrer"><MapPin size={13}/>Ver ubicación GPS (±{Math.round(item.accuracy??0)} m)</a>}</div>
-                      <div className="flex shrink-0 items-center gap-2">
-                        {item.photoUrl?<ClockPhoto url={item.photoUrl} name={item.name} type={item.type}/>:<span className="text-xs text-[var(--muted)]">Sin foto</span>}
-                        {canDelete&&entries.find(x=>x.userId===item.userId)?.id===item.id&&<button type="button" disabled={busy} onClick={()=>void deleteEntry(item.id)} aria-label="Anular registro" title="Anular checada (Administración)" className="rounded-lg border border-red-400/30 p-2 text-red-500 hover:bg-red-500/10 disabled:opacity-40"><Trash2 size={16}/></button>}
-                      </div>
-                    </div>)}
+                  <div className="flex shrink-0 items-center gap-2">
+                    {item.photoUrl?<ClockPhoto url={item.photoUrl} name={item.name} type={item.type}/>:<span className="text-xs text-[var(--muted)]">Sin foto</span>}
+                    {canDelete&&entries.find(x=>x.userId===item.userId)?.id===item.id&&<button type="button" disabled={busy} onClick={()=>void deleteEntry(item.id)} aria-label="Anular registro" title="Anular checada (Administración)" className="rounded-lg border border-red-400/30 p-2 text-red-500 hover:bg-red-500/10 disabled:opacity-40"><Trash2 size={16}/></button>}
                   </div>
-                </div>
-              })}
+                </div>)}
+              </div>
             </div>
           </section>
         </div>
