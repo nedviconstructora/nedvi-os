@@ -1,13 +1,14 @@
 'use client'
 
 import Link from 'next/link'
+import { useRouter } from 'next/navigation'
 import { useEffect, useMemo, useRef, useState } from 'react'
 import {
   Bell,
   BellRing,
-  Building2,
   Camera,
   LoaderCircle,
+  LogOut,
   Menu,
   TriangleAlert,
   Moon,
@@ -24,7 +25,7 @@ import {
   sortAgendaActivities,
   type AgendaItem,
 } from '@/features/agenda/services/agendaStorage'
-import type { AccessSession } from '@/features/access/services/accessStorage'
+import { clearAccessSession, type AccessSession } from '@/features/access/services/accessStorage'
 
 type HeaderProps = {
   onOpenMenu: () => void
@@ -44,6 +45,7 @@ function BrandMark() {
 }
 
 export function Header({ onOpenMenu, isDark, onToggleTheme, showCompanyLogo = false, user }: HeaderProps) {
+  const router = useRouter()
   const [avatarUrl, setAvatarUrl] = useState<string | null>(null)
   const [uploadingAvatar, setUploadingAvatar] = useState(false)
   const [notificationPermission, setNotificationPermission] = useState<NotificationPermission | 'unsupported'>('default')
@@ -552,7 +554,7 @@ export function Header({ onOpenMenu, isDark, onToggleTheme, showCompanyLogo = fa
 
         <div className="mx-2 hidden h-6 w-px bg-[var(--border)] sm:block" />
 
-        <div className="ml-1 flex items-center gap-3 rounded-2xl border border-white/[0.12] bg-white/[0.07] px-3 py-2 shadow-sm backdrop-blur-md sm:px-4">
+        <div className="ml-1 flex items-center gap-2.5 rounded-xl border border-white/[0.10] bg-white/[0.05] px-2.5 py-1.5 sm:px-3">
           <input
             ref={avatarInputRef}
             type="file"
@@ -565,7 +567,7 @@ export function Header({ onOpenMenu, isDark, onToggleTheme, showCompanyLogo = fa
             type="button"
             onClick={() => avatarInputRef.current?.click()}
             disabled={uploadingAvatar}
-            className="group relative flex h-12 w-12 shrink-0 items-center justify-center overflow-hidden rounded-full border-2 border-[#5496CC]/35 bg-[#343A40] text-xs font-bold text-white shadow-sm transition hover:scale-[1.03] disabled:cursor-wait sm:h-14 sm:w-14"
+            className="group relative flex h-9 w-9 shrink-0 items-center justify-center overflow-hidden rounded-full border-2 border-[#5496CC]/35 bg-[#343A40] text-xs font-bold text-white shadow-sm transition hover:scale-[1.03] disabled:cursor-wait sm:h-10 sm:w-10"
             aria-label="Cambiar foto de perfil"
             title="Cambiar foto de perfil"
           >
@@ -614,7 +616,12 @@ export function Header({ onOpenMenu, isDark, onToggleTheme, showCompanyLogo = fa
           </div>
         </div>
 
-        <Building2 className="ml-2 hidden text-white/60 xl:block" size={17} strokeWidth={1.7} aria-label="Espacio de trabajo de la empresa" />
+        <button type="button" onClick={() => { clearAccessSession(); router.replace('/login') }}
+          className="ml-1 inline-flex h-10 items-center gap-2 rounded-lg border border-white/15 px-3 text-xs font-semibold text-white/85 transition hover:border-white/25 hover:bg-white/10 hover:text-white"
+          aria-label="Cerrar sesión" title="Cerrar sesión">
+          <LogOut size={16} strokeWidth={1.8} />
+          <span className="hidden lg:inline">Cerrar sesión</span>
+        </button>
       </div>
     </header>
   )
