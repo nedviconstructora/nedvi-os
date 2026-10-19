@@ -7,6 +7,7 @@ import { AppShell } from '@/components/layout/AppShell'
 import { downloadClockWorkbook } from '@/features/time-clock/services/exportXlsx'
 
 type ClockEntry = { id:string; userId:string; name:string; type:'entrada'|'salida'; at:string; photoUrl:string|null; latitude:number|null; longitude:number|null; accuracy:number|null }
+type ExitReview={id:string;employee_name:string;entry_at:string|null;requested_exit_time:string;reason:string;submitted_at:string;status:string;has_photo:boolean;reviewed_at:string|null}
 type Payload = {entries:ClockEntry[]; me:string; canViewAll:boolean; canDelete:boolean; canClock:boolean; error?:string}
 
 export default function TimeClockPage() {
@@ -29,6 +30,9 @@ export default function TimeClockPage() {
   const [incidentTime,setIncidentTime]=useState('')
   const [incidentReason,setIncidentReason]=useState('')
   const [incidentPhoto,setIncidentPhoto]=useState<File|null>(null)
+  const [exitReviews,setExitReviews]=useState<ExitReview[]>([])
+  const [reviewsError,setReviewsError]=useState('')
+  const [reviewBusy,setReviewBusy]=useState<string|null>(null)
 
   const refresh = useCallback(async () => {
     try {
@@ -44,6 +48,27 @@ export default function TimeClockPage() {
     } catch (err) { setError(err instanceof Error ? err.message : 'Error al cargar asistencias.') }
     finally {setLoading(false)}
   },[])
+
+  const loadExitReviews=useCallback(async()=>{
+    try{
+      const response=await fetch('/api/time-clock/exit-reviews',{cache:'no-store'})
+      const result=await response.json()
+      if(!response.ok)throw new Error(result.error||'No se pudieron consultar solicitudes.')
+      setExitReviews(result.requests||[]);setReviewsError('')
+    }catch(err){setReviewsError(err instanceof Error?err.message:'Error al consultar solicitudes')}
+  },[])
+  useEffect(()=>{if(canDelete)void loadExitReviews()},[canDelete,loadExitReviews])
+  async function reviewExit(id:string,decision:'aprobada'|'rechazada'){
+    if(reviewBusy||!window.confirm('¿Confirmas '+(decision==='aprobada'?'aprobar':'rechazar')+' esta solicitud? La decisión no creará una salida retroactiva.'))return
+    setReviewBusy(id);setReviewsError('')
+    try{
+      const response=await fetch('/api/time-clock/exit-reviews',{method:'PATCH',headers:{'Content-Type':'application/json'},body:JSON.stringify({id,decision})})
+      const result=await response.json()
+      if(!response.ok)throw new Error(result.error||'No se pudo revisar la solicitud.')
+      await loadExitReviews()
+    }catch(err){setReviewsError(err instanceof Error?err.message:'Error al revisar')}
+    finally{setReviewBusy(null)}
+  }
 
   useEffect(() => {
     void refresh()
@@ -205,6 +230,7 @@ export default function TimeClockPage() {
           <button type="button" onClick={() => void refresh()} className="inline-flex items-center gap-2 rounded-xl border border-[var(--border)] px-4 py-2 text-sm"><RefreshCw size={16}/>Actualizar</button>
         </header>
 
+        {canDelete && <section className="rounded-2xl border border-[var(--border)] bg-[var(--surface)] p-5 shadow-sm"><div className="mb-3 flex flex-wrap items-center justify-between gap-3"><div><h2 className="text-xl font-bold">Solicitudes de regularización</h2><p className="text-xs text-[var(--muted)]">Acceso exclusivo de Administración · Las decisiones quedan registradas sin alterar las checadas originales.</p></div><button type="button" className="rounded-lg border border-[var(--border)] px-3 py-2 text-sm" onClick={()=>void loadExitReviews()}>Actualizar solicitudes</button></div>{reviewsError && <p role="alert" className="mb-3 rounded-lg bg-red-500/10 p-3 text-sm text-red-500">{reviewsError}</p>}{exitReviews.length===0?<p className="text-sm text-[var(--muted)]">No hay solicitudes registradas.</p>:<div className="grid gap-3 md:grid-cols-2">{exitReviews.map(item=><div key={item.id} className="rounded-xl border border-[var(--border)] p-4"><div className="flex items-center justify-between gap-2"><strong>{item.employee_name}</strong><span className="text-xs font-semibold uppercase">{item.status}</span></div><p className="mt-2 text-xs text-[var(--muted)]">Entrada: {item.entry_at?fmt(item.entry_at):'No disponible'}</p><p className="text-xs text-[var(--muted)]">Salida declarada: {fmt(item.requested_exit_time)}</p><p className="mt-2 text-sm">{item.reason}</p><div className="mt-3 flex flex-wrap gap-2">{item.has_photo && <a className="rounded-lg border border-[var(--border)] px-3 py-2 text-xs font-semibold" href={'/api/time-clock/exit-reviews/photo?id='+encodeURIComponent(item.id)} target="_blank" rel="noreferrer">Ver fotografía</a>}{item.status==='pendiente' && <><button disabled={reviewBusy!==null} onClick={()=>void reviewExit(item.id,'aprobada')} className="rounded-lg bg-emerald-600 px-3 py-2 text-xs font-semibold text-white disabled:opacity-40">Aprobar</button><button disabled={reviewBusy!==null} onClick={()=>void reviewExit(item.id,'rechazada')} className="rounded-lg bg-red-600 px-3 py-2 text-xs font-semibold text-white disabled:opacity-40">Rechazar</button></>}</div></div>)}</div>}</section>}
         <div className="grid gap-5 lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)]">
           {canClock && <section className="space-y-4 rounded-2xl border border-[var(--border)] bg-[var(--surface)] p-5 shadow-sm">
             <div className="flex items-center justify-between gap-2"><h2 className="text-xl font-semibold">Mi jornada</h2>
