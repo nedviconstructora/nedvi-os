@@ -16,10 +16,7 @@ async function context() {
   if (!url || !key) throw new Error('Configuración de servidor incompleta')
   return {user, role:String(profile.role).trim().toLowerCase(), admin:createAdminClient(url,key,{auth:{persistSession:false,autoRefreshToken:false}})}
 }
-const VICTOR_USER_ID = 'ba2a9516-d5d6-4d81-bf1a-0f2466a4c130'
-const canUploadAttendancePhoto = (ctx:{role:string;user:{id:string}}) =>
-  ctx.role === 'developer' ||
-  (ctx.user.id === VICTOR_USER_ID && ctx.role === 'gerente_comercial' && localDay() === '2026-10-19')
+const canUploadAttendancePhoto = (ctx:{role:string}) => ctx.role === 'developer'
 const validDate = (v:unknown):v is string => typeof v === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(v) && !Number.isNaN(Date.parse(v+'T12:00:00Z'))
 const validId = (v:unknown):v is string => typeof v === 'string' && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(v)
 function localDay() { return new Intl.DateTimeFormat('en-CA',{timeZone:'America/Tijuana',year:'numeric',month:'2-digit',day:'2-digit'}).format(new Date()) }
