@@ -45,6 +45,7 @@ export default function TimeClockPage() {
       setResolvedExitEntryIds(body.resolvedExitEntryIds||[])
       setMe(body.me)
       setCanViewAll(body.canViewAll)
+      if(body.canViewAll)setAllDates(true)
       setCanDelete(body.canDelete)
       setCanClock(body.canClock)
       setError('')
@@ -279,7 +280,7 @@ export default function TimeClockPage() {
               {!dailyRows.length && <p className="p-4 text-sm text-[var(--muted)]">No hay checadas para esta fecha.</p>}
             </div>
             <div className="max-h-[480px] space-y-3 overflow-y-auto">
-              {!visibleEntries.length && <p className="rounded-xl border border-[var(--border)] p-4 text-sm text-[var(--muted)]">Todavía no existen registros.</p>}
+              {!visibleEntries.length && <p className="rounded-xl border border-[var(--border)] p-4 text-sm text-[var(--muted)]">No hay registros en la fecha seleccionada. Presiona «Ver historial» para consultar checadas anteriores.</p>}
               {visibleEntries.map(item => <div key={item.id} className="flex items-center justify-between gap-3 rounded-xl border border-[var(--border)] p-3">
                 <div className="min-w-0"><p className="truncate text-sm font-semibold">{item.name}</p><p className="text-xs text-[var(--muted)]">{item.type==='entrada'?'Entrada':'Salida'} · {fmt(item.at)}{item.originalAt?' · Ajuste administrativo':''}</p>{item.latitude != null && item.longitude != null && <a className="inline-flex items-center gap-1 text-xs text-[#5496CC] underline" href={`https://www.google.com/maps?q=${item.latitude},${item.longitude}`} target="_blank" rel="noreferrer"><MapPin size={13}/>Ver ubicación GPS (±{Math.round(item.accuracy ?? 0)} m)</a>}</div>
                 <div className="flex shrink-0 items-center gap-2">
