@@ -796,3 +796,52 @@ textarea {
   color: #c4e7ff;
 }
 .theme-dark .nedvi-document-view-action:hover { background-color: rgba(123,174,227,.30); }
+
+/* NEDVI OS · Executive Premium design system · phase 1
+   Presentation only: no data, permissions or module behavior changed. */
+.theme-light {
+  --nedvi-blue: #256fba;
+  --nedvi-blue-strong: #174e89;
+  --primary: #246eb5;
+  --background: #f3f6fa;
+  --foreground: #172536;
+  --surface-soft: #f7f9fc;
+  --border: #dfe6ee;
+  --muted: #61758b;
+}
+.theme-dark {
+  --background: #0e1725;
+  --surface: #152234;
+  --surface-soft: #192a40;
+  --border: #2a3c50;
+  --primary: #6db0ed;
+}
+.nedvi-app-header {
+  background: linear-gradient(110deg,#12283f 0%,#1a4063 62%,#173956 100%) !important;
+  border-color: rgba(255,255,255,.11) !important;
+  box-shadow: 0 8px 28px rgba(12,32,53,.12);
+}
+.nedvi-main-content { background-image: radial-gradient(ellipse 65% 32% at 95% 0%,rgba(84,150,204,.055),transparent); }
+.theme-light .nedvi-main-content :is(input,select,textarea):not([type="checkbox"]):not([type="radio"]):not([type="file"]) {
+  border-color: #d5e0eb;
+}
+.nedvi-main-content :is(input,select,textarea,button,a):focus-visible {
+  outline: 2px solid #5496cc;
+  outline-offset: 2px;
+}
+.nedvi-main-content :is(input,select,textarea):not([type="checkbox"]):not([type="radio"]):not([type="file"]) {
+  transition: border-color .18s ease, box-shadow .18s ease;
+}
+.nedvi-main-content :is(input,select,textarea):not([type="checkbox"]):not([type="radio"]):not([type="file"]):focus {
+  border-color: #5496cc;
+  box-shadow: 0 0 0 3px rgba(84,150,204,.12);
+}
+.theme-light .nedvi-dashboard-hero {
+  background: linear-gradient(115deg,#fff 0%,#f2f8fe 100%) !important;
+  border: 1px solid #e0eaf3;
+  box-shadow: 0 12px 35px rgba(29,65,98,.06);
+}
+.theme-dark .nedvi-dashboard-hero { border: 1px solid var(--border); }
+@media (prefers-reduced-motion: reduce) {
+  .nedvi-main-content :is(input,select,textarea) { transition: none; }
+}
