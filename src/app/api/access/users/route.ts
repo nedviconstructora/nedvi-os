@@ -131,7 +131,8 @@ export async function GET() {
       )
     }
 
-    const { data: profiles, error } = await supabase
+    const admin = getAdminClient()
+    const { data: profiles, error } = await admin
       .from('profiles')
       .select('id,email,full_name,first_name,role,phone,active,position,permissions,created_at,deleted_at')
       .is('deleted_at', null)
@@ -141,7 +142,6 @@ export async function GET() {
       return NextResponse.json({ error: error.message }, { status: 500 })
     }
 
-    const admin = getAdminClient()
     const { data: customerLinks } = await admin
       .from('customer_users')
       .select('user_id,customer_id')
