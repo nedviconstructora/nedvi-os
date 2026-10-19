@@ -22,7 +22,6 @@ import {
   HardHat,
   Instagram,
   LayoutDashboard,
-  LogOut,
   Ruler,
   Search,
   ShieldCheck,
@@ -36,7 +35,6 @@ import {
 } from 'lucide-react'
 import type { ModulePermission } from '@/config/roles'
 import {
-  clearAccessSession,
   type AccessSession,
 } from '@/features/access/services/accessStorage'
 
@@ -178,12 +176,6 @@ export function Sidebar({
       visibleNavigationGroups.map((group) => [group.label, group.label === activeGroupLabel]),
     ),
   )
-
-  function handleLogout() {
-    clearAccessSession()
-    onCloseMobile()
-    router.replace('/login')
-  }
 
   const primaryItemClasses = (active: boolean) =>
     `group relative flex h-11 w-full items-center gap-3 rounded-xl border px-3 text-left text-[13px] font-medium text-white backdrop-blur-md transition duration-200 ${
@@ -372,18 +364,6 @@ export function Sidebar({
           </div>
         </div>
       </nav>
-
-      <div className="border-t border-white/10 p-3">
-        <button
-          type="button"
-          onClick={handleLogout}
-          title={collapsed ? 'Cerrar sesión' : undefined}
-          className={`mt-1 flex h-10 w-full items-center gap-3 rounded-xl px-2 text-left text-xs font-semibold text-white/75 transition hover:bg-white/10 hover:text-white ${collapsed ? 'lg:justify-center lg:gap-0 lg:px-0' : ''}`}
-        >
-          <LogOut size={17} strokeWidth={1.8} className="shrink-0" />
-          <span className={`${collapsed ? 'lg:hidden' : ''}`}>Cerrar sesión</span>
-        </button>
-      </div>
 
       <button
         type="button"
