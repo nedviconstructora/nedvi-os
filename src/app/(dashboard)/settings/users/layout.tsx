@@ -8,7 +8,7 @@ import { PasswordRecoveryCenter } from '@/features/access/components/PasswordRec
 import { PermissionsCenter } from '@/features/access/components/PermissionsCenter'
 
 type DbRole = 'developer' | 'gerente_comercial' | 'gerente_administrativo' | 'gerente_operativo' | 'supervisor_obra' | 'supervisor_administrativo' | 'administracion' | 'obra' | 'contabilidad' | 'cliente'
-type UiRole = 'DEVELOPER' | 'Gerente Comercial' | 'Gerente Administrativo' | 'Gerente Operativo' | 'Supervisor de Obra' | 'Supervisor Administrativo' | 'Administración' | 'Supervisor' | 'Contabilidad' | 'Cliente'
+type UiRole = 'DEVELOPER' | 'Gerente Comercial' | 'Gerente Administrativo' | 'Gerente Operativo' | 'Supervisor de Obra' | 'Supervisor Administrativo' | 'RH' | 'Administración' | 'Supervisor' | 'Contabilidad' | 'Cliente'
 type RoleUser = { id:string; name:string; email:string; role:DbRole; active:boolean; source:'principal'|'authorized' }
 const ROLE_OPTIONS: Array<{value:DbRole;label:string;description:string}> = [
  {value:'developer',label:'DEVELOPER',description:'Cuenta técnica principal protegida.'},
