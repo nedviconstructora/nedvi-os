@@ -71,8 +71,8 @@ function databaseRole(value: unknown) {
     return 'administracion'
   }
   if (['developer','gerente_comercial','gerente_administrativo','gerente_operativo','supervisor_obra','supervisor_administrativo'].includes(normalized)) return normalized
-  if (normalized === 'supervisor de obra') return 'supervisor_obra'
-  if (normalized === 'supervisor administrativo') return 'supervisor_administrativo'
+  if (normalized === 'supervisor de obra' || normalized === 'supervisor') return 'supervisor_obra'
+  if (normalized === 'supervisor administrativo' || normalized === 'rh') return 'supervisor_administrativo'
   if (normalized === 'gerente comercial') return 'gerente_comercial'
   if (normalized === 'gerente administrativo') return 'gerente_administrativo'
   if (normalized === 'gerente operativo') return 'gerente_operativo'
@@ -93,8 +93,8 @@ function roleLabel(role: string) {
   if (role === 'gerente_comercial') return 'Gerente Comercial'
   if (role === 'gerente_administrativo') return 'Gerente Administrativo'
   if (role === 'gerente_operativo') return 'Gerente Operativo'
-  if (role === 'supervisor_obra') return 'Supervisor de Obra'
-  if (role === 'supervisor_administrativo') return 'Supervisor Administrativo'
+  if (role === 'supervisor_obra') return 'Supervisor'
+  if (role === 'supervisor_administrativo') return 'RH'
   if (role === 'administracion') return 'Administración'
   if (role === 'obra') return 'Supervisor'
   if (role === 'contabilidad') return 'Contabilidad'
