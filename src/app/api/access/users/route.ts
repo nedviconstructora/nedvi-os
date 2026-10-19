@@ -4,6 +4,12 @@ import { createClient as createServerClient } from '@/utils/supabase/server'
 import type { ModulePermission } from '@/config/roles'
 
 const DEFAULT_PERMISSIONS: Record<string, ModulePermission[]> = {
+  developer: ['dashboard','commercial','projects','purchasing','operations','agenda','time-clock','human-resources','finance','indicators','settings','coral'],
+  gerente_comercial: ['dashboard','commercial','projects','purchasing','operations','agenda','time-clock','human-resources','finance','indicators','settings','coral'],
+  gerente_administrativo: ['dashboard','commercial','projects','purchasing','operations','agenda','time-clock','human-resources','finance','indicators','settings','coral'],
+  gerente_operativo: ['dashboard','commercial','projects','purchasing','operations','agenda','time-clock','human-resources','finance','indicators','settings','coral'],
+  supervisor_obra: ['dashboard','commercial','projects','operations','agenda','time-clock','indicators','coral'],
+  supervisor_administrativo: ['dashboard'],
   administracion: [
     'dashboard',
     'commercial',
@@ -64,6 +70,12 @@ function databaseRole(value: unknown) {
   if (normalized === 'administracion' || normalized === 'administrador' || normalized === 'admin') {
     return 'administracion'
   }
+  if (['developer','gerente_comercial','gerente_administrativo','gerente_operativo','supervisor_obra','supervisor_administrativo'].includes(normalized)) return normalized
+  if (normalized === 'supervisor de obra') return 'supervisor_obra'
+  if (normalized === 'supervisor administrativo') return 'supervisor_administrativo'
+  if (normalized === 'gerente comercial') return 'gerente_comercial'
+  if (normalized === 'gerente administrativo') return 'gerente_administrativo'
+  if (normalized === 'gerente operativo') return 'gerente_operativo'
   if (normalized === 'supervisor' || normalized === 'obra') return 'obra'
   if (normalized === 'contabilidad') return 'contabilidad'
   return 'cliente'
@@ -77,6 +89,12 @@ function temporaryPassword() {
 }
 
 function roleLabel(role: string) {
+  if (role === 'developer') return 'DEVELOPER'
+  if (role === 'gerente_comercial') return 'Gerente Comercial'
+  if (role === 'gerente_administrativo') return 'Gerente Administrativo'
+  if (role === 'gerente_operativo') return 'Gerente Operativo'
+  if (role === 'supervisor_obra') return 'Supervisor de Obra'
+  if (role === 'supervisor_administrativo') return 'Supervisor Administrativo'
   if (role === 'administracion') return 'Administración'
   if (role === 'obra') return 'Supervisor'
   if (role === 'contabilidad') return 'Contabilidad'
@@ -106,7 +124,7 @@ export async function GET() {
       return NextResponse.json({ error: profileError.message }, { status: 500 })
     }
 
-    if (!currentProfile?.active || normalizeRole(currentProfile.role) !== 'administracion') {
+    if (!currentProfile?.active || !['developer','administracion'].includes(normalizeRole(currentProfile.role))) {
       return NextResponse.json(
         { error: 'Solo Administración puede consultar usuarios.' },
         { status: 403 },
@@ -419,6 +437,11 @@ export async function PATCH(request: Request) {
 
     const admin = getAdminClient()
 
+    const { data: protectedTarget } = await admin.from('profiles').select('role').eq('id',userId).maybeSingle()
+    if (!protectedTarget) return NextResponse.json({error:'Usuario no encontrado.'},{status:404})
+    if (normalizeRole(protectedTarget.role) === 'developer' && (body.role || typeof body.active === 'boolean')) return NextResponse.json({error:'La cuenta DEVELOPER principal está protegida.'},{status:403})
+    if (body.role && databaseRole(body.role) === 'developer') return NextResponse.json({error:'No se puede asignar DEVELOPER desde esta pantalla.'},{status:403})
+
     if (typeof body.phone === 'string' || typeof body.name === 'string' || typeof body.position === 'string') {
       const phone = body.phone?.trim() ?? ''
       const name = body.name?.trim() ?? ''
@@ -436,13 +459,7 @@ export async function PATCH(request: Request) {
 
     if (body.role) {
       const role = databaseRole(body.role)
-      const permissions =
-        role === 'administracion'
-          ? DEFAULT_PERMISSIONS.administracion
-          : role === 'contabilidad' ? DEFAULT_PERMISSIONS.contabilidad
-          : Array.isArray(body.permissions)
-            ? body.permissions
-            : DEFAULT_PERMISSIONS[role] ?? []
+      const permissions = DEFAULT_PERMISSIONS[role] ?? []
 
       const { data: profile, error: profileError } = await admin
         .from('profiles')
