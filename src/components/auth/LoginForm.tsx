@@ -11,7 +11,7 @@ import {
 import type { AppRole, ModulePermission } from '@/config/roles'
 import { createClient } from '@/lib/supabase/client'
 
-type NedviRole = 'developer' | 'administracion' | 'obra' | 'contabilidad' | 'cliente'
+type NedviRole = 'developer' | 'gerente_comercial' | 'gerente_administrativo' | 'gerente_operativo' | 'supervisor_obra' | 'supervisor_administrativo' | 'administracion' | 'obra' | 'contabilidad' | 'cliente'
 
 type Profile = {
   id: string
@@ -41,6 +41,11 @@ const VALID_PERMISSIONS: ModulePermission[] = [
 
 function toAppRole(role: NedviRole): AppRole {
   if(role === 'developer') return 'DEVELOPER'
+  if(role === 'gerente_comercial') return 'Gerente Comercial'
+  if(role === 'gerente_administrativo') return 'Gerente Administrativo'
+  if(role === 'gerente_operativo') return 'Gerente Operativo'
+  if(role === 'supervisor_obra') return 'Supervisor de Obra'
+  if(role === 'supervisor_administrativo') return 'Supervisor Administrativo'
   if (role === 'administracion') return 'Administración'
   if (role === 'obra') return 'Supervisor'
   if (role === 'contabilidad') return 'Contabilidad'
@@ -122,7 +127,7 @@ export function LoginForm() {
       const customPermissions = readCustomPermissions(data.user.user_metadata?.permissions)
       const basePermissions = profilePermissions ?? customPermissions ?? defaultPermissionsForRole(appRole)
       const permissions =
-        appRole === 'DEVELOPER' ? defaultPermissionsForRole('DEVELOPER') : appRole === 'Contabilidad' ? defaultPermissionsForRole('Contabilidad') : appRole === 'Cliente'
+        appRole === 'DEVELOPER' || appRole.startsWith('Gerente ') || appRole === 'Supervisor de Obra' || appRole === 'Supervisor Administrativo' ? defaultPermissionsForRole(appRole) : appRole === 'Contabilidad' ? defaultPermissionsForRole('Contabilidad') : appRole === 'Cliente'
           ? Array.from(new Set<ModulePermission>([...basePermissions, 'client-portal']))
           : basePermissions
 
