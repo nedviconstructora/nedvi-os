@@ -22,7 +22,7 @@ function normalizeRole(value: unknown) {
 }
 
 function canManageClientPortal(role: unknown) {
-  return ['administracion', 'administrador', 'admin', 'obra', 'supervisor'].includes(normalizeRole(role))
+  return ['developer', 'gerente_operativo', 'gerente_comercial', 'gerente_administrativo', 'administracion', 'administrador', 'admin', 'supervisor_obra', 'obra', 'supervisor'].includes(normalizeRole(role))
 }
 
 async function requirePortalManager() {
