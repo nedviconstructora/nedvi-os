@@ -338,7 +338,7 @@ export function Header({ onOpenMenu, isDark, onToggleTheme, showCompanyLogo = fa
           className="rounded-lg p-2 text-white/75 transition hover:bg-white/10 hover:text-white lg:hidden"
           aria-label="Abrir navegación"
         >
-          <Menu size={20} strokeWidth={1.8} />
+          <Menu size={23} strokeWidth={1.8} />
         </button>
 
         <div className="flex items-center gap-2.5 lg:hidden">
@@ -349,7 +349,7 @@ export function Header({ onOpenMenu, isDark, onToggleTheme, showCompanyLogo = fa
         </div>
 
         <div className="relative hidden w-[min(360px,32vw)] md:block">
-          <Search className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 text-white/55" size={16} strokeWidth={1.8} />
+          <Search className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 text-white/55" size={19} strokeWidth={1.8} />
           <input
             type="search"
             placeholder="Buscar en NEDVI OS..."
@@ -380,7 +380,7 @@ export function Header({ onOpenMenu, isDark, onToggleTheme, showCompanyLogo = fa
           aria-pressed={isDark}
           title={isDark ? 'Tema claro' : 'Tema oscuro'}
         >
-          {isDark ? <Sun size={18} strokeWidth={1.8} /> : <Moon size={18} strokeWidth={1.8} />}
+          {isDark ? <Sun size={23} strokeWidth={1.8} /> : <Moon size={23} strokeWidth={1.8} />}
         </button>
 
         <button
@@ -392,7 +392,7 @@ export function Header({ onOpenMenu, isDark, onToggleTheme, showCompanyLogo = fa
           title={refreshing ? 'Actualizando...' : 'Actualizar información'}
         >
           <RefreshCw
-            size={18}
+            size={23}
             strokeWidth={1.8}
             className={refreshing ? 'animate-spin' : undefined}
           />
@@ -413,7 +413,7 @@ export function Header({ onOpenMenu, isDark, onToggleTheme, showCompanyLogo = fa
             aria-expanded={notificationsOpen}
             title="Notificaciones"
           >
-            <Bell size={18} strokeWidth={1.8} />
+            <Bell size={23} strokeWidth={1.8} />
             {notificationCount > 0 ? (
               <span className="absolute -right-0.5 -top-0.5 flex min-h-4 min-w-4 items-center justify-center rounded-full bg-red-500 px-1 text-[9px] font-bold leading-none text-white ring-2 ring-[var(--surface)]">
                 {notificationCount > 9 ? '9+' : notificationCount}
@@ -435,7 +435,7 @@ export function Header({ onOpenMenu, isDark, onToggleTheme, showCompanyLogo = fa
                   </p>
                 </div>
                 <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-[#5496CC]/10 text-[#5496CC]">
-                  <BellRing size={16} />
+                  <BellRing size={19} />
                 </span>
               </div>
 
@@ -619,7 +619,7 @@ export function Header({ onOpenMenu, isDark, onToggleTheme, showCompanyLogo = fa
         <button type="button" onClick={() => { clearAccessSession(); router.replace('/login') }}
           className="ml-1 inline-flex h-10 items-center gap-2 rounded-lg border border-white/15 px-3 text-xs font-semibold text-white/85 transition hover:border-white/25 hover:bg-white/10 hover:text-white"
           aria-label="Cerrar sesión" title="Cerrar sesión">
-          <LogOut size={16} strokeWidth={1.8} />
+          <LogOut size={20} strokeWidth={1.8} />
           <span className="hidden lg:inline">Cerrar sesión</span>
         </button>
       </div>
