@@ -1,7 +1,7 @@
 import { createClient as createAdminClient } from '@supabase/supabase-js'
 import { createClient as createServerClient } from '@/utils/supabase/server'
 
-const roles = ['developer','administracion','administrador','admin','obra','supervisor','contabilidad']
+const roles = ['developer','gerente_comercial','gerente_administrativo','gerente_operativo','administracion','administrador','admin','obra','supervisor','contabilidad']
 const admins = ['developer','administracion','administrador','admin']
 
 export async function getTimeClockContext() {
