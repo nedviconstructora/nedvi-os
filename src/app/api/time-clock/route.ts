@@ -17,8 +17,11 @@ export async function GET() {
       console.error('Time clock DB read failed', {code:error.code,message:error.message})
       return NextResponse.json({error:'No se pudieron consultar las asistencias en Supabase.',code:error.code || 'DB_READ_ERROR'},{status:500})
     }
+    const {data:adjustments,error:adjustmentError}=await ctx.admin.from('time_clock_adjustments').select('entry_id,adjusted_at,original_at').in('entry_id',(data||[]).map(x=>x.id).length?(data||[]).map(x=>x.id):['00000000-0000-0000-0000-000000000000'])
+    if(adjustmentError)throw adjustmentError
+    const adjustedById=new Map((adjustments||[]).map(a=>[a.entry_id,a]))
     const entries = (data ?? []).map(item => ({
-      id:item.id,userId:item.user_id,name:item.employee_name,type:item.event_type,at:item.occurred_at,
+      id:item.id,userId:item.user_id,name:item.employee_name,type:item.event_type,at:adjustedById.get(item.id)?.adjusted_at||item.occurred_at,originalAt:adjustedById.get(item.id)?.original_at||null,
       // Resolve the private photo only when opened, so backgrounded apps cannot keep expired links.
       photoUrl:item.photo_path ? `/api/time-clock/photo?id=${encodeURIComponent(item.id)}` : null,
       latitude:item.latitude,longitude:item.longitude,accuracy:item.location_accuracy_m,
