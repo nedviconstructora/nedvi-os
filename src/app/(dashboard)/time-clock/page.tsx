@@ -8,10 +8,11 @@ import { downloadClockWorkbook } from '@/features/time-clock/services/exportXlsx
 
 type ClockEntry = { id:string; userId:string; name:string; type:'entrada'|'salida'; at:string; photoUrl:string|null; latitude:number|null; longitude:number|null; accuracy:number|null }
 type ExitReview={id:string;employee_name:string;entry_at:string|null;requested_exit_time:string;reason:string;submitted_at:string;status:string;has_photo:boolean;reviewed_at:string|null}
-type Payload = {entries:ClockEntry[]; me:string; canViewAll:boolean; canDelete:boolean; canClock:boolean; error?:string}
+type Payload = {entries:ClockEntry[]; me:string; canViewAll:boolean; canDelete:boolean; canClock:boolean; resolvedExitEntryIds:string[]; error?:string}
 
 export default function TimeClockPage() {
   const [entries,setEntries] = useState<ClockEntry[]>([])
+  const [resolvedExitEntryIds,setResolvedExitEntryIds]=useState<string[]>([])
   const [me,setMe] = useState('')
   const [canViewAll,setCanViewAll] = useState(false)
   const [canDelete,setCanDelete] = useState(false)
@@ -40,6 +41,7 @@ export default function TimeClockPage() {
       const body = await res.json() as Payload
       if (!res.ok) throw new Error([body.error || 'No fue posible cargar asistencias.', (body as Payload & {code?:string}).code ? 'Código: '+(body as Payload & {code?:string}).code : null].filter(Boolean).join(' '))
       setEntries(body.entries)
+      setResolvedExitEntryIds(body.resolvedExitEntryIds||[])
       setMe(body.me)
       setCanViewAll(body.canViewAll)
       setCanDelete(body.canDelete)
@@ -66,6 +68,7 @@ export default function TimeClockPage() {
       const result=await response.json()
       if(!response.ok)throw new Error(result.error||'No se pudo revisar la solicitud.')
       await loadExitReviews()
+      await refresh()
     }catch(err){setReviewsError(err instanceof Error?err.message:'Error al revisar')}
     finally{setReviewBusy(null)}
   }
@@ -73,7 +76,7 @@ export default function TimeClockPage() {
   useEffect(() => {
     void refresh()
     const refreshVisible = () => { if (document.visibilityState === 'visible') {setNow(new Date());void refresh()} }
-    const interval = window.setInterval(refreshVisible,30000)
+    const interval = window.setInterval(()=>{if(document.visibilityState==='visible'){setNow(new Date());void refresh()}},30000)
     window.addEventListener('focus',refreshVisible)
     document.addEventListener('visibilitychange',refreshVisible)
     setNow(new Date())
@@ -96,7 +99,7 @@ export default function TimeClockPage() {
   const dayOf = (value:string) => new Intl.DateTimeFormat('sv-SE',{timeZone:'America/Tijuana',year:'numeric',month:'2-digit',day:'2-digit'}).format(new Date(value))
   const today = now ? dayOf(now.toISOString()) : ''
   const current = mine.find(e => dayOf(e.at) === today)
-  const pendingPrevious = mine.filter(e => dayOf(e.at) !== today).filter(e => {const sameDay=mine.filter(v=>dayOf(v.at)===dayOf(e.at)).sort((a,b)=>b.at.localeCompare(a.at));return sameDay[0]?.id===e.id && e.type==='entrada'})
+  const pendingPrevious = mine.filter(e => dayOf(e.at) !== today).filter(e => {const sameDay=mine.filter(v=>dayOf(v.at)===dayOf(e.at)).sort((a,b)=>b.at.localeCompare(a.at));return sameDay[0]?.id===e.id && e.type==='entrada' && !resolvedExitEntryIds.includes(e.id)})
   const hasEntry = current?.type === 'entrada'
   const nextType = hasEntry ? 'salida' : 'entrada'
   const fmt = (date:string) => new Intl.DateTimeFormat('es-MX',{dateStyle:'medium',timeStyle:'short'}).format(new Date(date))
