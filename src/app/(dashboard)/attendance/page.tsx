@@ -36,6 +36,9 @@ export default function AttendancePage() {
   const [checkOut, setCheckOut] = useState('')
   const [supervisorCrew, setSupervisorCrew] = useState('')
   const [supervisorDate, setSupervisorDate] = useState(new Intl.DateTimeFormat('en-CA',{timeZone:'America/Tijuana',year:'numeric',month:'2-digit',day:'2-digit'}).format(new Date()))
+  const [workerQuery,setWorkerQuery]=useState('')
+  const [workerFilter,setWorkerFilter]=useState<'Todos'|'Pendientes'|'Presentes'|'Ausentes'>('Todos')
+  const [selectedWorkerId,setSelectedWorkerId]=useState('')
   const [workers, setWorkers] = useState<Array<{id:string;full_name:string;position:string;entry_time:string}>>([])
   const [crewEntries,setCrewEntries] = useState<Array<{worker_id:string;status:string;check_in:string|null;check_out:string|null;entry_photo_url:string|null;exit_photo_url:string|null}>>([])
   const [photos,setPhotos] = useState<Record<string,File>>({})
@@ -122,6 +125,17 @@ export default function AttendancePage() {
   }
   useEffect(()=>{const refresh=()=>setSyncTick(t=>t+1);window.addEventListener('focus',refresh);const interval=window.setInterval(()=>{if(document.visibilityState==='visible')refresh()},15000);return ()=>{window.removeEventListener('focus',refresh);window.clearInterval(interval)}},[])
   useEffect(()=>{void refreshSharedCrews();if(supervisorCrew)void reloadSupervisor(supervisorCrew,supervisorDate)},[syncTick,supervisorCrew,supervisorDate])
+  const crewRecordByWorker=useMemo(()=>new Map(crewEntries.map(entry=>[entry.worker_id,entry])),[crewEntries])
+  const counts=useMemo(()=>({presentes:workers.filter(worker=>!!crewRecordByWorker.get(worker.id)?.check_in).length,ausentes:workers.filter(worker=>crewRecordByWorker.get(worker.id)?.status==='Ausente').length}),[workers,crewRecordByWorker])
+  const listedWorkers=useMemo(()=>workers.filter(worker=>{
+    const entry=crewRecordByWorker.get(worker.id)
+    const state=entry?.status==='Ausente'?'Ausentes':entry?.check_in?'Presentes':'Pendientes'
+    return (workerFilter==='Todos'||workerFilter===state)&&(worker.full_name+' '+worker.position).toLocaleLowerCase('es').includes(workerQuery.trim().toLocaleLowerCase('es'))
+  }),[workers,crewRecordByWorker,workerFilter,workerQuery])
+  const activeWorker=listedWorkers.find(w=>w.id===selectedWorkerId)??listedWorkers[0]
+  const activeRecord=activeWorker?crewRecordByWorker.get(activeWorker.id):undefined
+  const fmtCrewTime=(value:string|null|undefined)=>value?new Intl.DateTimeFormat('es-MX',{timeZone:'America/Tijuana',hour:'2-digit',minute:'2-digit'}).format(new Date(value)):'—'
+  const workerBusy=!!supervisorBusy||supervisorLoading
   const uploadExcel = async (file:File|undefined) => {
     if(!file||!supervisorCrew)return
     setExcelBusy(true);setSupervisorError('');setExcelNotice('')
@@ -282,35 +296,45 @@ export default function AttendancePage() {
           {supervisorError && <p role="alert" className="rounded-lg bg-red-500/10 p-3 text-sm text-red-500">{supervisorError}</p>}
           {supervisorLoading && <p className="text-sm text-[var(--muted)]">Cargando integrantes…</p>}
           {supervisorCrew && !supervisorLoading && workers.length===0 && !supervisorError && <p className="text-sm text-[var(--muted)]">No hay trabajadores asociados a esta cuadrilla en Supabase.</p>}
-          {workers.length>0 && <div className="space-y-3 md:hidden">{workers.map(w=>{
-            const record=crewEntries.find(e=>e.worker_id===w.id)
-            const time=(v:string|null|undefined)=>v?new Intl.DateTimeFormat('es-MX',{timeZone:'America/Tijuana',hour:'2-digit',minute:'2-digit'}).format(new Date(v)):'—'
-            const busy=!!supervisorBusy || supervisorLoading
-            return <article key={w.id} className="min-w-0 space-y-3 rounded-xl border border-[var(--border)] bg-[var(--background)] p-3">
-              <div className="flex min-w-0 items-start justify-between gap-2">
-                <div className="min-w-0"><h3 className="break-words text-sm font-semibold">{w.full_name}</h3><p className="text-xs text-[var(--muted)]">{w.position}</p></div>
-                <span className="shrink-0 rounded-full bg-[var(--surface)] px-2 py-1 text-[11px] font-medium">{record?.status||'Pendiente'}</span>
+          {workers.length>0 && <div className="space-y-4">
+            <div className="grid grid-cols-2 gap-2 lg:grid-cols-4">
+              {([{label:'Presentes',count:counts.presentes,style:'text-emerald-500'},{label:'Pendientes',count:workers.length-counts.presentes-counts.ausentes,style:'text-amber-500'},{label:'Ausentes',count:counts.ausentes,style:'text-red-500'},{label:'Total trabajadores',count:workers.length,style:'text-[#5496CC]'}]).map(item=><div key={item.label} className="rounded-xl border border-[var(--border)] bg-[var(--background)] p-3"><strong className={`text-2xl ${item.style}`}>{item.count}</strong><p className="text-xs text-[var(--muted)]">{item.label}</p></div>)}
+            </div>
+            <div className="grid min-w-0 gap-4 xl:grid-cols-[minmax(0,1.4fr)_minmax(340px,1fr)]">
+              <div className="min-w-0 space-y-3">
+                <div className="relative"><Search size={17} className="absolute left-3 top-1/2 -translate-y-1/2 text-[var(--muted)]"/><input value={workerQuery} onChange={e=>setWorkerQuery(e.target.value)} placeholder="Buscar trabajador o puesto..." className="w-full rounded-xl border border-[var(--border)] bg-[var(--background)] py-3 pl-10 pr-3 text-sm"/></div>
+                <div className="flex flex-wrap gap-2">{(['Todos','Pendientes','Presentes','Ausentes'] as const).map(option=><button key={option} type="button" onClick={()=>setWorkerFilter(option)} className={`rounded-full border px-3 py-2 text-xs font-semibold ${workerFilter===option?'border-[#317FC1] bg-[#317FC1] text-white':'border-[var(--border)]'}`}>{option}</button>)}</div>
+                <div className="max-h-[520px] overflow-auto rounded-xl border border-[var(--border)]">
+                  {listedWorkers.length===0&&<p className="p-5 text-sm text-[var(--muted)]">No hay trabajadores para este filtro.</p>}
+                  {listedWorkers.map(worker=>{
+                    const entry=crewRecordByWorker.get(worker.id)
+                    const label=entry?.status==='Ausente'?'Ausente':entry?.check_in?'Presente':'Pendiente'
+                    return <button key={worker.id} type="button" onClick={()=>setSelectedWorkerId(worker.id)} className={`flex w-full items-center justify-between gap-3 border-b border-[var(--border)] p-3 text-left last:border-b-0 hover:bg-[#317FC1]/10 ${activeWorker?.id===worker.id?'bg-[#317FC1]/15':''}`}>
+                      <div className="min-w-0"><p className="truncate text-sm font-semibold">{worker.full_name}</p><p className="truncate text-xs text-[var(--muted)]">{worker.position||'Sin puesto'}</p></div>
+                      <div className="flex shrink-0 items-center gap-3"><span className={`text-xs font-semibold ${label==='Presente'?'text-emerald-500':label==='Ausente'?'text-red-500':'text-amber-500'}`}>{label}</span><span className="hidden text-xs text-[var(--muted)] sm:inline">{fmtCrewTime(entry?.check_in)}</span><span aria-hidden="true" className="text-[#5496CC]">›</span></div>
+                    </button>
+                  })}
+                </div>
+                <p className="text-xs text-[var(--muted)]">Mostrando {listedWorkers.length} de {workers.length} trabajadores. Selecciona uno para registrar su asistencia.</p>
               </div>
-              <div className="grid grid-cols-2 gap-2 rounded-lg bg-[var(--surface)] p-2 text-xs">
-                <div><span className="text-[var(--muted)]">Entrada</span><p className="font-semibold">{time(record?.check_in)}</p></div>
-                <div><span className="text-[var(--muted)]">Salida</span><p className="font-semibold">{time(record?.check_out)}</p></div>
+              <div className="min-w-0 space-y-3 rounded-xl border border-[var(--border)] bg-[var(--background)] p-4">
+                {activeWorker?<><div className="flex items-start justify-between gap-2"><div><h3 className="font-bold">{activeWorker.full_name}</h3><p className="text-xs text-[var(--muted)]">{activeWorker.position||'Sin puesto'}</p></div><span className="rounded-full border border-[var(--border)] px-2 py-1 text-xs">{activeRecord?.status||'Pendiente'}</span></div>
+                  <div className="grid grid-cols-2 gap-2 rounded-xl bg-[var(--surface)] p-3 text-sm"><div><p className="text-xs text-[var(--muted)]">Entrada</p><strong>{fmtCrewTime(activeRecord?.check_in)}</strong></div><div><p className="text-xs text-[var(--muted)]">Salida</p><strong>{fmtCrewTime(activeRecord?.check_out)}</strong></div></div>
+                  <button type="button" onClick={()=>setCameraWorker(activeWorker.id)} className="w-full rounded-lg border border-[var(--border)] p-3 text-sm font-semibold">📷 {photos[activeWorker.id]?'Foto lista · Volver a tomar':'Abrir cámara y tomar foto'}</button>
+                  {canUploadPhoto&&<label className="block cursor-pointer rounded-lg border border-[var(--border)] p-3 text-center text-sm font-semibold">Cargar foto (Administración)<input type="file" accept="image/jpeg,image/png,image/webp" className="sr-only" onChange={e=>{selectWorkerPhoto(activeWorker.id,e.target.files?.[0]);e.target.value=''}}/></label>}
+                  {photos[activeWorker.id]&&<p className="text-center text-xs text-emerald-500">Fotografía lista para registrar</p>}
+                  <div className="grid grid-cols-3 gap-2">
+                    <button type="button" disabled={workerBusy||!photos[activeWorker.id]||!!activeRecord?.check_in||activeRecord?.status==='Ausente'} onClick={()=>void registerSupervisor(activeWorker.id,'entrada')} className="rounded-lg bg-[#317FC1] p-3 text-xs font-semibold text-white disabled:opacity-40"><LogIn size={15} className="inline"/> Entrada</button>
+                    <button type="button" disabled={workerBusy||!photos[activeWorker.id]||!activeRecord?.check_in||!!activeRecord?.check_out} onClick={()=>void registerSupervisor(activeWorker.id,'salida')} className="rounded-lg bg-emerald-600 p-3 text-xs font-semibold text-white disabled:opacity-40"><LogOut size={15} className="inline"/> Salida</button>
+                    <button type="button" disabled={workerBusy||!!activeRecord?.check_in||activeRecord?.status==='Ausente'} onClick={()=>void registerSupervisor(activeWorker.id,'ausente')} className="rounded-lg border border-red-500/50 p-3 text-xs font-semibold text-red-500 disabled:opacity-40">Ausente</button>
+                  </div>
+                  {(activeRecord?.entry_photo_url||activeRecord?.exit_photo_url)&&<div className="flex flex-wrap gap-3 text-xs">{activeRecord.entry_photo_url&&<a href={activeRecord.entry_photo_url} target="_blank" rel="noreferrer" className="text-[#5496CC] underline">Ver foto entrada</a>}{activeRecord.exit_photo_url&&<a href={activeRecord.exit_photo_url} target="_blank" rel="noreferrer" className="text-[#5496CC] underline">Ver foto salida</a>}</div>}
+                  {(activeRecord?.check_in||activeRecord?.check_out||activeRecord?.status==='Ausente')&&<button type="button" disabled={workerBusy} onClick={()=>void resetAttendance(activeWorker.id,activeWorker.full_name)} className="w-full rounded-lg border border-amber-500/50 p-2 text-xs font-semibold text-amber-500 disabled:opacity-40">Restablecer checada (autorizados)</button>}
+                  {listedWorkers.length>1&&<button type="button" onClick={()=>setSelectedWorkerId(listedWorkers[(listedWorkers.findIndex(w=>w.id===activeWorker.id)+1)%listedWorkers.length].id)} className="w-full rounded-lg border border-[var(--border)] p-2 text-sm">Siguiente trabajador →</button>}
+                </>:<p className="text-sm text-[var(--muted)]">Selecciona un trabajador para revisar sus checadas.</p>}
               </div>
-              <button type="button" onClick={()=>setCameraWorker(w.id)} className="flex min-h-11 w-full items-center justify-center rounded-lg border border-[var(--border)] px-3 py-2 text-xs font-semibold">📷 {photos[w.id]?'Foto lista · Volver a tomar':'Abrir cámara y tomar foto'}</button>{canUploadPhoto && <label className="flex min-h-11 cursor-pointer items-center justify-center rounded-lg border border-[var(--border)] px-3 py-2 text-xs font-semibold">Cargar foto del trabajador<input type="file" accept="image/jpeg,image/png,image/webp" className="sr-only" onChange={e=>{selectWorkerPhoto(w.id,e.target.files?.[0]);e.target.value=""}}/></label>}<p className="text-xs text-[var(--muted)]">Expediente seleccionado: {w.full_name} · {w.position||"Puesto no registrado"}. La foto se asocia a este trabajador al confirmar.</p>
-              <div className="grid grid-cols-3 gap-2">
-                <button type="button" disabled={busy||!photos[w.id]||!!record?.check_in||record?.status==='Ausente'} onClick={()=>void registerSupervisor(w.id,'entrada')} className="min-h-11 rounded-lg bg-[#5496CC] px-1 text-xs font-semibold text-white disabled:opacity-40"><LogIn size={13} className="inline"/> Entrada</button>
-                <button type="button" disabled={busy||!photos[w.id]||!record?.check_in||!!record?.check_out} onClick={()=>void registerSupervisor(w.id,'salida')} className="min-h-11 rounded-lg bg-emerald-600 px-1 text-xs font-semibold text-white disabled:opacity-40"><LogOut size={13} className="inline"/> Salida</button>
-                <button type="button" disabled={busy||!!record?.check_in||record?.status==='Ausente'} onClick={()=>void registerSupervisor(w.id,'ausente')} className="min-h-11 rounded-lg border border-red-500/40 px-1 text-xs font-semibold text-red-500 disabled:opacity-40">Ausente</button>
-              </div>
-              {(record?.check_in||record?.check_out||record?.status==='Ausente')&&<button type="button" disabled={busy} onClick={()=>void resetAttendance(w.id,w.full_name)} className="min-h-11 w-full rounded-lg border border-amber-500/50 px-3 py-2 text-xs font-semibold text-amber-500 disabled:opacity-40">Restablecer checada</button>}
-              {(record?.entry_photo_url||record?.exit_photo_url)&&<div className="flex flex-wrap gap-3 text-xs">{record?.entry_photo_url&&<a className="text-[#5496CC] underline" target="_blank" rel="noreferrer" href={record.entry_photo_url}>Ver foto entrada</a>}{record?.exit_photo_url&&<a className="text-[#5496CC] underline" target="_blank" rel="noreferrer" href={record.exit_photo_url}>Ver foto salida</a>}</div>}
-            </article>
-          })}</div>}
-          {workers.length>0 && <div className="hidden overflow-x-auto md:block"><table className="w-full min-w-[780px] text-left text-sm"><thead><tr className="border-b border-[var(--border)] text-xs"><th className="p-3">Trabajador</th><th className="p-3">Estado</th><th className="p-3">Entrada</th><th className="p-3">Salida</th><th className="p-3">Evidencia fotográfica y registro</th></tr></thead><tbody>{workers.map(w=>{
-            const record=crewEntries.find(e=>e.worker_id===w.id)
-            const time=(v:string|null|undefined)=>v?new Intl.DateTimeFormat('es-MX',{timeZone:'America/Tijuana',hour:'2-digit',minute:'2-digit'}).format(new Date(v)):'—'
-            const busy=!!supervisorBusy || supervisorLoading
-            return <tr key={w.id} className="border-b border-[var(--border)]"><td className="p-3"><p className="font-semibold">{w.full_name}</p><p className="text-xs text-[var(--muted)]">{w.position}</p></td><td className="p-3">{record?.status||'Pendiente'}</td><td className="p-3">{time(record?.check_in)}</td><td className="p-3">{time(record?.check_out)}</td><td className="p-3"><div className="space-y-2"><button type="button" onClick={()=>setCameraWorker(w.id)} className="inline-flex min-h-10 items-center gap-2 rounded-lg border border-[var(--border)] px-3 py-2 text-xs">📷 {photos[w.id]?'Foto lista · Repetir':'Abrir cámara'}</button>{canUploadPhoto && <label className="ml-2 inline-flex min-h-10 cursor-pointer items-center rounded-lg border border-[var(--border)] px-3 py-2 text-xs">Cargar foto<input type="file" accept="image/jpeg,image/png,image/webp" className="sr-only" onChange={e=>{selectWorkerPhoto(w.id,e.target.files?.[0]);e.target.value=""}}/></label>}<div className="flex flex-wrap gap-2"><button type="button" disabled={busy||!photos[w.id]||!!record?.check_in||record?.status==='Ausente'} onClick={()=>void registerSupervisor(w.id,'entrada')} className="rounded-lg bg-[#5496CC] px-3 py-2 text-xs font-semibold text-white disabled:opacity-40"><LogIn size={13} className="inline"/> Entrada</button><button type="button" disabled={busy||!photos[w.id]||!record?.check_in||!!record?.check_out} onClick={()=>void registerSupervisor(w.id,'salida')} className="rounded-lg bg-emerald-600 px-3 py-2 text-xs font-semibold text-white disabled:opacity-40"><LogOut size={13} className="inline"/> Salida</button><button type="button" disabled={busy||!!record?.check_in||record?.status==='Ausente'} onClick={()=>void registerSupervisor(w.id,'ausente')} className="rounded-lg border border-red-500/40 px-3 py-2 text-xs text-red-500 disabled:opacity-40">Ausente</button></div>{(record?.check_in||record?.check_out||record?.status==='Ausente')&&<button type="button" disabled={busy} onClick={()=>void resetAttendance(w.id,w.full_name)} className="rounded-lg border border-amber-500/50 px-3 py-2 text-xs font-semibold text-amber-500 disabled:opacity-40">Restablecer checada</button>}<div className="flex gap-3 text-xs">{record?.entry_photo_url&&<a className="text-[#5496CC] underline" target="_blank" rel="noreferrer" href={record.entry_photo_url}>Ver foto entrada</a>}{record?.exit_photo_url&&<a className="text-[#5496CC] underline" target="_blank" rel="noreferrer" href={record.exit_photo_url}>Ver foto salida</a>}</div></div></td></tr>
-          })}</tbody></table></div>}
+            </div>
+          </div>}
         </section>
 
         <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4"><Metric label="Registros de hoy" value={todayRecords.length.toString()} /><Metric label="Presentes" value={presentToday.toString()} /><Metric label="Retardos" value={lateToday.toString()} /><Metric label="Ausentes" value={absentToday.toString()} /></div>
