@@ -84,6 +84,25 @@ export async function POST(request:Request) {
  } catch(error){console.error('Crew attendance write failed',error);return NextResponse.json({error:'No se pudo registrar la asistencia.'},{status:500})}
 }
 
+export async function PATCH(request:Request) {
+ try {
+  const ctx=await context()
+  if(!ctx)return NextResponse.json({error:'No autorizado.'},{status:403})
+  const body=await request.json().catch(()=>null) as {workerId?:string;crewId?:string;date?:string;reason?:string}|null
+  const workerId=body?.workerId,crewId=body?.crewId,date=body?.date,reason=String(body?.reason||'').trim()
+  if(!validId(workerId)||!validId(crewId)||!validDate(date)||reason.length<12||reason.length>500)return NextResponse.json({error:'Indica el trabajador, fecha y motivo de al menos 12 caracteres.'},{status:400})
+  if(date!==localDay())return NextResponse.json({error:'Solo pueden restablecerse checadas de hoy. Para jornadas anteriores consulta a Administración.'},{status:403})
+  const {data:entry,error:readError}=await ctx.admin.from('crew_attendance').select('id,worker_id,crew_id,work_date,status,check_in,check_out,entry_photo_path,exit_photo_path').eq('worker_id',workerId).eq('crew_id',crewId).eq('work_date',date).maybeSingle()
+  if(readError)throw readError
+  if(!entry)return NextResponse.json({error:'No existe checada para este trabajador y fecha.'},{status:404})
+  const {error:auditError}=await ctx.admin.from('crew_attendance_reset_audit').insert({attendance_id:entry.id,worker_id:entry.worker_id,crew_id:entry.crew_id,work_date:entry.work_date,previous_status:entry.status,previous_check_in:entry.check_in,previous_check_out:entry.check_out,previous_entry_photo_path:entry.entry_photo_path,previous_exit_photo_path:entry.exit_photo_path,reason,reset_by:ctx.user.id})
+  if(auditError)throw auditError
+  const {error:updateError}=await ctx.admin.from('crew_attendance').update({status:'Pendiente',check_in:null,check_out:null,entry_photo_path:null,exit_photo_path:null,updated_at:new Date().toISOString(),recorded_by:ctx.user.id}).eq('id',entry.id)
+  if(updateError)throw updateError
+  return NextResponse.json({ok:true,message:'Checada restablecida; la evidencia anterior se conservó en la bitácora.'})
+ }catch(error){console.error('Crew attendance reset failed',error);return NextResponse.json({error:'No se pudo restablecer la checada.'},{status:500})}
+}
+
 export async function PUT(request:Request){
  try {
   const ctx=await context()
