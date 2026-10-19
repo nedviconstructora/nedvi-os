@@ -75,8 +75,10 @@ export default function AttendancePage() {
       setSupervisorError('Selecciona una fotografía JPG, PNG o WebP de máximo 5 MB.')
       return
     }
+    if(!canUploadPhoto){setSupervisorError('Solo Administración puede cargar imágenes. Usa la cámara.');return}
     setSupervisorError('')
     setPhotos(current=>({...current,[workerId]:file}))
+    setPhotoSources(current=>({...current,[workerId]:'upload'}))
   }
   const takeCameraPhoto=()=>{
     const video=cameraVideo.current
@@ -92,6 +94,7 @@ export default function AttendancePage() {
       const file=new File([blob],'asistencia-'+Date.now()+'.jpg',{type:'image/jpeg'})
       if(file.size>5*1024*1024){setCameraError('La fotografía no puede superar 5 MB.');return}
       setPhotos(current=>({...current,[cameraWorker]:file}))
+      setPhotoSources(current=>({...current,[cameraWorker]:'camera'}))
       setPhotoSources(current=>({...current,[cameraWorker]:'camera'}))
       setCameraWorker(null)
     },'image/jpeg',0.82)
