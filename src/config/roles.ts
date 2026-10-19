@@ -1,4 +1,4 @@
-export type AppRole = 'DEVELOPER' | 'Gerente Comercial' | 'Gerente Administrativo' | 'Gerente Operativo' | 'Supervisor de Obra' | 'Supervisor Administrativo' | 'Administración' | 'Supervisor' | 'Contabilidad' | 'Cliente'
+export type AppRole = 'DEVELOPER' | 'Gerente Comercial' | 'Gerente Administrativo' | 'Gerente Operativo' | 'Supervisor de Obra' | 'Supervisor Administrativo' | 'RH' | 'Administración' | 'Supervisor' | 'Contabilidad' | 'Cliente'
 
 export type ModulePermission =
   | 'dashboard'
@@ -25,7 +25,8 @@ export const ROLE_LABELS: Record<AppRole, string> = {
   'Supervisor de Obra': 'SUPERVISOR DE OBRA',
   'Supervisor Administrativo': 'SUPERVISOR ADMINISTRATIVO',
   Administración: 'ADMIN',
-  Supervisor: 'SUPERVISOR / OBRA',
+  Supervisor: 'SUPERVISOR',
+  RH: 'RH',
   Contabilidad: 'CONTABILIDAD',
   Cliente: 'CLIENTE',
 }
@@ -39,6 +40,7 @@ export const ROLE_PERMISSIONS: Record<AppRole, readonly ModulePermission[]> = {
   'Supervisor de Obra': ['dashboard','commercial','projects','operations','agenda','time-clock','indicators','coral'],
   // Bloqueado preventivamente hasta aplicar filtros de proyectos y lecturas en cada API.
   'Supervisor Administrativo': ['dashboard'],
+  RH: ['dashboard'],
   DEVELOPER: ['management-attendance','dashboard','commercial','projects','purchasing','operations','agenda','time-clock','human-resources','finance','indicators','settings','coral','developer-panel'],
   Administración: [
     'dashboard',
@@ -58,7 +60,6 @@ export const ROLE_PERMISSIONS: Record<AppRole, readonly ModulePermission[]> = {
     'dashboard',
     'commercial',
     'projects',
-    'purchasing',
     'operations',
     'agenda',
     'time-clock',
@@ -80,6 +81,7 @@ export const ROLE_DESCRIPTIONS: Record<AppRole, string> = {
     'Acceso total a NEDVI OS, incluidos usuarios y permisos, Recursos Humanos, nómina, finanzas y configuración administrativa.',
   Supervisor:
     'Acceso operativo amplio: clientes, oportunidades, levantamientos, cotizaciones, proyectos, documentos, compras, proveedores, obra, avances, reportes, asistencias, cuadrillas, agenda, indicadores y Coral AI. Sin acceso a Recursos Humanos, nómina, finanzas ni configuración de usuarios y permisos.',
+  RH: 'Acceso restringido hasta completar permisos de Recursos Humanos y proyectos autorizados.',
   Contabilidad: 'Acceso de solo lectura al historial del Checador y sus exportaciones. Sin permisos de edición.',
   Cliente:
     'Acceso exclusivo al Portal del Cliente para consultar únicamente sus proyectos y la información de avance autorizada por NEDVI.',
