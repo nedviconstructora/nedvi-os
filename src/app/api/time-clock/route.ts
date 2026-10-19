@@ -28,7 +28,7 @@ export async function GET() {
     }))
     const {data:resolved,error:resolutionError}=await ctx.admin.from('time_clock_exit_requests').select('entry_id,status').eq('user_id',ctx.user.id).eq('status','aprobada')
     if(resolutionError)throw resolutionError
-    return NextResponse.json({entries,resolvedExitEntryIds:(resolved||[]).map(x=>x.entry_id),me:ctx.user.id,canViewAll,canDelete:ctx.isAdmin,canClock:!ctx.isAccountant},{headers:{'Cache-Control':'no-store'}})
+    return NextResponse.json({entries,resolvedExitEntryIds:(resolved||[]).map(x=>x.entry_id),me:ctx.user.id,canViewAll,canDelete:ctx.isAdmin,canClock:!ctx.isAccountant,canUploadTestPhoto:String(ctx.profile.role)==='developer'},{headers:{'Cache-Control':'no-store'}})
   } catch (error) {
     console.error('Time clock list failed',error)
     return NextResponse.json({error:'No se pudo consultar el checador. Revisa la sesión o la configuración del servidor.',code:'HISTORY_ERROR'},{status:500})
@@ -43,6 +43,9 @@ export async function POST(request: Request) {
     const form = await request.formData()
     const type = form.get('type')
     const photo = form.get('photo')
+    const photoSource = String(form.get('photoSource') || 'camera')
+    if (!['camera','upload'].includes(photoSource)) return NextResponse.json({error:'Origen de fotografía inválido.'},{status:400})
+    if (photoSource === 'upload' && String(ctx.profile.role) !== 'developer') return NextResponse.json({error:'Solo DEVELOPER puede cargar imágenes de prueba.'},{status:403})
     const lat = Number(form.get('latitude'))
     const lon = Number(form.get('longitude'))
     const accuracy = Number(form.get('accuracy'))
