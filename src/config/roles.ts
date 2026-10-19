@@ -15,6 +15,7 @@ export type ModulePermission =
   | 'coral'
   | 'client-portal'
   | 'developer-panel'
+  | 'management-attendance'
 
 export const ROLE_LABELS: Record<AppRole, string> = {
   DEVELOPER: 'DEVELOPER',
@@ -29,7 +30,7 @@ export const ROLE_LABELS: Record<AppRole, string> = {
   Cliente: 'CLIENTE',
 }
 
-const MANAGEMENT_PERMISSIONS: readonly ModulePermission[] = ['dashboard','commercial','projects','purchasing','operations','agenda','time-clock','human-resources','finance','indicators','settings','coral']
+const MANAGEMENT_PERMISSIONS: readonly ModulePermission[] = ['management-attendance','dashboard','commercial','projects','purchasing','operations','agenda','time-clock','human-resources','finance','indicators','settings','coral']
 
 export const ROLE_PERMISSIONS: Record<AppRole, readonly ModulePermission[]> = {
   'Gerente Comercial': MANAGEMENT_PERMISSIONS,
@@ -38,7 +39,7 @@ export const ROLE_PERMISSIONS: Record<AppRole, readonly ModulePermission[]> = {
   'Supervisor de Obra': ['dashboard','commercial','projects','operations','agenda','time-clock','indicators','coral'],
   // Bloqueado preventivamente hasta aplicar filtros de proyectos y lecturas en cada API.
   'Supervisor Administrativo': ['dashboard'],
-  DEVELOPER: ['dashboard','commercial','projects','purchasing','operations','agenda','time-clock','human-resources','finance','indicators','settings','coral','developer-panel'],
+  DEVELOPER: ['management-attendance','dashboard','commercial','projects','purchasing','operations','agenda','time-clock','human-resources','finance','indicators','settings','coral','developer-panel'],
   Administración: [
     'dashboard',
     'commercial',
@@ -114,6 +115,7 @@ const ROUTE_PERMISSIONS: Array<{ prefix: string; permission: ModulePermission }>
   { prefix: '/hr-attendance', permission: 'human-resources' },
   { prefix: '/payroll', permission: 'human-resources' },
   { prefix: '/developer', permission: 'developer-panel' },
+  { prefix: '/management-attendance', permission: 'management-attendance' },
   { prefix: '/settings', permission: 'settings' },
 ]
 
