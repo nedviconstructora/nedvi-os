@@ -15,21 +15,20 @@ const ROLE_OPTIONS: Array<{value:DbRole;label:string;description:string}> = [
  {value:'gerente_comercial',label:'GERENTE COMERCIAL',description:'Acceso empresarial, sin herramientas exclusivas DEVELOPER.'},
  {value:'gerente_administrativo',label:'GERENTE ADMINISTRATIVO',description:'Acceso empresarial, sin herramientas exclusivas DEVELOPER.'},
  {value:'gerente_operativo',label:'GERENTE OPERATIVO',description:'Acceso empresarial, sin herramientas exclusivas DEVELOPER.'},
- {value:'supervisor_obra',label:'SUPERVISOR DE OBRA',description:'Clientes, cotizaciones, proyectos y operaciones.'},
- {value:'supervisor_administrativo',label:'SUPERVISOR ADMINISTRATIVO',description:'Acceso preventivamente restringido hasta completar la lectura por proyecto.'},
+ {value:'supervisor_obra',label:'SUPERVISOR',description:'Clientes, cotizaciones, proyectos y operaciones.'},
+ {value:'supervisor_administrativo',label:'RH',description:'Acceso preventivamente restringido hasta completar la lectura por proyecto.'},
  {value:'administracion',label:'ADMIN (ANTERIOR)',description:'Rol anterior de administración.'},
- {value:'obra',label:'SUPERVISOR / OBRA (ANTERIOR)',description:'Rol anterior de supervisor.'},
  {value:'contabilidad',label:'CONTABILIDAD',description:'Consulta de checadas.'},
  {value:'cliente',label:'CLIENTE',description:'Portal del cliente.'},
 ]
 const uiRoles: Record<DbRole,UiRole> = {
  developer:'DEVELOPER',gerente_comercial:'Gerente Comercial',gerente_administrativo:'Gerente Administrativo',
- gerente_operativo:'Gerente Operativo',supervisor_obra:'Supervisor de Obra',
- supervisor_administrativo:'Supervisor Administrativo',administracion:'Administración',
+ gerente_operativo:'Gerente Operativo',supervisor_obra:'Supervisor',
+ supervisor_administrativo:'RH',administracion:'Administración',
  obra:'Supervisor',contabilidad:'Contabilidad',cliente:'Cliente'
 }
-const dbRoles: Record<UiRole,DbRole> = Object.fromEntries(Object.entries(uiRoles).map(([k,v])=>[v,k])) as Record<UiRole,DbRole>
-function toDbRole(role:string):DbRole {return dbRoles[role as UiRole] ?? (role in uiRoles ? role as DbRole : 'cliente')}
+const dbRoles: Record<UiRole,DbRole> = {...Object.fromEntries(Object.entries(uiRoles).map(([k,v])=>[v,k])) as Record<UiRole,DbRole>,Supervisor:'supervisor_obra'}
+function toDbRole(role:string):DbRole {return role==='Supervisor de Obra'?'supervisor_obra':role==='Supervisor Administrativo'?'supervisor_administrativo':dbRoles[role as UiRole] ?? (role in uiRoles ? role as DbRole : 'cliente')}
 function toUiRole(role:DbRole):UiRole {return uiRoles[role]}
 export default function UsersSettingsLayout({ children }: { children: ReactNode }) {
   const [open, setOpen] = useState(false)
@@ -121,7 +120,7 @@ export default function UsersSettingsLayout({ children }: { children: ReactNode 
                       </p>
                     </div>
                     <select
-                      value={pending[user.id] ?? user.role}
+                      value={pending[user.id] ?? (user.role === 'obra' ? 'supervisor_obra' : user.role)}
                       disabled={!!savingId || user.source === 'principal'}
                       onChange={(event) => {const next=event.target.value as DbRole;setPending(current=>{const draft={...current};if(next===user.role)delete draft[user.id];else draft[user.id]=next;return draft});setMessage('')}}
                       className="h-11 w-full rounded-xl border border-[var(--border)] bg-[var(--surface)] px-3 text-sm font-bold text-[var(--foreground)] outline-none focus:border-[#5496CC] disabled:cursor-not-allowed disabled:opacity-60"
