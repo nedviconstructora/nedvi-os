@@ -1,4 +1,4 @@
-export type AppRole = 'DEVELOPER' | 'Administración' | 'Supervisor' | 'Contabilidad' | 'Cliente'
+export type AppRole = 'DEVELOPER' | 'Gerente Comercial' | 'Gerente Administrativo' | 'Gerente Operativo' | 'Supervisor de Obra' | 'Supervisor Administrativo' | 'Administración' | 'Supervisor' | 'Contabilidad' | 'Cliente'
 
 export type ModulePermission =
   | 'dashboard'
@@ -17,13 +17,26 @@ export type ModulePermission =
 
 export const ROLE_LABELS: Record<AppRole, string> = {
   DEVELOPER: 'DEVELOPER',
+  'Gerente Comercial': 'GERENTE COMERCIAL',
+  'Gerente Administrativo': 'GERENTE ADMINISTRATIVO',
+  'Gerente Operativo': 'GERENTE OPERATIVO',
+  'Supervisor de Obra': 'SUPERVISOR DE OBRA',
+  'Supervisor Administrativo': 'SUPERVISOR ADMINISTRATIVO',
   Administración: 'ADMIN',
   Supervisor: 'SUPERVISOR / OBRA',
   Contabilidad: 'CONTABILIDAD',
   Cliente: 'CLIENTE',
 }
 
+const MANAGEMENT_PERMISSIONS: readonly ModulePermission[] = ['dashboard','commercial','projects','purchasing','operations','agenda','time-clock','human-resources','finance','indicators','settings','coral']
+
 export const ROLE_PERMISSIONS: Record<AppRole, readonly ModulePermission[]> = {
+  'Gerente Comercial': MANAGEMENT_PERMISSIONS,
+  'Gerente Administrativo': MANAGEMENT_PERMISSIONS,
+  'Gerente Operativo': MANAGEMENT_PERMISSIONS,
+  'Supervisor de Obra': ['dashboard','commercial','projects','operations','agenda','time-clock','indicators','coral'],
+  // Bloqueado preventivamente hasta aplicar filtros de proyectos y lecturas en cada API.
+  'Supervisor Administrativo': ['dashboard'],
   DEVELOPER: ['dashboard','commercial','projects','purchasing','operations','agenda','time-clock','human-resources','finance','indicators','settings','coral'],
   Administración: [
     'dashboard',
@@ -55,6 +68,11 @@ export const ROLE_PERMISSIONS: Record<AppRole, readonly ModulePermission[]> = {
 }
 
 export const ROLE_DESCRIPTIONS: Record<AppRole, string> = {
+  'Gerente Comercial': 'Acceso empresarial completo a módulos presentes y futuros, excepto herramientas reservadas para DEVELOPER.',
+  'Gerente Administrativo': 'Acceso empresarial completo a módulos presentes y futuros, excepto herramientas reservadas para DEVELOPER.',
+  'Gerente Operativo': 'Acceso empresarial completo a módulos presentes y futuros, excepto herramientas reservadas para DEVELOPER.',
+  'Supervisor de Obra': 'Acceso operativo a clientes, levantamientos, cotizaciones, proyectos y obra; sin RH, nómina ni administración sensible.',
+  'Supervisor Administrativo': 'Acceso restringido preventivamente hasta completar las consultas de solo lectura y el filtro de proyectos autorizados.',
   DEVELOPER: 'Acceso técnico total, gestión de usuarios y configuración del sistema.',
   Administración:
     'Acceso total a NEDVI OS, incluidos usuarios y permisos, Recursos Humanos, nómina, finanzas y configuración administrativa.',
