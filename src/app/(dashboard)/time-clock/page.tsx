@@ -4,7 +4,7 @@ import { ChangeEvent, useCallback, useEffect, useMemo, useState } from 'react'
 import Image from 'next/image'
 import { Camera, Clock3, LogIn, LogOut, RefreshCw, ShieldCheck, Trash2, MapPin, FileSpreadsheet, CalendarDays } from 'lucide-react'
 import { AppShell } from '@/components/layout/AppShell'
-import { ManagementAttendanceContent } from '../management-attendance/page'
+import { ManagementAttendanceContent } from '@/features/time-clock/components/ManagementAttendanceContent'
 import { readAccessSession } from '@/features/access/services/accessStorage'
 import { downloadClockWorkbook } from '@/features/time-clock/services/exportXlsx'
 
