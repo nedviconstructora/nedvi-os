@@ -23,7 +23,7 @@ import {
   type AppRole,
   type ModulePermission,
 } from '@/config/roles'
-import { currentUser } from '@/data/currentUser'
+import { readAccessSession } from '@/features/access/services/accessStorage'
 import {
   defaultPermissionsForRole,
   readAccessUsers,
@@ -92,6 +92,8 @@ export default function UsersAndPermissionsPage() {
   const [requests, setRequests] = useState<RegistrationRequest[]>([])
   const [passwordRequests, setPasswordRequests] = useState<PasswordResetRequest[]>([])
   const [users, setUsers] = useState<AccessUser[]>([])
+  const [loadError, setLoadError] = useState('')
+  const [sessionUser, setSessionUser] = useState<ReturnType<typeof readAccessSession>>(null)
   const [search, setSearch] = useState('')
   const [refreshing, setRefreshing] = useState(false)
   const [editUser, setEditUser] = useState<AccessUser | null>(null)
@@ -131,7 +133,7 @@ export default function UsersAndPermissionsPage() {
   const [createError, setCreateError] = useState('')
   const [creatingUser, setCreatingUser] = useState(false)
 
-  const isAdmin = currentUser.role === 'Administración'
+  const isAdmin = sessionUser?.role === 'DEVELOPER' || sessionUser?.role === 'Administración'
 
   async function refresh() {
     setRequests(readRegistrationRequests())
@@ -145,15 +147,12 @@ export default function UsersAndPermissionsPage() {
         throw new Error(data.error || 'No se pudieron cargar los usuarios de Supabase.')
       }
 
-      const syncedUsers = data.users.filter(
-        (user) => user.email.toLowerCase() !== currentUser.email.toLowerCase(),
-      )
-
-      setUsers(syncedUsers)
-      writeAccessUsers(syncedUsers)
+      setUsers(data.users)
+      writeAccessUsers(data.users)
+      setLoadError('')
     } catch (loadError) {
       console.error('Error al sincronizar usuarios desde Supabase:', loadError)
-      setUsers(readAccessUsers())
+      setLoadError(loadError instanceof Error ? loadError.message : 'No fue posible consultar Supabase.')
     }
   }
 
@@ -168,6 +167,7 @@ export default function UsersAndPermissionsPage() {
   }
 
   useEffect(() => {
+    setSessionUser(readAccessSession())
     void refresh()
     const handleStorage = () => void refresh()
     window.addEventListener('storage', handleStorage)
@@ -188,7 +188,7 @@ export default function UsersAndPermissionsPage() {
     [passwordRequests],
   )
 
-  const activeUsersCount = users.filter((user) => user.status === 'Activo').length + 1
+  const activeUsersCount = users.filter((user) => user.status === 'Activo').length
 
   const visibleUsers = useMemo(() => {
     const normalizedSearch = search.trim().toLowerCase()
@@ -201,7 +201,7 @@ export default function UsersAndPermissionsPage() {
     )
   }, [search, users])
 
-  const teamUsers = visibleUsers.filter(user => user.role !== 'Cliente')
+  const teamUsers = visibleUsers.filter(user => user.role !== 'Cliente' && user.role !== 'DEVELOPER')
   const clientUsers = visibleUsers.filter(user => user.role === 'Cliente')
 
   function resetCreateUserForm() {
@@ -681,22 +681,8 @@ export default function UsersAndPermissionsPage() {
           </div>
 
           <div className="divide-y divide-[var(--border)]">
-            <div className="grid gap-4 p-5 md:grid-cols-[minmax(220px,1.2fr)_minmax(150px,0.7fr)_minmax(180px,1fr)_minmax(230px,auto)] md:items-center">
-              <div className="flex items-center gap-3">
-                <span className="flex h-10 w-10 items-center justify-center rounded-full bg-[#7DC6FF] text-xs font-bold text-black">{currentUser.initials}</span>
-                <div className="min-w-0">
-                  <p className="truncate text-sm font-semibold text-[var(--foreground)]">{currentUser.name}</p>
-                  <p className="truncate text-xs text-[var(--muted)]">{currentUser.email}</p>
-                </div>
-              </div>
-              <span className="inline-flex w-fit rounded-full bg-[#5496CC]/10 px-2.5 py-1 text-xs font-semibold text-[#5496CC]">{currentUser.role}</span>
-              <p className="text-xs text-[var(--muted)]">Acceso total · Usuario principal</p>
-              <div className="flex flex-wrap items-center gap-2">
-                <span className="inline-flex rounded-full bg-emerald-500/10 px-2.5 py-1 text-xs font-semibold text-emerald-600">Activo</span>
-                <span className="text-[11px] text-[var(--muted)]">Cuenta principal protegida</span>
-              </div>
-            </div>
-
+            {loadError ? <div role="alert" className="m-4 rounded-xl border border-red-500/30 bg-red-500/10 p-4 text-sm text-red-500">No se pudo sincronizar el listado: {loadError}. Los registros siguen en Supabase. Pulsa Actualizar para reintentar.</div> : null}
+            {users.filter(u=>u.role==='DEVELOPER').map(user=><div key={user.id} className="flex flex-wrap items-center justify-between gap-3 border-t border-[var(--border)] p-5"><div><p className="font-semibold">{user.name}</p><p className="text-xs text-[var(--muted)]">{user.email}</p></div><span className="rounded-full bg-[#5496CC]/10 px-3 py-1 text-xs font-bold text-[#5496CC]">DEVELOPER · Cuenta principal protegida</span></div>)}
             <div className="border-t border-[var(--border)] bg-[#5496CC]/10 px-5 py-3 text-sm font-bold text-[var(--foreground)]">Equipo NEDVI · {teamUsers.length} integrantes</div>
             {teamUsers.map((user) => (
               <div key={user.id} className="grid gap-4 p-5 md:grid-cols-[minmax(220px,1.2fr)_minmax(150px,0.7fr)_minmax(180px,1fr)_minmax(230px,auto)] md:items-center">
