@@ -13,7 +13,7 @@ export async function GET(request: Request) {
   const params = new URL(request.url).searchParams
   const projectId = params.get('projectId')?.trim()
   const name = params.get('name')?.trim() ?? ''
-  const isStaff = ['administracion','obra','supervisor'].includes(role)
+  const isStaff = ['developer','gerente_operativo','gerente_comercial','gerente_administrativo','administracion','supervisor_obra','obra','supervisor'].includes(role)
   if (!isStaff && (role !== 'cliente' || !projectId)) return NextResponse.json({ error: 'Acceso no permitido.' }, { status: 403 })
   if (!name || name.length > 120) return NextResponse.json({ phone: null }, { status: 200 })
 
@@ -31,6 +31,6 @@ export async function GET(request: Request) {
   }
   const { data, error } = await admin.from('profiles').select('full_name,phone,role,active').eq('full_name',name).eq('active',true).limit(2)
   if (error) return NextResponse.json({ error: 'No pudimos consultar el contacto.' }, { status: 500 })
-  const staff = (data ?? []).filter(person => ['administracion','obra','supervisor'].includes(String(person.role ?? '').toLowerCase()))
+  const staff = (data ?? []).filter(person => ['developer','gerente_operativo','gerente_comercial','gerente_administrativo','administracion','supervisor_obra','obra','supervisor'].includes(String(person.role ?? '').toLowerCase()))
   return NextResponse.json({ phone: staff.length === 1 ? staff[0].phone || null : null })
 }
