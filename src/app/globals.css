@@ -845,3 +845,37 @@ textarea {
 @media (prefers-reduced-motion: reduce) {
   .nedvi-main-content :is(input,select,textarea) { transition: none; }
 }
+
+/* Executive Premium v2: slightly brighter, layered dark background with
+   original vector construction motif; no change to business functionality. */
+.theme-dark {
+  --background: #18293c;
+  --surface: rgba(31, 48, 68, .91);
+  --card: rgba(31, 48, 68, .94);
+  --surface-soft: rgba(43, 65, 88, .92);
+  --border: #3a536d;
+  --muted: #b4c6d9;
+}
+.nedvi-app-header {
+  background: linear-gradient(110deg,#28577E 0%,#316B96 60%,#27577E 100%) !important;
+  border-bottom: 1px solid rgba(186,221,250,.18) !important;
+}
+.theme-dark .nedvi-main-content {
+  background-color: #18293c !important;
+  background-image:
+    linear-gradient(105deg,rgba(24,41,60,.84),rgba(35,59,84,.80)),
+    url('/construction-premium-pattern.svg') !important;
+  background-size: auto, 560px 420px;
+  background-repeat: repeat;
+  background-attachment: scroll;
+}
+.theme-dark .nedvi-main-content > * { position: relative; }
+.theme-light .nedvi-main-content {
+  background-image: linear-gradient(115deg,rgba(244,248,252,.95),rgba(233,242,250,.93)),
+    url('/construction-premium-pattern.svg');
+  background-size: auto, 560px 420px;
+}
+.theme-dark .nedvi-main-content :is(.nedvi-dashboard-hero) {
+  background: linear-gradient(115deg,rgba(42,69,98,.94),rgba(26,44,67,.94)) !important;
+  border-color: rgba(149,193,229,.22);
+}
