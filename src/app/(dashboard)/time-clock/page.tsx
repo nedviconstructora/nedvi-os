@@ -64,11 +64,13 @@ export default function TimeClockPage() {
   },[photo])
 
   const mine = useMemo(() => entries.filter(x => x.userId === me),[entries,me])
-  const current = mine[0]
+  const dayOf = (value:string) => new Intl.DateTimeFormat('sv-SE',{timeZone:'America/Tijuana',year:'numeric',month:'2-digit',day:'2-digit'}).format(new Date(value))
+  const today = now ? dayOf(now.toISOString()) : ''
+  const current = mine.find(e => dayOf(e.at) === today)
+  const pendingPrevious = mine.filter(e => dayOf(e.at) !== today).filter(e => {const sameDay=mine.filter(v=>dayOf(v.at)===dayOf(e.at)).sort((a,b)=>b.at.localeCompare(a.at));return sameDay[0]?.id===e.id && e.type==='entrada'})
   const hasEntry = current?.type === 'entrada'
   const nextType = hasEntry ? 'salida' : 'entrada'
   const fmt = (date:string) => new Intl.DateTimeFormat('es-MX',{dateStyle:'medium',timeStyle:'short'}).format(new Date(date))
-  const dayOf = (value:string) => new Intl.DateTimeFormat('sv-SE',{timeZone:'America/Tijuana',year:'numeric',month:'2-digit',day:'2-digit'}).format(new Date(value))
   const visibleEntries=useMemo(()=>allDates ? entries : entries.filter(item=>dayOf(item.at)===dateFilter),[entries,dateFilter,allDates])
   const dailyRows=useMemo(()=>{
     const groups=new Map<string,{date:string;userId:string;name:string;start:string;end:string;totalMinutes:number;open:string|null}>()
@@ -191,6 +193,7 @@ export default function TimeClockPage() {
               <p className="mt-2 text-lg font-semibold">{current ? `${current.type === 'entrada' ? 'Entrada' : 'Salida'} · ${fmt(current.at)}` : 'Aún no hay registros'}</p>
               {duration && <p className="mt-1 text-sm text-[#5496CC]">Tiempo en turno: {duration}</p>}
             </div>
+            {pendingPrevious.length>0 && <div className="rounded-xl border border-amber-400/40 bg-amber-400/10 p-3 text-sm"><p className="font-semibold">Jornada anterior pendiente de salida</p><p className="mt-1">Encontramos una entrada sin salida de {fmt(pendingPrevious[0].at)}. Puedes registrar tu entrada de hoy normalmente. La jornada anterior quedará pendiente de regularización por Administración; una fotografía tomada hoy no se registrará como si hubiera sido tomada ese día.</p></div>}
             <div className="space-y-3">
               <p className="text-sm font-semibold">Fotografía obligatoria para {nextType}</p>
               <div className="flex flex-wrap gap-2">
