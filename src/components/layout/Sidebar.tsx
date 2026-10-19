@@ -186,7 +186,7 @@ export function Sidebar({
 
   return (
     <aside
-      className={`fixed inset-y-0 left-0 z-40 flex w-[280px] flex-col overflow-hidden border-r border-white/10 bg-[linear-gradient(180deg,#235D92_0%,#24669D_52%,#1E5488_100%)] text-white shadow-[12px_0_32px_rgba(8,25,47,0.14)] backdrop-blur-2xl transition-[width,transform] duration-300 ease-out lg:relative lg:z-0 lg:translate-x-0 ${
+      className={`fixed inset-y-0 left-0 z-40 flex w-[280px] flex-col overflow-hidden border-r border-white/10 bg-[linear-gradient(110deg,#235D92_0%,#24669D_52%,#1E5488_100%)] text-white shadow-[12px_0_32px_rgba(8,25,47,0.14)] backdrop-blur-2xl transition-[width,transform] duration-300 ease-out lg:relative lg:z-0 lg:translate-x-0 ${
         collapsed ? 'lg:w-20' : 'lg:w-[280px]'
       } ${mobileOpen ? 'translate-x-0' : '-translate-x-full'}`}
       aria-label="Navegación principal"
