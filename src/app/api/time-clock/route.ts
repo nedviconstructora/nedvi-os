@@ -23,7 +23,9 @@ export async function GET() {
       photoUrl:item.photo_path ? `/api/time-clock/photo?id=${encodeURIComponent(item.id)}` : null,
       latitude:item.latitude,longitude:item.longitude,accuracy:item.location_accuracy_m,
     }))
-    return NextResponse.json({entries,me:ctx.user.id,canViewAll,canDelete:ctx.isAdmin,canClock:!ctx.isAccountant},{headers:{'Cache-Control':'no-store'}})
+    const {data:resolved,error:resolutionError}=await ctx.admin.from('time_clock_exit_requests').select('entry_id,status').eq('user_id',ctx.user.id).eq('status','aprobada')
+    if(resolutionError)throw resolutionError
+    return NextResponse.json({entries,resolvedExitEntryIds:(resolved||[]).map(x=>x.entry_id),me:ctx.user.id,canViewAll,canDelete:ctx.isAdmin,canClock:!ctx.isAccountant},{headers:{'Cache-Control':'no-store'}})
   } catch (error) {
     console.error('Time clock list failed',error)
     return NextResponse.json({error:'No se pudo consultar el checador. Revisa la sesión o la configuración del servidor.',code:'HISTORY_ERROR'},{status:500})
