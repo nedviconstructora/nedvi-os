@@ -8,11 +8,18 @@ type InstallPromptEvent = Event & {
   userChoice: Promise<{ outcome: 'accepted' | 'dismissed'; platform: string }>
 }
 
+function navigateToFreshApp(version: string) {
+  const url = new URL(window.location.href)
+  url.searchParams.set('nedvi_version', version.slice(0, 12))
+  window.location.replace(url.toString())
+}
+
 export function PwaManager({ initialVersion }: { initialVersion: string }) {
   const [installPrompt, setInstallPrompt] = useState<InstallPromptEvent | null>(null)
   const [online, setOnline] = useState(true)
   const [dismissed, setDismissed] = useState(false)
   const [updateAvailable, setUpdateAvailable] = useState(false)
+  const [latestVersion, setLatestVersion] = useState('')
   const editingRef = useRef(false)
 
   useEffect(() => {
@@ -48,6 +55,7 @@ export function PwaManager({ initialVersion }: { initialVersion: string }) {
 
   useEffect(() => {
     if (initialVersion === 'development') return
+    sessionStorage.removeItem('nedvi-auto-update-' + initialVersion)
 
     let cancelled = false
     let pendingVersion = ''
@@ -68,6 +76,7 @@ export function PwaManager({ initialVersion }: { initialVersion: string }) {
         const data = (await response.json()) as { version?: string }
         if (cancelled || !data.version || data.version === 'development' || data.version === initialVersion) return
         pendingVersion = data.version
+        setLatestVersion(data.version)
         setUpdateAvailable(true)
         attemptUpdate()
       } catch {
@@ -88,10 +97,12 @@ export function PwaManager({ initialVersion }: { initialVersion: string }) {
       // Never interrupt a form after the user has started editing it.
       if (editingRef.current || editingNow()) return
       const guard = 'nedvi-auto-update-' + pendingVersion
-      if (sessionStorage.getItem(guard)) return
-      sessionStorage.setItem(guard, '1')
+      const lastAttempt = Number(sessionStorage.getItem(guard) || 0)
+      // Prevent a redirect loop, while allowing another attempt after a failed update.
+      if (lastAttempt && Date.now() - lastAttempt < 5 * 60_000) return
+      sessionStorage.setItem(guard, String(Date.now()))
       reloadScheduled = true
-      window.location.reload()
+      navigateToFreshApp(pendingVersion)
     }
 
     const onEdit = (event: Event) => {
@@ -142,7 +153,7 @@ export function PwaManager({ initialVersion }: { initialVersion: string }) {
         <div role="status" className="fixed inset-x-3 top-3 z-[100] mx-auto flex max-w-md items-center gap-3 rounded-2xl border border-[#5496CC]/40 bg-[var(--surface)] p-3 text-sm text-[var(--foreground)] shadow-2xl">
           <RefreshCw size={20} className="shrink-0 text-[#5496CC]" />
           <span className="min-w-0 flex-1">Hay una nueva versión de NEDVI OS disponible.</span>
-          <button type="button" onClick={() => window.location.reload()} className="rounded-xl bg-[#5496CC] px-3 py-2 text-xs font-semibold text-white">
+          <button type="button" onClick={() => navigateToFreshApp(latestVersion || String(Date.now()))} className="rounded-xl bg-[#5496CC] px-3 py-2 text-xs font-semibold text-white">
             Actualizar app
           </button>
         </div>
