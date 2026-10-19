@@ -11,7 +11,7 @@ export async function DELETE(_request: Request, context: { params: Promise<{ id:
     const { data: { user } } = await server.auth.getUser()
     if (!user) return NextResponse.json({ error: 'Sesión no válida.' }, { status: 401 })
     const { data: profile, error: profileError } = await server.from('profiles').select('role,active').eq('id',user.id).maybeSingle()
-    if (profileError || !profile?.active || !['administracion','administrador','admin','obra','supervisor'].includes(String(profile.role ?? '').toLowerCase().trim()))
+    if (profileError || !profile?.active || !['developer','gerente_operativo','gerente_comercial','gerente_administrativo','administracion','administrador','admin','supervisor_obra','obra','supervisor'].includes(String(profile.role ?? '').toLowerCase().trim()))
       return NextResponse.json({ error: 'Solo Administración y Supervisores de obra pueden eliminar completamente un cliente.' }, { status: 403 })
     const url = process.env.NEXT_PUBLIC_SUPABASE_URL
     const key = process.env.SUPABASE_SERVICE_ROLE_KEY
