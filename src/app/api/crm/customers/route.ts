@@ -45,6 +45,13 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Sesión no válida.' }, { status: 401 })
     }
 
+    const { data: profile, error: profileError } = await supabase.from('profiles')
+      .select('role,active').eq('id',user.id).maybeSingle()
+    const allowed = new Set(['developer','gerente_operativo','gerente_comercial','gerente_administrativo','administracion','supervisor_obra','obra'])
+    if (profileError || !profile?.active || !allowed.has(String(profile.role ?? '').toLowerCase().trim())) {
+      return NextResponse.json({ error: 'No tienes autorización para crear clientes.' }, { status: 403 })
+    }
+
     const body = (await request.json()) as CreateCustomerBody
     const company = body.company?.trim()
     const contact = body.contact?.trim()
