@@ -14,6 +14,7 @@ export type ModulePermission =
   | 'settings'
   | 'coral'
   | 'client-portal'
+  | 'developer-panel'
 
 export const ROLE_LABELS: Record<AppRole, string> = {
   DEVELOPER: 'DEVELOPER',
@@ -37,7 +38,7 @@ export const ROLE_PERMISSIONS: Record<AppRole, readonly ModulePermission[]> = {
   'Supervisor de Obra': ['dashboard','commercial','projects','operations','agenda','time-clock','indicators','coral'],
   // Bloqueado preventivamente hasta aplicar filtros de proyectos y lecturas en cada API.
   'Supervisor Administrativo': ['dashboard'],
-  DEVELOPER: ['dashboard','commercial','projects','purchasing','operations','agenda','time-clock','human-resources','finance','indicators','settings','coral'],
+  DEVELOPER: ['dashboard','commercial','projects','purchasing','operations','agenda','time-clock','human-resources','finance','indicators','settings','coral','developer-panel'],
   Administración: [
     'dashboard',
     'commercial',
@@ -112,6 +113,7 @@ const ROUTE_PERMISSIONS: Array<{ prefix: string; permission: ModulePermission }>
   { prefix: '/personnel', permission: 'human-resources' },
   { prefix: '/hr-attendance', permission: 'human-resources' },
   { prefix: '/payroll', permission: 'human-resources' },
+  { prefix: '/developer', permission: 'developer-panel' },
   { prefix: '/settings', permission: 'settings' },
 ]
 
