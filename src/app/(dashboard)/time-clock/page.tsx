@@ -4,6 +4,8 @@ import { ChangeEvent, useCallback, useEffect, useMemo, useState } from 'react'
 import Image from 'next/image'
 import { Camera, Clock3, LogIn, LogOut, RefreshCw, ShieldCheck, Trash2, MapPin, FileSpreadsheet, CalendarDays } from 'lucide-react'
 import { AppShell } from '@/components/layout/AppShell'
+import { ManagementAttendanceContent } from '../management-attendance/page'
+import { readAccessSession } from '@/features/access/services/accessStorage'
 import { downloadClockWorkbook } from '@/features/time-clock/services/exportXlsx'
 
 type ClockEntry = { id:string; userId:string; name:string; type:'entrada'|'salida'; at:string; originalAt?:string|null; photoUrl:string|null; latitude:number|null; longitude:number|null; accuracy:number|null }
@@ -11,6 +13,9 @@ type ExitReview={id:string;employee_name:string;entry_at:string|null;requested_e
 type Payload = {entries:ClockEntry[]; me:string; canViewAll:boolean; canDelete:boolean; canClock:boolean; resolvedExitEntryIds:string[]; error?:string}
 
 export default function TimeClockPage() {
+  const [managerAllowed,setManagerAllowed] = useState(false)
+  const [view,setView] = useState<'jornada'|'gerencia'>('jornada')
+  useEffect(()=>{const role=readAccessSession()?.role;setManagerAllowed(['DEVELOPER','Gerente Operativo','Gerente Comercial','Gerente Administrativo'].includes(role||''))},[])
   const [entries,setEntries] = useState<ClockEntry[]>([])
   const [resolvedExitEntryIds,setResolvedExitEntryIds]=useState<string[]>([])
   const [me,setMe] = useState('')
@@ -226,6 +231,8 @@ export default function TimeClockPage() {
   return (
     <AppShell>
       <main className="mx-auto max-w-6xl space-y-6 pb-12 text-[var(--foreground)]">
+        <div className="space-y-3"><div><p className="text-xs font-bold uppercase tracking-[0.16em] text-[#5496CC]">Control de personal</p><h1 className="mt-1 text-2xl font-bold">Centro de Asistencia</h1></div><div className="flex flex-wrap gap-2" role="tablist" aria-label="Secciones del Centro de Asistencia"><button role="tab" aria-selected={view==='jornada'} type="button" onClick={()=>setView('jornada')} className={`rounded-xl px-4 py-2 text-sm font-semibold ${view==='jornada'?'bg-[#317FC1] text-white':'border border-[var(--border)]'}`}>Mi jornada e historial</button>{managerAllowed&&<button role="tab" aria-selected={view==='gerencia'} type="button" onClick={()=>setView('gerencia')} className={`rounded-xl px-4 py-2 text-sm font-semibold ${view==='gerencia'?'bg-[#317FC1] text-white':'border border-[var(--border)]'}`}>Vista Gerencial</button>}</div></div>
+        {view==='gerencia' && managerAllowed ? <ManagementAttendanceContent /> : <>
         <header className="flex flex-wrap items-start justify-between gap-3">
           <div><p className="text-xs font-semibold uppercase tracking-[0.18em] text-[#5496CC]">Control de personal</p>
             <h1 className="mt-2 text-3xl font-bold">Checador · Equipo NEDVI</h1>
@@ -301,6 +308,7 @@ export default function TimeClockPage() {
             </div>
           </section>
         </div>
+        </>}
       </main>
     </AppShell>
   )
