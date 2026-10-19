@@ -27,7 +27,7 @@ function normalizeRole(value: unknown) {
 }
 
 function canResetPasswords(role: unknown) {
-  return ['administracion', 'administrador', 'admin'].includes(normalizeRole(role))
+  return ['developer', 'administracion', 'administrador', 'admin'].includes(normalizeRole(role))
 }
 
 async function findUserIdByEmail(
