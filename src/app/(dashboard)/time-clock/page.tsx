@@ -25,6 +25,10 @@ export default function TimeClockPage() {
   const [photo,setPhoto] = useState<File|null>(null)
   const [preview,setPreview] = useState('')
   const [now,setNow] = useState<Date|null>(null)
+  const [incidentEntry,setIncidentEntry]=useState<string|null>(null)
+  const [incidentTime,setIncidentTime]=useState('')
+  const [incidentReason,setIncidentReason]=useState('')
+  const [incidentPhoto,setIncidentPhoto]=useState<File|null>(null)
 
   const refresh = useCallback(async () => {
     try {
@@ -140,6 +144,24 @@ export default function TimeClockPage() {
     finally {setBusy(false)}
   }
 
+  async function submitIncident() {
+    if(!incidentEntry||!incidentPhoto||busy)return
+    setBusy(true);setError('');setNotice('')
+    try{
+      const form=new FormData()
+      form.set('entryId',incidentEntry)
+      form.set('exitTime',new Date(incidentTime).toISOString())
+      form.set('reason',incidentReason)
+      form.set('photo',incidentPhoto)
+      const response=await fetch('/api/time-clock/exit-request',{method:'POST',body:form})
+      const result=await response.json()
+      if(!response.ok)throw new Error(result.error||'No se pudo enviar la incidencia.')
+      setNotice('Solicitud de salida pendiente enviada a Administración. Tu entrada de hoy no se verá afectada.')
+      setIncidentEntry(null);setIncidentPhoto(null);setIncidentTime('');setIncidentReason('')
+    }catch(err){setError(err instanceof Error?err.message:'Error al enviar incidencia.')}
+    finally{setBusy(false)}
+  }
+
   async function locate(): Promise<GeolocationPosition> {
     if (!navigator.geolocation) throw new Error('Este dispositivo no tiene acceso a ubicación GPS.')
     setLocationBusy(true)
@@ -193,7 +215,8 @@ export default function TimeClockPage() {
               <p className="mt-2 text-lg font-semibold">{current ? `${current.type === 'entrada' ? 'Entrada' : 'Salida'} · ${fmt(current.at)}` : 'Aún no hay registros'}</p>
               {duration && <p className="mt-1 text-sm text-[#5496CC]">Tiempo en turno: {duration}</p>}
             </div>
-            {pendingPrevious.length>0 && <div className="rounded-xl border border-amber-400/40 bg-amber-400/10 p-3 text-sm"><p className="font-semibold">Jornada anterior pendiente de salida</p><p className="mt-1">Encontramos una entrada sin salida de {fmt(pendingPrevious[0].at)}. Puedes registrar tu entrada de hoy normalmente. La jornada anterior quedará pendiente de regularización por Administración; una fotografía tomada hoy no se registrará como si hubiera sido tomada ese día.</p></div>}
+            {pendingPrevious.length>0 && <div className="rounded-xl border border-amber-400/40 bg-amber-400/10 p-3 text-sm"><p className="font-semibold">Jornada anterior pendiente de salida</p><p className="mt-1">Encontramos una entrada sin salida de {fmt(pendingPrevious[0].at)}. Puedes registrar tu entrada de hoy normalmente. La salida anterior requiere revisión. Una foto tomada hoy se conservará como evidencia actual, no como fotografía del día anterior.</p><button type="button" className="mt-3 rounded-lg bg-amber-500 px-3 py-2 font-semibold text-black" onClick={()=>{setIncidentEntry(pendingPrevious[0].id);setIncidentTime(dayOf(pendingPrevious[0].at)+'T17:00')}}>Solicitar regularización de salida</button></div>}
+            {incidentEntry && <div className="space-y-3 rounded-xl border border-[#5496CC] p-4"><h3 className="font-semibold">Regularizar salida anterior</h3><p className="text-xs text-[var(--muted)]">Indica la hora en que realmente saliste. Una fotografía tomada hoy se guarda con fecha de captura actual. Administración deberá validar la incidencia.</p><label className="block text-sm">Fecha y hora de salida declarada<input type="datetime-local" className="mt-1 block w-full rounded-lg border border-[var(--border)] bg-[var(--background)] p-2" value={incidentTime} onChange={e=>setIncidentTime(e.target.value)}/></label><label className="block text-sm">Motivo<textarea className="mt-1 block w-full rounded-lg border border-[var(--border)] bg-[var(--background)] p-2" rows={3} value={incidentReason} onChange={e=>setIncidentReason(e.target.value)} placeholder="Ej. Corte de energía en instalaciones; no pude registrar mi salida."/></label><label className="block text-sm">Fotografía actual de respaldo<input type="file" accept="image/jpeg,image/png,image/webp" capture="user" className="mt-1 block w-full text-sm" onChange={e=>setIncidentPhoto(e.target.files?.[0]||null)}/></label><div className="flex flex-wrap gap-2"><button type="button" disabled={busy||!incidentPhoto||incidentReason.trim().length<12||!incidentTime} onClick={()=>void submitIncident()} className="rounded-lg bg-[#317FC1] px-4 py-2 font-semibold text-white disabled:opacity-40">Enviar a revisión</button><button type="button" onClick={()=>setIncidentEntry(null)} className="rounded-lg border border-[var(--border)] px-4 py-2">Cancelar</button></div></div>}
             <div className="space-y-3">
               <p className="text-sm font-semibold">Fotografía obligatoria para {nextType}</p>
               <div className="flex flex-wrap gap-2">
