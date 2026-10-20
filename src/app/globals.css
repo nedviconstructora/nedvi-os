@@ -1241,3 +1241,40 @@ textarea {
 .nedvi-main-content .nedvi-quote-form-dialog button {
   -webkit-text-fill-color: currentColor;
 }
+
+
+/* Light theme foundation 2026-10-20: shared accessible glass language.
+   Scoped to light main only; preserve dark mode, semantic buttons and alerts. */
+.theme-light .nedvi-main-content {
+  --foreground: #102c46;
+  --muted: #3d5c79;
+  --subtle: #53718b;
+  --primary: #145d9b;
+  --card: rgba(255,255,255,.85);
+  --surface: rgba(255,255,255,.88);
+  --surface-soft: rgba(237,247,255,.88);
+  --border: rgba(129,171,206,.52);
+}
+.theme-light .nedvi-main-content :is(.nedvi-card,.nedvi-dashboard-hero),
+.theme-light .nedvi-main-content :is(div,section,article)[class*="bg-[var(--surface)"][class*="rounded-"],
+.theme-light .nedvi-main-content :is(div,section,article)[class*="bg-[var(--card)"][class*="rounded-"] {
+  background: var(--card) !important;
+  border-color: var(--border) !important;
+  color: var(--foreground);
+  -webkit-backdrop-filter: blur(14px);
+  backdrop-filter: blur(14px);
+}
+.theme-light .nedvi-main-content :is(input,textarea,select):not([type="checkbox"]):not([type="radio"]):not([type="file"]) {
+  color: #102c46;
+  border-color: var(--border);
+}
+.theme-light .nedvi-main-content :is(input,textarea)::placeholder { color: #54718b; opacity: 1; }
+.theme-light .nedvi-main-content select option { background-color: #f5faff; color: #102c46; }
+.theme-light .nedvi-main-content .nedvi-card :is(h1,h2,h3,h4),
+.theme-light .nedvi-main-content .nedvi-dashboard-hero :is(h1,h2,h3,h4) {
+  color: #102c46;
+}
+.theme-light .nedvi-main-content :is(table,thead,tbody,tr,th,td) {
+  border-color: var(--border);
+}
+.theme-light .nedvi-main-content thead { color: #31536f; }
