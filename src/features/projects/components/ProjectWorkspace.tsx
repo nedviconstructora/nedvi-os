@@ -120,13 +120,13 @@ export function ProjectWorkspace() {
   ).length
 
   return (
-    <div className="mx-auto w-full max-w-[1600px] space-y-7">
+    <div className="nedvi-projects-workspace mx-auto w-full max-w-[1600px] space-y-7">
       <header className="flex flex-col justify-between gap-5 sm:flex-row sm:items-end">
         <div>
           <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[#7187ff]">
             Operación
           </p>
-          <h1 className="mt-2 text-3xl font-semibold tracking-[-0.05em] text-white sm:text-4xl">
+          <h1 className="mt-2 text-3xl font-semibold tracking-[-0.05em] text-[var(--foreground)] sm:text-4xl">
             Proyectos
           </h1>
           <p className="mt-2 max-w-xl text-sm text-[#9CA3AF]">
@@ -206,7 +206,7 @@ export function ProjectWorkspace() {
       </Card>
 
       {loading ? (
-        <div className="rounded-2xl border border-white/[0.07] bg-[#20232A] p-8 text-sm text-[#9CA3AF]">
+        <div className="rounded-2xl border border-white/[0.07] bg-[var(--card)] p-8 text-sm text-[#9CA3AF]">
           Cargando proyectos desde Supabase...
         </div>
       ) : visibleProjects.length ? (
