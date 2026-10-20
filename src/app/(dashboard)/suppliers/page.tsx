@@ -234,8 +234,8 @@ export default function SuppliersPage() {
       </div>
 
       {open ? (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/55 p-4">
-          <div className="max-h-[92vh] w-full max-w-4xl overflow-y-auto rounded-2xl bg-[var(--surface)] p-6 shadow-2xl">
+        <div className="fixed inset-0 z-[120] flex items-center justify-center bg-slate-950/60 p-4 backdrop-blur-sm">
+          <div className="nedvi-standard-modal max-h-[92vh] w-full max-w-4xl overflow-y-auto rounded-2xl border border-[#cbddea] bg-[#f9fcff] p-6 shadow-2xl">
             <div className="mb-5 flex items-start justify-between"><div><p className="text-xs font-semibold uppercase tracking-wide text-[#5496CC]">Compras y Suministros</p><h2 className="mt-1 text-xl font-bold text-[var(--foreground)]">{editingId ? 'Editar proveedor' : 'Nuevo proveedor'}</h2></div><button type="button" onClick={closeForm} className="rounded-lg p-2 text-[var(--muted)] hover:bg-[var(--surface-soft)]"><X size={18} /></button></div>
             <form onSubmit={saveSupplier} className="space-y-6">
               <section>
