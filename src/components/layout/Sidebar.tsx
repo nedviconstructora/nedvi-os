@@ -253,7 +253,7 @@ export function Sidebar({
 
                         if (item.href) {
                           return (
-                            <Link key={item.label} href={item.href} onClick={onCloseMobile} className={`group/sub relative flex min-h-9 items-center gap-2.5 rounded-lg bg-white/[0.12] px-3 py-2 text-[12px] font-medium text-white backdrop-blur-md transition hover:bg-white/[0.18] ${active ? 'ring-1 ring-white/25 shadow-sm' : ''}`}>
+                            <Link key={item.label} href={item.href} onClick={onCloseMobile} className={`group/sub nedvi-sidebar-subitem relative flex min-h-9 items-center gap-2.5 rounded-lg bg-white/[0.12] px-3 py-2 text-[12px] font-medium text-white backdrop-blur-md transition hover:bg-white/[0.18] ${active ? 'nedvi-sidebar-subitem-active ring-1 ring-white/25 shadow-sm' : ''}`}>
                               {active ? <span className="absolute -left-[13px] h-4 w-0.5 rounded-r-full bg-white" /> : null}
                               {ItemIcon ? <ItemIcon size={14} strokeWidth={1.8} className="text-white" /> : null}
                               <span className="truncate">{item.label}</span>
