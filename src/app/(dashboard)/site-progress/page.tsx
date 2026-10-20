@@ -576,7 +576,7 @@ export default function SiteProgressPage() {
 
               <label className="block space-y-2"><span className="text-sm font-semibold">Observaciones</span><textarea rows={3} value={notes} onChange={(event) => setNotes(event.target.value)} className="w-full rounded-xl border border-[var(--border)] bg-transparent px-4 py-3" /></label>
 
-              <div className="flex justify-end gap-3"><button type="button" onClick={() => { setOpen(false); setEditingRecordId(null) }} className="rounded-xl border border-[var(--border)] px-5 py-3 font-semibold">Cancelar</button><button type="submit" className="rounded-xl bg-[#5496CC] px-5 py-3 font-semibold text-white">{editingRecordId ? "Guardar cambios" : "Guardar avance"}</button></div>
+              <div className="flex justify-end gap-3"><button type="button" onClick={() => { setOpen(false); setEditingRecordId(null) }} className="rounded-xl border border-[var(--border)] px-5 py-3 font-semibold">Cancelar</button><button type="submit" className="nedvi-dark-white-create rounded-xl bg-[#5496CC] px-5 py-3 font-semibold text-white">{editingRecordId ? "Guardar cambios" : "Guardar avance"}</button></div>
             </form>
           </div>
         </div>
