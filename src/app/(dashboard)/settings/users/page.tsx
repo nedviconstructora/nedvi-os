@@ -584,7 +584,7 @@ export default function UsersAndPermissionsPage() {
   }
 
   return (
-    <div className="mx-auto w-full max-w-7xl space-y-6 pt-4 sm:pt-6 lg:pt-8">
+    <div className="nedvi-config-shell mx-auto w-full max-w-7xl space-y-6 pt-4 sm:pt-6 lg:pt-8">
       <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
         <div>
           <Link
@@ -607,22 +607,22 @@ export default function UsersAndPermissionsPage() {
         </div>
 
         <div className="grid grid-cols-3 gap-3">
-          <div className="rounded-2xl border border-[var(--border)] bg-[var(--surface)] px-5 py-4 shadow-sm">
+          <div className="nedvi-config-card rounded-2xl border border-[var(--border)] bg-[var(--surface)] px-5 py-4 shadow-sm">
             <div className="flex items-center gap-2 text-xs text-[var(--muted)]"><UserCheck size={15} /> Activos</div>
             <p className="mt-1 text-2xl font-bold text-[var(--foreground)]">{activeUsersCount}</p>
           </div>
-          <div className="rounded-2xl border border-[var(--border)] bg-[var(--surface)] px-5 py-4 shadow-sm">
+          <div className="nedvi-config-card rounded-2xl border border-[var(--border)] bg-[var(--surface)] px-5 py-4 shadow-sm">
             <div className="flex items-center gap-2 text-xs text-[var(--muted)]"><Clock3 size={15} /> Pendientes</div>
             <p className="mt-1 text-2xl font-bold text-[var(--foreground)]">{pendingRequests.length}</p>
           </div>
-          <div className="rounded-2xl border border-[var(--border)] bg-[var(--surface)] px-5 py-4 shadow-sm">
+          <div className="nedvi-config-card rounded-2xl border border-[var(--border)] bg-[var(--surface)] px-5 py-4 shadow-sm">
             <div className="flex items-center gap-2 text-xs text-[var(--muted)]"><KeyRound size={15} /> Contraseñas</div>
             <p className="mt-1 text-2xl font-bold text-[var(--foreground)]">{pendingPasswordRequests.length}</p>
           </div>
         </div>
       </div>
 
-      <div className="flex flex-wrap gap-2 rounded-2xl border border-[var(--border)] bg-[var(--surface)] p-2 shadow-sm">
+      <div className="nedvi-config-tabs flex flex-wrap gap-2 rounded-2xl border border-[var(--border)] bg-[var(--surface)] p-2 shadow-sm">
         {([
           ['users', 'Usuarios'],
           ['requests', `Solicitudes pendientes${pendingRequests.length ? ` (${pendingRequests.length})` : ''}`],
@@ -634,7 +634,7 @@ export default function UsersAndPermissionsPage() {
             onClick={() => setTab(value)}
             className={`rounded-xl px-4 py-2.5 text-sm font-semibold transition ${
               tab === value
-                ? 'bg-[#7DC6FF] text-black shadow-sm'
+                ? 'nedvi-config-tab-active bg-[#7DC6FF] text-black shadow-sm'
                 : 'text-[var(--muted)] hover:bg-[var(--surface-soft)] hover:text-[var(--foreground)]'
             }`}
           >
@@ -644,7 +644,7 @@ export default function UsersAndPermissionsPage() {
       </div>
 
       {tab === 'users' ? (
-        <section className="overflow-hidden rounded-2xl border border-[var(--border)] bg-[var(--surface)] shadow-sm">
+        <section className="nedvi-config-card overflow-hidden rounded-2xl border border-[var(--border)] bg-[var(--surface)] shadow-sm">
           <div className="flex flex-col gap-3 border-b border-[var(--border)] p-5 lg:flex-row lg:items-center lg:justify-between">
             <div>
               <h2 className="text-lg font-bold text-[var(--foreground)]">Usuarios autorizados</h2>
@@ -660,7 +660,7 @@ export default function UsersAndPermissionsPage() {
                     resetCreateUserForm()
                     setCreateUserOpen(true)
                   }}
-                  className="inline-flex h-10 items-center justify-center gap-2 rounded-xl bg-[#1F6FEB] px-4 text-sm font-semibold text-white shadow-sm transition hover:bg-[#1759C7]"
+                  className="nedvi-dark-white-create inline-flex h-10 items-center justify-center gap-2 rounded-xl bg-[#1F6FEB] px-4 text-sm font-semibold text-white shadow-sm transition hover:bg-[#1759C7]"
                 >
                   <UserPlus size={16} />
                   Nuevo usuario NEDVI
@@ -770,7 +770,7 @@ export default function UsersAndPermissionsPage() {
           {pendingRequests.map((request) => {
             const isReviewing = reviewingId === request.id
             return (
-              <article key={request.id} className="overflow-hidden rounded-2xl border border-[var(--border)] bg-[var(--surface)] shadow-sm">
+              <article key={request.id} className="nedvi-config-card overflow-hidden rounded-2xl border border-[var(--border)] bg-[var(--surface)] shadow-sm">
                 <div className="flex flex-col gap-5 p-5 lg:flex-row lg:items-center lg:justify-between">
                   <div className="flex min-w-0 items-start gap-4">
                     <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-[#7DC6FF] text-sm font-bold text-black">{initials(request.name)}</span>
@@ -1033,7 +1033,7 @@ export default function UsersAndPermissionsPage() {
                 type="button"
                 onClick={() => void createInternalUser()}
                 disabled={creatingUser}
-                className="inline-flex h-10 items-center gap-2 rounded-xl bg-[#1F6FEB] px-4 text-sm font-semibold text-white transition hover:bg-[#1759C7] disabled:cursor-wait disabled:opacity-60"
+                className="nedvi-dark-white-create inline-flex h-10 items-center gap-2 rounded-xl bg-[#1F6FEB] px-4 text-sm font-semibold text-white transition hover:bg-[#1759C7] disabled:cursor-wait disabled:opacity-60"
               >
                 <UserPlus size={15} />
                 {creatingUser ? 'Creando...' : 'Crear usuario NEDVI'}
