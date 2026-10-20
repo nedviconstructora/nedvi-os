@@ -49,7 +49,7 @@ function SortableColumn({
     <button
       type="button"
       onClick={() => onSort(sortKey)}
-      className="inline-flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-[0.1em] text-[#646873] transition hover:text-white"
+      className="inline-flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-[0.1em] text-[var(--muted)] transition hover:text-[var(--primary)]"
     >
       {label}
       {isActive ? (
@@ -73,10 +73,10 @@ export function CustomerTable({
   onDelete,
 }: CustomerTableProps) {
   return (
-    <div className="hidden overflow-hidden rounded-2xl border border-white/[0.07] bg-[#20232A] shadow-[0_16px_50px_rgba(0,0,0,0.16)] lg:block">
+    <div className="crm-table-shell hidden overflow-hidden rounded-2xl border border-[var(--border)] bg-[var(--card)] text-[var(--foreground)] shadow-[0_12px_32px_rgba(18,47,76,0.10)] backdrop-blur-xl lg:block">
       <div className="overflow-x-auto">
         <table className="w-full min-w-[980px] border-collapse text-left">
-          <thead className="border-b border-white/[0.06] bg-white/[0.015]">
+          <thead className="border-b border-[var(--border)] bg-[var(--surface-soft)]">
             <tr>
               <th className="px-6 py-4">
                 <SortableColumn
@@ -123,32 +123,32 @@ export function CustomerTable({
                   onSort={onSort}
                 />
               </th>
-              <th className="px-4 py-4 text-[10px] font-semibold uppercase tracking-[0.1em] text-[#646873]">
+              <th className="px-4 py-4 text-[10px] font-semibold uppercase tracking-[0.1em] text-[var(--muted)]">
                 Acciones
               </th>
             </tr>
           </thead>
 
-          <tbody className="divide-y divide-white/[0.05]">
+          <tbody className="divide-y divide-[var(--border)]">
             {customers.map((customer) => (
               <tr
-                className="group transition hover:bg-white/[0.025]"
+                className="group transition hover:bg-[var(--surface-soft)]"
                 key={customer.id}
               >
                 <td className="px-6 py-4">
                   <div className="flex items-center gap-3">
-                    <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-[#163DFF]/[0.12] text-[10px] font-semibold text-[#9aabff]">
+                    <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-[#163DFF]/[0.12] text-[10px] font-semibold text-[var(--primary)]">
                       {getCustomerInitials(customer)}
                     </span>
 
                     <div className="min-w-0">
                       <Link
                         href={`/crm/${customer.id}`}
-                        className="block max-w-[220px] truncate text-xs font-semibold text-white transition hover:text-[#91a2ff]"
+                        className="block max-w-[220px] truncate text-xs font-semibold text-[var(--foreground)] transition hover:text-[#91a2ff]"
                       >
                         {customer.company}
                       </Link>
-                      <p className="mt-1 text-[10px] font-semibold text-[#7187ff]">
+                      <p className="mt-1 text-[10px] font-semibold text-[var(--primary)]">
                         {customer.folio ?? 'Sin folio'}
                       </p>
                     </div>
@@ -156,16 +156,16 @@ export function CustomerTable({
                 </td>
 
                 <td className="px-4 py-4">
-                  <p className="text-xs font-medium text-[#d5d7df]">
+                  <p className="text-xs font-medium text-[var(--foreground)]">
                     {customer.contact}
                   </p>
-                  <div className="mt-1 flex items-center gap-2 text-[10px] text-[#646873]">
+                  <div className="mt-1 flex items-center gap-2 text-[10px] text-[var(--muted)]">
                     <Mail size={12} />
                     {customer.email}
                   </div>
                 </td>
 
-                <td className="px-4 py-4 text-xs text-[#9CA3AF]">
+                <td className="px-4 py-4 text-xs text-[var(--muted)]">
                   {customer.projectType}
                 </td>
 
@@ -174,10 +174,10 @@ export function CustomerTable({
                 </td>
 
                 <td className="px-4 py-4">
-                  <p className="text-xs text-[#d5d7df]">
+                  <p className="text-xs text-[var(--foreground)]">
                     {formatCustomerDate(customer.lastContact)}
                   </p>
-                  <div className="mt-1 flex items-center gap-1 text-[10px] text-[#646873]">
+                  <div className="mt-1 flex items-center gap-1 text-[10px] text-[var(--muted)]">
                     <Phone size={11} />
                     {customer.phone}
                   </div>
