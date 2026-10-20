@@ -1934,3 +1934,21 @@ textarea {
   color: #111827 !important;
   -webkit-text-fill-color: #111827 !important;
 }
+
+
+/* Settings toolbar: three access-management controls, dark theme only. */
+.theme-dark .nedvi-settings-top-action {
+  background: #f8fafc !important;
+  background-image: none !important;
+  color: #111827 !important;
+  -webkit-text-fill-color: #111827 !important;
+  border: 1px solid rgba(255,255,255,.9) !important;
+  box-shadow: 0 6px 20px rgba(0,0,0,.2) !important;
+}
+.theme-dark .nedvi-settings-top-action :is(svg,span):not(.bg-amber-500) {
+  color: #111827 !important;
+  stroke: currentColor;
+}
+.theme-dark .nedvi-settings-top-action:hover {
+  background: #e5e9ef !important;
+}
