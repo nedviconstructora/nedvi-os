@@ -787,7 +787,7 @@ export default function DailyReportsPage() {
       </div>
 
       {viewingGroup ? (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4">
+        <div className="fixed inset-0 z-[120] flex items-center justify-center overflow-y-auto bg-slate-950/55 p-4 backdrop-blur-md">
           <div className="max-h-[94vh] w-full max-w-[1500px] overflow-y-auto rounded-2xl bg-[var(--surface)] shadow-2xl">
             <div className="sticky top-0 z-10 flex items-start justify-between gap-4 border-b border-[var(--border)] bg-[var(--surface)] p-5">
               <div>
@@ -875,7 +875,7 @@ export default function DailyReportsPage() {
       ) : null}
 
       {open ? (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/55 p-4">
+        <div className="fixed inset-0 z-[120] flex items-center justify-center overflow-y-auto bg-slate-950/55 p-4 backdrop-blur-md">
           <div className="max-h-[94vh] w-full max-w-6xl overflow-y-auto rounded-2xl bg-[var(--surface)] p-6 shadow-2xl">
             <div className="mb-5 flex items-center justify-between">
               <div>
