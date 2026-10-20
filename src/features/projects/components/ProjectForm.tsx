@@ -2,6 +2,7 @@
 
 import Link from 'next/link'
 import { useEffect, useMemo, useState, type FormEvent } from 'react'
+import type { Project } from '@/features/projects/types/project'
 import { useRouter } from 'next/navigation'
 import { ExternalLink, MapPin, Save } from 'lucide-react'
 import { readAccessSession } from '@/features/access/services/accessStorage'
@@ -24,6 +25,8 @@ type ProjectFormProps = {
   initialValues?: Partial<ProjectFormValues>
   mode: 'create' | 'edit'
   projectId?: string
+  onSaved?: (project: Project) => void
+  onCancel?: () => void
 }
 
 const inputClassName =
@@ -52,6 +55,8 @@ export function ProjectForm({
   initialValues,
   mode,
   projectId,
+  onSaved,
+  onCancel,
 }: ProjectFormProps) {
   const router = useRouter()
   const [customers, setCustomers] = useState<Customer[]>([])
@@ -212,8 +217,11 @@ export function ProjectForm({
         return
       }
 
-      router.push(`/projects/${project.id}`)
-      router.refresh()
+      if (onSaved) onSaved(project)
+      else {
+        router.push(`/projects/${project.id}`)
+        router.refresh()
+      }
     } catch (submitError) {
       console.error('Error al guardar el proyecto:', submitError)
       setError('No se pudo guardar el proyecto en Supabase. Revisa permisos o conexión.')
@@ -460,12 +468,12 @@ export function ProjectForm({
         </p>
 
         <div className="flex justify-end gap-3">
-          <Link
+          {onCancel ? <button type="button" onClick={onCancel} disabled={saving} className="inline-flex h-11 items-center justify-center rounded-xl px-4 text-xs font-semibold text-[var(--foreground)]">Cancelar</button> : <Link
             href={mode === 'edit' && projectId ? `/projects/${projectId}` : '/projects'}
             className="inline-flex h-11 items-center justify-center rounded-xl px-4 text-xs font-semibold text-[#9CA3AF] transition hover:bg-white/[0.05] hover:text-white"
           >
             Cancelar
-          </Link>
+          </Link>}
 
           <button
             type="submit"
