@@ -1458,3 +1458,75 @@ textarea {
   background: #343942 !important;
   color: #fff !important;
 }
+
+
+/* Dark monochrome v2: near-black modules, white readable lettering.
+   Exclude the deliberately light creation dialogs and status-colored elements. */
+.theme-dark {
+  --background: #101114;
+  --foreground: #ffffff;
+  --muted: #d1d5db;
+  --subtle: #aeb4bd;
+  --card: #1b1d21;
+  --surface: #1b1d21;
+  --surface-soft: #26292e;
+  --border: #3d424a;
+}
+.theme-dark .nedvi-main-content {
+  --background: #101114;
+  --foreground: #ffffff;
+  --muted: #d1d5db;
+  --subtle: #aeb4bd;
+  --card: #1b1d21;
+  --surface: #1b1d21;
+  --surface-soft: #26292e;
+  --border: #3d424a;
+  background: #101114 !important;
+  background-image: none !important;
+  color: #fff;
+}
+.theme-dark .nedvi-main-content :is(.nedvi-card,.nedvi-dashboard-hero,.crm-table-shell),
+.theme-dark .nedvi-main-content :is(div,section,article)[class*="rounded-"][class*="border"][class*="bg-[var(--surface)"],
+.theme-dark .nedvi-main-content :is(div,section,article)[class*="rounded-"][class*="border"][class*="bg-[var(--card)"] {
+  background: #1b1d21 !important;
+  border-color: #3d424a !important;
+  color: #fff !important;
+  box-shadow: 0 10px 28px rgba(0,0,0,.26) !important;
+}
+.theme-dark .nedvi-main-content :is(.nedvi-card,.crm-table-shell) :is(thead,tr):hover {
+  background-color: #292c32;
+}
+.theme-dark .nedvi-main-content :is(.nedvi-card,.nedvi-dashboard-hero,.crm-table-shell) :is(h1,h2,h3,h4,h5,h6),
+.theme-dark .nedvi-main-content :is(.nedvi-card,.nedvi-dashboard-hero,.crm-table-shell) :is(p,td,th,span):not([class*="text-red"]):not([class*="text-green"]):not([class*="text-emerald"]):not([class*="text-amber"]):not([class*="text-blue"]):not([class*="text-sky"]):not([class*="text-violet"]) {
+  color: inherit;
+}
+.theme-dark .nedvi-main-content :is(input,textarea,select):not([type="file"]):not([type="checkbox"]):not(.nedvi-folio-search-input):not(.nedvi-quote-form-dialog *):not(.nedvi-customer-create-modal *):not(.nedvi-project-create-modal *):not(.nedvi-standard-modal *) {
+  background: #25282d !important;
+  border-color: #50555d !important;
+  color: #fff !important;
+  -webkit-text-fill-color: #fff;
+  caret-color: #fff;
+  color-scheme: dark;
+}
+.theme-dark .nedvi-main-content select.nedvi-customer-filter-select,
+.theme-dark .nedvi-main-content select.nedvi-customer-filter-select option {
+  background: #25282d !important;
+  color: #fff !important;
+  -webkit-text-fill-color: #fff;
+}
+.theme-dark .nedvi-main-content :is(input,textarea):not(.nedvi-folio-search-input)::placeholder {
+  color: #b8bfc9 !important;
+  opacity: 1;
+}
+.theme-dark .nedvi-main-content select option { background: #25282d !important; color: #fff !important; }
+.theme-dark .nedvi-main-content .nedvi-quick-action {
+  background: #24272c !important;
+  border-color: #454b54 !important;
+  color: #fff !important;
+}
+.theme-dark .nedvi-main-content .nedvi-quick-action:hover { background: #30343b !important; }
+.theme-dark .nedvi-main-content .nedvi-quick-action-label { color: #fff !important; }
+.theme-dark .nedvi-main-content :is(.nedvi-card,.crm-table-shell) a:not([class*="text-"]),
+.theme-dark .nedvi-main-content :is(.nedvi-card,.crm-table-shell) button:not([class*="text-"]) {
+  color: #fff;
+}
