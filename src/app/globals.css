@@ -1836,3 +1836,35 @@ textarea {
   opacity: .48 !important;
   cursor: not-allowed;
 }
+
+
+/* Agenda: charcoal translucent glass, preserving the light theme. */
+.theme-dark .nedvi-agenda-shell {
+  background: linear-gradient(145deg,rgba(28,30,35,.86),rgba(20,22,27,.79)) !important;
+  border: 1px solid rgba(255,255,255,.15) !important;
+  box-shadow: 0 22px 58px rgba(0,0,0,.28) !important;
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+}
+.theme-dark .nedvi-agenda-panel {
+  background: rgba(29,31,36,.68) !important;
+  border: 1px solid rgba(255,255,255,.13) !important;
+  box-shadow: 0 12px 36px rgba(0,0,0,.22) !important;
+  backdrop-filter: blur(18px);
+  -webkit-backdrop-filter: blur(18px);
+}
+.theme-dark .nedvi-agenda-shell .nedvi-dark-white-create {
+  background: #f8fafc !important;
+  background-image: none !important;
+  border: 1px solid rgba(255,255,255,.88) !important;
+  color: #111827 !important;
+  -webkit-text-fill-color: #111827 !important;
+  box-shadow: 0 8px 22px rgba(0,0,0,.2) !important;
+}
+.theme-dark .nedvi-agenda-shell .nedvi-dark-white-create :is(svg,span) {
+  color: #111827 !important;
+  stroke: currentColor;
+}
+.theme-dark .nedvi-agenda-shell .nedvi-dark-white-create:hover {
+  background: #e5e9ef !important;
+}
