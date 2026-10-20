@@ -111,7 +111,7 @@ export function CustomerWorkspace() {
           <h1 className="mt-2 text-3xl font-semibold tracking-[-0.05em] text-[var(--foreground)] sm:text-4xl">Clientes</h1>
           <p className="mt-2 max-w-xl text-sm text-[#9CA3AF]">Administra relaciones, oportunidades y el seguimiento comercial de cada cliente de NEDVI.</p>
         </div>
-        <button type="button" onClick={() => setNewClientOpen(true)} className="inline-flex h-11 items-center justify-center gap-2 rounded-xl bg-[#163DFF] px-4 text-xs font-semibold text-white shadow-[0_10px_25px_rgba(22,61,255,0.2)] transition hover:bg-[#3155ff] hover:shadow-[0_14px_30px_rgba(22,61,255,0.3)] focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-[#163DFF]/30">
+        <button type="button" onClick={() => setNewClientOpen(true)} className="nedvi-primary-create inline-flex h-11 items-center justify-center gap-2 rounded-xl bg-[#163DFF] px-4 text-xs font-semibold text-white shadow-[0_10px_25px_rgba(22,61,255,0.2)] transition hover:bg-[#3155ff] hover:shadow-[0_14px_30px_rgba(22,61,255,0.3)] focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-[#163DFF]/30">
           <Plus size={16} /> Nuevo cliente
         </button>
       </header>
