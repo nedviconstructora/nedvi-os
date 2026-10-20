@@ -9,6 +9,7 @@ import {
   useRef,
   useState,
 } from 'react'
+import { createPortal } from 'react-dom'
 import {
   Download,
   Eye,
@@ -601,7 +602,7 @@ export default function SiteSurveysPage() {
         </div>
       </div>
 
-      {open ? (
+      {open ? createPortal((
         <div className="fixed inset-0 z-[100] flex items-start justify-center overflow-y-auto overscroll-contain bg-slate-950/55 p-2 backdrop-blur-md sm:p-4" role="dialog" aria-modal="true">
           <div className="max-h-[calc(100dvh-1rem)] min-h-0 w-full max-w-6xl overflow-y-auto overscroll-contain sm:max-h-[calc(100dvh-2rem)] rounded-2xl bg-[var(--surface)] shadow-2xl">
             <div className="sticky top-0 z-20 flex items-start justify-between border-b border-[var(--border)] bg-[var(--surface)] p-5">
@@ -681,9 +682,9 @@ export default function SiteSurveysPage() {
             </form>
           </div>
         </div>
-      ) : null}
+      ), document.body) : null}
 
-      {viewing ? (
+      {viewing ? createPortal((
         <div className="fixed inset-0 z-[100] flex items-start justify-center overflow-y-auto overscroll-contain bg-slate-950/55 p-2 backdrop-blur-md sm:p-4" role="dialog" aria-modal="true">
           <div className="max-h-[calc(100dvh-1rem)] min-h-0 w-full max-w-5xl overflow-y-auto overscroll-contain sm:max-h-[calc(100dvh-2rem)] rounded-2xl bg-[var(--surface)] shadow-2xl">
             <div className="sticky top-0 z-10 flex items-start justify-between border-b border-[var(--border)] bg-[var(--surface)] p-5"><div><p className="text-xs font-semibold uppercase tracking-[0.14em] text-[#5496CC]">Levantamiento · {formatDate(viewing.date)}</p><h2 className="mt-1 text-2xl font-bold text-[var(--foreground)]">{viewing.clientName}</h2><p className="mt-1 text-sm text-[var(--muted)]">{viewing.location || 'Sin ciudad / zona'}</p></div><button type="button" onClick={() => setViewing(null)} aria-label="Cerrar detalles del levantamiento" title="Cerrar" className="rounded-lg p-2 text-[var(--muted)] hover:bg-[var(--surface-soft)]"><X size={18} /></button></div>
@@ -697,9 +698,9 @@ export default function SiteSurveysPage() {
             </div>
           </div>
         </div>
-      ) : null}
+      ), document.body) : null}
 
-      {previewFile ? (
+      {previewFile ? createPortal((
         <div className="fixed inset-0 z-[120] flex items-center justify-center bg-black/85 p-2 sm:p-4" role="dialog" aria-modal="true" aria-label={`Vista previa de ${previewFile.name}`}>
           <div className="flex max-h-[calc(100dvh-1rem)] w-full max-w-5xl flex-col overflow-hidden rounded-2xl bg-[var(--surface)] shadow-2xl">
             <header className="flex items-center justify-between gap-3 border-b border-[var(--border)] p-4">
@@ -719,7 +720,7 @@ export default function SiteSurveysPage() {
             </div>
           </div>
         </div>
-      ) : null}
+      ), document.body) : null}
 
       <style jsx global>{`.survey-input{width:100%;border:1px solid var(--border);border-radius:.75rem;background:transparent;padding:.75rem 1rem;color:var(--foreground);outline:none}.survey-input:focus{border-color:#5496CC}`}</style>
     </AppShell>
