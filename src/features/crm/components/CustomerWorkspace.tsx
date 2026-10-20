@@ -11,10 +11,12 @@ import {
   TrendingUp,
   UserCheck,
   Users,
+  X,
 } from 'lucide-react'
 import { Card } from '@/components/ui/Card'
 import { EmptyState } from '@/components/ui/EmptyState'
 import { CustomerCard } from '@/features/crm/components/CustomerCard'
+import { CustomerForm } from '@/features/crm/components/CustomerForm'
 import { CustomerFilters } from '@/features/crm/components/CustomerFilters'
 import { CustomerSearch } from '@/features/crm/components/CustomerSearch'
 import { CustomerTable } from '@/features/crm/components/CustomerTable'
@@ -27,6 +29,7 @@ const PAGE_SIZE = 8
 export function CustomerWorkspace() {
   const [customers, setCustomers] = useState<Customer[]>([])
   const [loading, setLoading] = useState(true)
+  const [newClientOpen, setNewClientOpen] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
   const loadCustomers = useCallback(async () => {
@@ -108,9 +111,9 @@ export function CustomerWorkspace() {
           <h1 className="mt-2 text-3xl font-semibold tracking-[-0.05em] text-[var(--foreground)] sm:text-4xl">Clientes</h1>
           <p className="mt-2 max-w-xl text-sm text-[#9CA3AF]">Administra relaciones, oportunidades y el seguimiento comercial de cada cliente de NEDVI.</p>
         </div>
-        <Link href="/crm/new" className="inline-flex h-11 items-center justify-center gap-2 rounded-xl bg-[#163DFF] px-4 text-xs font-semibold text-white shadow-[0_10px_25px_rgba(22,61,255,0.2)] transition hover:bg-[#3155ff] hover:shadow-[0_14px_30px_rgba(22,61,255,0.3)] focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-[#163DFF]/30">
+        <button type="button" onClick={() => setNewClientOpen(true)} className="inline-flex h-11 items-center justify-center gap-2 rounded-xl bg-[#163DFF] px-4 text-xs font-semibold text-white shadow-[0_10px_25px_rgba(22,61,255,0.2)] transition hover:bg-[#3155ff] hover:shadow-[0_14px_30px_rgba(22,61,255,0.3)] focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-[#163DFF]/30">
           <Plus size={16} /> Nuevo cliente
-        </Link>
+        </button>
       </header>
 
       {error ? (
@@ -169,10 +172,25 @@ export function CustomerWorkspace() {
           ) : error ? (
             <button type="button" onClick={() => void loadCustomers()} className="inline-flex h-10 items-center gap-2 rounded-lg border border-white/[0.08] px-4 text-xs font-semibold text-[#d5d7df] transition hover:bg-white/[0.05]"><RefreshCw size={14} /> Reintentar</button>
           ) : (
-            <Link href="/crm/new" className="inline-flex h-10 items-center gap-2 rounded-lg bg-[#163DFF] px-4 text-xs font-semibold text-white transition hover:bg-[#3155ff]"><Plus size={14} /> Agregar cliente</Link>
+            <button type="button" onClick={() => setNewClientOpen(true)} className="inline-flex h-10 items-center gap-2 rounded-lg bg-[#163DFF] px-4 text-xs font-semibold text-white transition hover:bg-[#3155ff]"><Plus size={14} /> Agregar cliente</button>
           )}
         />
       )}
+      {newClientOpen ? (
+        <div role="presentation" className="fixed inset-0 z-[120] flex items-start justify-center overflow-y-auto bg-slate-950/60 p-3 backdrop-blur-sm sm:p-6">
+          <section role="dialog" aria-modal="true" aria-label="Nuevo cliente" className="nedvi-customer-create-modal my-auto max-h-[calc(100dvh-1.5rem)] w-full max-w-4xl overflow-y-auto rounded-3xl border border-[#cbddea] bg-[#f9fcff] p-5 shadow-[0_32px_95px_rgba(5,29,55,.35)] sm:p-8">
+            <header className="mb-6 flex items-start justify-between gap-4 border-b border-[#d7e4ef] pb-5">
+              <div>
+                <p className="text-xs font-semibold uppercase tracking-widest text-[#256fa7]">CRM · Registro de clientes</p>
+                <h2 className="mt-2 text-2xl font-bold text-[#102d47]">Nuevo cliente</h2>
+                <p className="mt-1 text-sm text-[#526d84]">Registra la información sin salir de Clientes.</p>
+              </div>
+              <button type="button" onClick={() => setNewClientOpen(false)} aria-label="Cerrar nuevo cliente" className="rounded-xl border border-[#cbddea] bg-white p-2 text-[#17324b] hover:bg-[#edf5fc]"><X size={20}/></button>
+            </header>
+            <CustomerForm mode="create" onCancel={() => setNewClientOpen(false)} onSaved={(customer) => { setCustomers((current) => [customer, ...current.filter((item) => item.id !== customer.id)]); setNewClientOpen(false); void loadCustomers() }} />
+          </section>
+        </div>
+      ) : null}
     </div>
   )
 }
