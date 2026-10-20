@@ -602,7 +602,7 @@ export default function SiteSurveysPage() {
       </div>
 
       {open ? (
-        <div className="fixed inset-0 z-[100] flex items-start justify-center overflow-y-auto overscroll-contain bg-black/60 p-2 sm:p-4" role="dialog" aria-modal="true">
+        <div className="fixed inset-0 z-[100] flex items-start justify-center overflow-y-auto overscroll-contain bg-slate-950/55 p-2 backdrop-blur-md sm:p-4" role="dialog" aria-modal="true">
           <div className="max-h-[calc(100dvh-1rem)] min-h-0 w-full max-w-6xl overflow-y-auto overscroll-contain sm:max-h-[calc(100dvh-2rem)] rounded-2xl bg-[var(--surface)] shadow-2xl">
             <div className="sticky top-0 z-20 flex items-start justify-between border-b border-[var(--border)] bg-[var(--surface)] p-5">
               <div><p className="text-xs font-semibold uppercase tracking-[0.14em] text-[#5496CC]">Comercial y Ventas</p><h2 className="mt-1 text-xl font-bold text-[var(--foreground)]">{editingId ? 'Editar levantamiento' : 'Nuevo levantamiento'}</h2></div>
@@ -684,7 +684,7 @@ export default function SiteSurveysPage() {
       ) : null}
 
       {viewing ? (
-        <div className="fixed inset-0 z-[100] flex items-start justify-center overflow-y-auto overscroll-contain bg-black/60 p-2 sm:p-4" role="dialog" aria-modal="true">
+        <div className="fixed inset-0 z-[100] flex items-start justify-center overflow-y-auto overscroll-contain bg-slate-950/55 p-2 backdrop-blur-md sm:p-4" role="dialog" aria-modal="true">
           <div className="max-h-[calc(100dvh-1rem)] min-h-0 w-full max-w-5xl overflow-y-auto overscroll-contain sm:max-h-[calc(100dvh-2rem)] rounded-2xl bg-[var(--surface)] shadow-2xl">
             <div className="sticky top-0 z-10 flex items-start justify-between border-b border-[var(--border)] bg-[var(--surface)] p-5"><div><p className="text-xs font-semibold uppercase tracking-[0.14em] text-[#5496CC]">Levantamiento · {formatDate(viewing.date)}</p><h2 className="mt-1 text-2xl font-bold text-[var(--foreground)]">{viewing.clientName}</h2><p className="mt-1 text-sm text-[var(--muted)]">{viewing.location || 'Sin ciudad / zona'}</p></div><button type="button" onClick={() => setViewing(null)} aria-label="Cerrar detalles del levantamiento" title="Cerrar" className="rounded-lg p-2 text-[var(--muted)] hover:bg-[var(--surface-soft)]"><X size={18} /></button></div>
             <div className="space-y-5 p-5">
