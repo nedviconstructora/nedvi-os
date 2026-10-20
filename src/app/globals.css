@@ -1914,3 +1914,23 @@ textarea {
 .theme-dark .nedvi-config-shell .nedvi-dark-white-create:hover {
   background: #e5e9ef !important;
 }
+
+
+/* Settings action palette: neutral white glass rather than cyan/blue. */
+.theme-dark .nedvi-config-shell .nedvi-config-secondary-action {
+  background: rgba(248,250,252,.90) !important;
+  color: #111827 !important;
+  -webkit-text-fill-color: #111827 !important;
+  border-color: rgba(255,255,255,.82) !important;
+}
+.theme-dark .nedvi-config-shell .nedvi-config-secondary-action :is(svg,span) {
+  color: #111827 !important; stroke: currentColor;
+}
+.theme-dark .nedvi-config-shell .nedvi-config-secondary-action:hover {
+  background: #fff !important;
+}
+.theme-dark .nedvi-config-shell button.nedvi-dark-white-create {
+  background: #f8fafc !important;
+  color: #111827 !important;
+  -webkit-text-fill-color: #111827 !important;
+}
