@@ -38,10 +38,14 @@ export function PwaManager({ initialVersion }: { initialVersion: string }) {
   const [dismissed, setDismissed] = useState(false)
   const [updateAvailable, setUpdateAvailable] = useState(false)
   const [latestVersion, setLatestVersion] = useState('')
+  const [manualStatus, setManualStatus] = useState('')
+  const [manualChecking, setManualChecking] = useState(false)
+  const [standalone, setStandalone] = useState(false)
   const editingRef = useRef(false)
 
   useEffect(() => {
     setOnline(navigator.onLine)
+    setStandalone(window.matchMedia('(display-mode: standalone)').matches)
 
     if ('serviceWorker' in navigator) {
       navigator.serviceWorker.register('/sw.js').catch((error) => {
@@ -158,6 +162,39 @@ export function PwaManager({ initialVersion }: { initialVersion: string }) {
     }
   }, [initialVersion])
 
+  async function manualCheck() {
+    if (manualChecking) return
+    if (!navigator.onLine) {
+      setManualStatus('No hay conexión para comprobar actualizaciones.')
+      return
+    }
+    setManualChecking(true)
+    setManualStatus('Buscando versión publicada...')
+    try {
+      const registration = await navigator.serviceWorker?.getRegistration()
+      await registration?.update()
+      const response = await fetch('/api/app-version?manual=' + Date.now(), {
+        cache: 'no-store',
+        headers: { 'Cache-Control': 'no-cache' },
+      })
+      if (!response.ok) throw new Error('La comprobación no está disponible')
+      const data = (await response.json()) as { version?: string }
+      if (!data.version || data.version === 'development') {
+        setManualStatus('El servidor no informó una versión publicada.')
+      } else if (data.version !== initialVersion) {
+        setLatestVersion(data.version)
+        setUpdateAvailable(true)
+        setManualStatus('Nueva versión disponible. Pulsa Actualizar app.')
+      } else {
+        setManualStatus('NEDVI OS ya está en la última versión publicada.')
+      }
+    } catch {
+      setManualStatus('No fue posible comprobar la versión. Inténtalo de nuevo.')
+    } finally {
+      setManualChecking(false)
+    }
+  }
+
   async function installApp() {
     if (!installPrompt) return
     await installPrompt.prompt()
@@ -167,6 +204,15 @@ export function PwaManager({ initialVersion }: { initialVersion: string }) {
 
   return (
     <>
+      {standalone ? (
+        <div className="fixed bottom-4 left-4 z-[80] flex max-w-[calc(100vw-2rem)] items-center gap-2 rounded-xl border border-[var(--border)] bg-[var(--surface)] px-2 py-2 text-[var(--foreground)] shadow-lg">
+          <button type="button" onClick={() => void manualCheck()} disabled={manualChecking} className="inline-flex items-center gap-2 rounded-lg px-3 py-2 text-xs font-semibold hover:bg-[var(--surface-soft)] disabled:opacity-60">
+            <RefreshCw size={15} className={manualChecking ? 'animate-spin' : ''} />
+            {manualChecking ? 'Comprobando...' : 'Buscar actualización'}
+          </button>
+          {manualStatus ? <span role="status" className="max-w-56 text-xs text-[var(--muted)]">{manualStatus}</span> : null}
+        </div>
+      ) : null}
       {updateAvailable ? (
         <div role="status" className="fixed inset-x-3 top-3 z-[100] mx-auto flex max-w-md items-center gap-3 rounded-2xl border border-[#5496CC]/40 bg-[var(--surface)] p-3 text-sm text-[var(--foreground)] shadow-2xl">
           <RefreshCw size={20} className="shrink-0 text-[#5496CC]" />
