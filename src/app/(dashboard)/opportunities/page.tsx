@@ -366,8 +366,8 @@ export default function OpportunitiesPage() {
         )}
 
         {open && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
-            <div className="max-h-[92vh] w-full max-w-4xl overflow-y-auto rounded-2xl bg-[var(--surface)] p-6 text-[var(--foreground)] shadow-2xl">
+          <div className="fixed inset-0 z-[120] flex items-center justify-center bg-slate-950/60 p-4 backdrop-blur-sm">
+            <div className="nedvi-standard-modal max-h-[92vh] w-full max-w-4xl overflow-y-auto rounded-2xl border border-[#cbddea] bg-[#f9fcff] p-6 text-[var(--foreground)] shadow-2xl">
               <div className="mb-5 flex items-start justify-between gap-4">
                 <div><h2 className="text-xl font-bold">{editingId ? 'Editar oportunidad' : 'Nueva oportunidad'}</h2><p className="mt-1 text-xs text-slate-500">Registra el seguimiento comercial del prospecto.</p></div>
                 <button type="button" onClick={closeForm} className="text-sm text-slate-500">Cerrar</button>
