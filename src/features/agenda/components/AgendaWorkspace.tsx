@@ -224,7 +224,7 @@ export function AgendaWorkspace() {
   }
 
   return (
-    <div className="relative mx-auto w-full max-w-[1600px] space-y-8 overflow-hidden rounded-[28px] border border-[#5496CC]/15 bg-[radial-gradient(circle_at_top_left,rgba(84,150,204,0.16),transparent_34%),linear-gradient(145deg,rgba(13,30,48,0.98),rgba(31,41,55,0.96)_48%,rgba(17,24,39,0.98))] p-4 shadow-[0_30px_80px_rgba(2,12,27,0.35)] sm:p-6 lg:p-8">
+    <div className="nedvi-agenda-shell relative mx-auto w-full max-w-[1600px] space-y-8 overflow-hidden rounded-[28px] border border-[#5496CC]/15 bg-[radial-gradient(circle_at_top_left,rgba(84,150,204,0.16),transparent_34%),linear-gradient(145deg,rgba(13,30,48,0.98),rgba(31,41,55,0.96)_48%,rgba(17,24,39,0.98))] p-4 shadow-[0_30px_80px_rgba(2,12,27,0.35)] sm:p-6 lg:p-8">
       <div className="pointer-events-none absolute inset-0 opacity-[0.08] [background-image:linear-gradient(rgba(255,255,255,.3)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,.3)_1px,transparent_1px)] [background-size:32px_32px]" />
 
       <header className="relative z-10 flex flex-col justify-between gap-5 sm:flex-row sm:items-end">
@@ -245,7 +245,7 @@ export function AgendaWorkspace() {
         <button
           type="button"
           onClick={openCreateModal}
-          className="inline-flex h-11 items-center justify-center gap-2 rounded-xl bg-[#5496CC] px-4 text-xs font-semibold text-white shadow-[0_12px_30px_rgba(84,150,204,0.28)] transition hover:bg-[#6aa9dc] focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-[#5496CC]/30"
+          className="nedvi-dark-white-create inline-flex h-11 items-center justify-center gap-2 rounded-xl bg-[#5496CC] px-4 text-xs font-semibold text-white shadow-[0_12px_30px_rgba(84,150,204,0.28)] transition hover:bg-[#6aa9dc] focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-[#5496CC]/30"
         >
           <Plus size={16} strokeWidth={2} />
           Nueva actividad
@@ -258,7 +258,7 @@ export function AgendaWorkspace() {
         </div>
       ) : null}
 
-      <section className="relative z-10 overflow-hidden rounded-2xl border border-white/[0.08] bg-[#172331]/90 shadow-[0_20px_60px_rgba(0,0,0,0.2)] backdrop-blur-xl">
+      <section className="nedvi-agenda-panel relative z-10 overflow-hidden rounded-2xl border border-white/[0.08] bg-[#172331]/90 shadow-[0_20px_60px_rgba(0,0,0,0.2)] backdrop-blur-xl">
         <div className="border-b border-white/[0.07] bg-[linear-gradient(90deg,rgba(84,150,204,0.14),rgba(255,255,255,0.02))] px-5 py-5 sm:px-6">
           <div className="flex flex-col justify-between gap-4 lg:flex-row lg:items-center">
             <div>
@@ -462,7 +462,7 @@ export function AgendaWorkspace() {
                 <button type="button" onClick={closeModal} className="h-10 rounded-xl border border-white/[0.08] px-4 text-xs font-medium text-[#a9b6c5] hover:bg-white/[0.05] hover:text-white">
                   Cancelar
                 </button>
-                <button type="submit" disabled={saving} className="inline-flex h-10 items-center justify-center gap-2 rounded-xl bg-[#5496CC] px-4 text-xs font-semibold text-white transition hover:bg-[#6aa9dc] disabled:cursor-wait disabled:opacity-60">
+                <button type="submit" disabled={saving} className="nedvi-dark-white-create inline-flex h-10 items-center justify-center gap-2 rounded-xl bg-[#5496CC] px-4 text-xs font-semibold text-white transition hover:bg-[#6aa9dc] disabled:cursor-wait disabled:opacity-60">
                   {saving ? <LoaderCircle size={15} className="animate-spin" /> : editingActivityId !== null ? <Pencil size={15} /> : <Plus size={15} />}
                   {saving ? 'Guardando...' : editingActivityId !== null ? 'Guardar cambios' : 'Crear actividad'}
                 </button>
