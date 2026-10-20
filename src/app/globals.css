@@ -1313,3 +1313,38 @@ textarea {
 .nedvi-main-content .nedvi-quote-form-dialog button:not(:disabled) {
   opacity: 1;
 }
+
+
+/* Same-page new customer editor: always readable, even in dark app mode. */
+.nedvi-main-content .nedvi-customer-create-modal {
+  --foreground: #17324b;
+  --muted: #526d84;
+  --surface-soft: #eff6fc;
+  --border: #cbddea;
+  background: #f9fcff !important;
+  color: #17324b !important;
+  color-scheme: light !important;
+}
+.nedvi-main-content .nedvi-customer-create-modal :is(input,select,textarea) {
+  background: #fff !important;
+  color: #17324b !important;
+  -webkit-text-fill-color: #17324b;
+  border-color: #cbddea !important;
+  color-scheme: light !important;
+}
+.nedvi-main-content .nedvi-customer-create-modal :is(input,textarea)::placeholder {
+  color: #698199 !important;
+  -webkit-text-fill-color: #698199;
+  opacity: 1;
+}
+.nedvi-main-content .nedvi-customer-create-modal select option {
+  background: #fff !important;
+  color: #17324b !important;
+}
+.nedvi-main-content .nedvi-customer-create-modal label {
+  color: #34546f !important;
+}
+.nedvi-main-content .nedvi-customer-create-modal button[type="submit"] {
+  color: #fff !important;
+  -webkit-text-fill-color: #fff;
+}
