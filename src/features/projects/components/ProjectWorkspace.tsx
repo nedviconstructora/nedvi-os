@@ -135,7 +135,7 @@ export function ProjectWorkspace() {
         </div>
 
         <button type="button" onClick={() => setNewProjectOpen(true)}
-          className="inline-flex h-11 items-center justify-center gap-2 rounded-xl bg-[#163DFF] px-4 text-xs font-semibold text-white shadow-[0_10px_25px_rgba(22,61,255,0.2)] transition hover:bg-[#3155ff] hover:shadow-[0_14px_30px_rgba(22,61,255,0.3)] focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-[#163DFF]/30"
+          className="nedvi-dark-white-create inline-flex h-11 items-center justify-center gap-2 rounded-xl bg-[#163DFF] px-4 text-xs font-semibold text-white shadow-[0_10px_25px_rgba(22,61,255,0.2)] transition hover:bg-[#3155ff] hover:shadow-[0_14px_30px_rgba(22,61,255,0.3)] focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-[#163DFF]/30"
         >
           <Plus size={16} />
           Nuevo proyecto
@@ -291,7 +291,7 @@ export function ProjectWorkspace() {
               </button>
             ) : (
               <button type="button" onClick={() => setNewProjectOpen(true)}
-                className="inline-flex h-10 items-center gap-2 rounded-lg bg-[#163DFF] px-4 text-xs font-semibold text-white transition hover:bg-[#3155ff]"
+                className="nedvi-dark-white-create inline-flex h-10 items-center gap-2 rounded-lg bg-[#163DFF] px-4 text-xs font-semibold text-white transition hover:bg-[#3155ff]"
               >
                 <Plus size={14} />
                 Agregar proyecto
