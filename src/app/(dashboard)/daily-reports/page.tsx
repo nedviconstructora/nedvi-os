@@ -919,7 +919,7 @@ export default function DailyReportsPage() {
                     type="button"
                     onClick={captureLocation}
                     disabled={locating}
-                    className="inline-flex min-h-11 items-center justify-center gap-2 rounded-xl border border-[#5496CC]/40 px-4 py-2.5 text-sm font-semibold text-[#5496CC] transition hover:bg-[#5496CC]/10 disabled:opacity-60"
+                    className="nedvi-dark-white-create inline-flex min-h-11 items-center justify-center gap-2 rounded-xl border border-[#5496CC]/40 px-4 py-2.5 text-sm font-semibold text-[#5496CC] transition hover:bg-[#5496CC]/10 disabled:opacity-60"
                   >
                     {locating ? <LoaderCircle size={16} className="animate-spin" /> : <MapPin size={16} />}
                     {locating ? 'Obteniendo...' : latitude ? 'Actualizar ubicación' : 'Usar ubicación actual'}
@@ -974,12 +974,12 @@ export default function DailyReportsPage() {
                     <p className="mt-1 text-xs text-[var(--muted)]">Agrega hasta {MAX_REPORT_IMAGES} imágenes. Se optimizan antes de guardar.</p>
                   </div>
                   <div className="flex flex-col gap-2 sm:flex-row">
-                    <label className="inline-flex min-h-11 cursor-pointer items-center justify-center gap-2 rounded-xl bg-[#5496CC] px-4 py-2.5 text-sm font-semibold text-white">
+                    <label className="nedvi-dark-white-create inline-flex min-h-11 cursor-pointer items-center justify-center gap-2 rounded-xl bg-[#5496CC] px-4 py-2.5 text-sm font-semibold text-white">
                       <ImagePlus size={16} />
                       {processingImages ? 'Procesando...' : 'Galería'}
                       <input type="file" accept="image/*" multiple disabled={processingImages || images.length >= MAX_REPORT_IMAGES} onChange={handleImages} className="hidden" />
                     </label>
-                    <label className="inline-flex min-h-11 cursor-pointer items-center justify-center gap-2 rounded-xl border border-[#5496CC]/40 bg-[var(--surface)] px-4 py-2.5 text-sm font-semibold text-[#5496CC]">
+                    <label className="nedvi-dark-white-create inline-flex min-h-11 cursor-pointer items-center justify-center gap-2 rounded-xl border border-[#5496CC]/40 bg-[var(--surface)] px-4 py-2.5 text-sm font-semibold text-[#5496CC]">
                       <ImagePlus size={16} />
                       Tomar foto
                       <input type="file" accept="image/*" capture="environment" disabled={processingImages || images.length >= MAX_REPORT_IMAGES} onChange={handleImages} className="hidden" />
@@ -1004,7 +1004,7 @@ export default function DailyReportsPage() {
 
               <div className="flex justify-end gap-3">
                 <button type="button" onClick={() => { setOpen(false); resetForm() }} className="rounded-xl border border-[var(--border)] px-5 py-3 font-semibold">Cancelar</button>
-                <button type="submit" disabled={processingImages} className="rounded-xl bg-[#5496CC] px-5 py-3 font-semibold text-white disabled:cursor-not-allowed disabled:opacity-60">{editingReportId ? 'Guardar cambios' : 'Guardar reporte'}</button>
+                <button type="submit" disabled={processingImages} className="nedvi-dark-white-create rounded-xl bg-[#5496CC] px-5 py-3 font-semibold text-white disabled:cursor-not-allowed disabled:opacity-60">{editingReportId ? 'Guardar cambios' : 'Guardar reporte'}</button>
               </div>
             </form>
           </div>
