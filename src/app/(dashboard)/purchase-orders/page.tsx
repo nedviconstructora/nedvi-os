@@ -523,7 +523,7 @@ export default function PurchaseOrdersPage() {
       </div>
 
       {open ? (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/55 p-4">
+        <div className="fixed inset-0 z-[120] flex items-center justify-center bg-slate-950/55 p-4 backdrop-blur-md">
           <div className="max-h-[94vh] w-full max-w-5xl overflow-y-auto rounded-2xl bg-[var(--surface)] p-6 shadow-2xl">
             <div className="mb-5 flex items-start justify-between"><div><p className="text-xs font-semibold uppercase tracking-wide text-[#5496CC]">Compras y Suministros</p><h2 className="mt-1 text-xl font-bold text-[var(--foreground)]">{editingOrder ? `Editar ${editingOrder.folio}` : 'Nueva orden de compra'}</h2></div><button type="button" onClick={closeForm} className="rounded-lg p-2 text-[var(--muted)]"><X size={18} /></button></div>
             <form onSubmit={saveOrder} className="space-y-6">
@@ -593,7 +593,7 @@ export default function PurchaseOrdersPage() {
       ) : null}
 
       {viewing ? (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/55 p-4">
+        <div className="fixed inset-0 z-[120] flex items-center justify-center bg-slate-950/55 p-4 backdrop-blur-md">
           <div className="max-h-[92vh] w-full max-w-4xl overflow-y-auto rounded-2xl bg-[var(--surface)] p-6 shadow-2xl">
             <div className="flex items-start justify-between border-b border-[var(--border)] pb-5"><div><p className="text-xs font-semibold uppercase tracking-wide text-[#5496CC]">{viewing.folio}</p><h2 className="mt-1 text-2xl font-bold text-[var(--foreground)]">{viewing.projectName}</h2><p className="mt-1 text-sm text-[var(--muted)]">Proveedor: {viewing.supplier.company}</p></div><button type="button" onClick={() => setViewing(null)} className="rounded-lg p-2 text-[var(--muted)]"><X size={18} /></button></div>
             <div className="mt-5 flex flex-wrap items-center justify-between gap-3"><div className="grid flex-1 gap-3 sm:grid-cols-3"><Summary label="Subtotal" value={money(viewing.subtotal, viewing.currency)} /><Summary label={`IVA (${viewing.taxRate}%)`} value={money(viewing.tax, viewing.currency)} /><Summary label="Total" value={money(viewing.total, viewing.currency)} accent /></div><button type="button" onClick={() => togglePayment(viewing)} className={`rounded-full border px-4 py-2 text-xs font-semibold ${paymentClass(viewing)}`}>{paymentLabel(viewing)}</button></div>
