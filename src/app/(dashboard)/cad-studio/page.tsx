@@ -149,7 +149,7 @@ export default function CadStudioPage() {
           <a href="https://web.autocad.com/" target="_blank" rel="noopener noreferrer" className="inline-flex shrink-0 items-center justify-center gap-2 rounded-xl border border-[var(--border)] bg-[var(--surface-soft)] px-4 py-3 text-sm font-semibold text-[var(--foreground)] hover:opacity-80">
             <ExternalLink size={17}/> AutoCAD Web
           </a>
-          <button type="button" onClick={openDesktopAutocad} className="inline-flex shrink-0 items-center justify-center gap-2 rounded-xl bg-[#5496CC] px-4 py-3 text-sm font-semibold text-white hover:brightness-95">
+          <button type="button" onClick={openDesktopAutocad} className="nedvi-dark-white-create inline-flex shrink-0 items-center justify-center gap-2 rounded-xl bg-[#5496CC] px-4 py-3 text-sm font-semibold text-white hover:brightness-95">
             <MonitorDown size={17}/> AutoCAD PC · Configurar
           </button>
         </div>
@@ -165,7 +165,7 @@ export default function CadStudioPage() {
         <aside className="self-start rounded-3xl border border-[var(--border)] bg-[var(--surface)] p-5 shadow-sm">
           <h2 className="flex items-center gap-2 text-lg font-semibold text-[var(--foreground)]"><Layers3 size={19} className="text-[#7BAEE3]"/> Archivos del proyecto</h2>
           <p className="mt-1 text-sm text-[var(--muted)]">Selecciona un plano DWG para visualizarlo.</p>
-          <label className="mt-5 flex min-h-11 cursor-pointer items-center justify-center gap-2 rounded-xl bg-[#7BAEE3] px-4 py-3 text-sm font-semibold text-slate-950 hover:bg-[#6c9ed2] focus-within:ring-2 focus-within:ring-blue-500">
+          <label className="nedvi-dark-white-create mt-5 flex min-h-11 cursor-pointer items-center justify-center gap-2 rounded-xl bg-[#7BAEE3] px-4 py-3 text-sm font-semibold text-slate-950 hover:bg-[#6c9ed2] focus-within:ring-2 focus-within:ring-blue-500">
             <Upload size={17}/> Subir plano DWG
             <input className="sr-only" type="file" accept=".dwg" disabled={busy} onChange={async e=>{
               const selected=e.target.files?.[0];e.target.value='';if(!selected)return
@@ -196,7 +196,7 @@ export default function CadStudioPage() {
           <div className="mb-4 flex flex-col gap-3 xl:flex-row xl:items-center xl:justify-between">
             <div className="min-w-0"><h2 className="break-all text-lg font-semibold text-[var(--foreground)] fullscreen:text-white">{file?.name || 'Plano arquitectónico'}</h2><p className="text-sm text-[var(--muted)]">Visor Autodesk · DWG</p></div>
             <div className="flex flex-wrap gap-2">
-              <button type="button" disabled={!file || busy} onClick={()=>void openPlan()} className="inline-flex min-h-10 items-center gap-2 rounded-xl bg-[#7BAEE3] px-3 py-2 text-sm font-semibold text-slate-950 hover:bg-[#6c9ed2] disabled:cursor-not-allowed disabled:opacity-50">{busy?'Preparando...':'Visualizar plano'}</button>
+              <button type="button" disabled={!file || busy} onClick={()=>void openPlan()} className="nedvi-dark-white-create inline-flex min-h-10 items-center gap-2 rounded-xl bg-[#7BAEE3] px-3 py-2 text-sm font-semibold text-slate-950 hover:bg-[#6c9ed2] disabled:cursor-not-allowed disabled:opacity-50">{busy?'Preparando...':'Visualizar plano'}</button>
               <a href="https://web.autocad.com/" target="_blank" rel="noopener noreferrer" className="inline-flex min-h-10 items-center gap-2 rounded-xl border border-[var(--border)] bg-[var(--surface-soft)] px-3 py-2 text-sm font-semibold text-[var(--foreground)]"><ExternalLink size={15}/> AutoCAD Web</a>
               <button type="button" onClick={openDesktopAutocad} className="inline-flex min-h-10 items-center gap-2 rounded-xl border border-[var(--border)] bg-[var(--surface-soft)] px-3 py-2 text-sm font-semibold text-[var(--foreground)]"><MonitorDown size={15}/> AutoCAD PC</button>
               <button type="button" disabled={!file} onClick={downloadOriginal} className="inline-flex min-h-10 items-center gap-2 rounded-xl border border-[var(--border)] bg-[var(--surface-soft)] px-3 py-2 text-sm font-semibold text-[var(--foreground)] disabled:opacity-50"><Download size={15}/> Descargar DWG</button>
