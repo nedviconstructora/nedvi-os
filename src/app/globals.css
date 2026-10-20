@@ -1049,3 +1049,44 @@ textarea {
     backdrop-filter: none !important;
   }
 }
+
+
+/* NEDVI OS glass v6: direct fix for legacy DIV-based panels and overrides. */
+.theme-dark {
+  --card: rgba(91, 143, 183, .38);
+  --surface: rgba(91, 143, 183, .40);
+  --surface-soft: rgba(102, 155, 196, .35);
+  --border: rgba(180, 218, 247, .48);
+}
+.theme-light {
+  --card: rgba(255, 255, 255, .55);
+  --surface: rgba(255, 255, 255, .58);
+  --surface-soft: rgba(240, 249, 255, .58);
+  --border: rgba(121, 170, 211, .45);
+}
+.theme-dark .nedvi-main-content {
+  background-color: #345f81 !important;
+  background-image: linear-gradient(115deg, rgba(43,86,121,.24),rgba(59,111,151,.20)),url('/construction-premium-pattern.svg') !important;
+}
+.theme-light .nedvi-main-content {
+  background-color: #dfedf9 !important;
+}
+/* Transparent glass panels: match cards plus legacy DIV blocks in modules. */
+.theme-dark .nedvi-main-content :is(.nedvi-card,.nedvi-dashboard-hero),
+.theme-dark .nedvi-main-content :is(div,section,article)[class*="rounded-"][class*="border"][class*="bg-[var(--surface)"],
+.theme-dark .nedvi-main-content :is(div,section,article)[class*="rounded-"][class*="border"][class*="bg-[var(--card)"] {
+  background: rgba(91,143,183,.38) !important;
+  border-color: rgba(180,218,247,.48) !important;
+  box-shadow: 0 10px 30px rgba(10,35,58,.09) !important;
+  -webkit-backdrop-filter: blur(16px) saturate(135%) !important;
+  backdrop-filter: blur(16px) saturate(135%) !important;
+}
+.theme-light .nedvi-main-content :is(.nedvi-card,.nedvi-dashboard-hero),
+.theme-light .nedvi-main-content :is(div,section,article)[class*="rounded-"][class*="border"][class*="bg-[var(--surface)"],
+.theme-light .nedvi-main-content :is(div,section,article)[class*="rounded-"][class*="border"][class*="bg-[var(--card)"] {
+  background: rgba(255,255,255,.55) !important;
+  border-color: rgba(121,170,211,.45) !important;
+  box-shadow: 0 10px 30px rgba(40,83,121,.07) !important;
+  -webkit-backdrop-filter: blur(16px) saturate(135%) !important;
+  backdrop-filter: blur(16px) saturate(135%) !important;
+}
