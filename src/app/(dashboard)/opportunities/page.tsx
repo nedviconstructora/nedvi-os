@@ -259,7 +259,7 @@ export default function OpportunitiesPage() {
           <button
             type="button"
             onClick={openNew}
-            className="rounded-xl bg-[#5496CC] px-5 py-3 font-semibold text-slate-950 transition hover:brightness-95"
+            className="nedvi-dark-white-create rounded-xl bg-[#5496CC] px-5 py-3 font-semibold text-slate-950 transition hover:brightness-95"
           >
             + Nueva oportunidad
           </button>
