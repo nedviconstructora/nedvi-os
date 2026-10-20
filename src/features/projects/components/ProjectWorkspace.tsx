@@ -11,9 +11,11 @@ import {
   ShieldAlert,
   Timer,
   TrendingUp,
+  X,
 } from 'lucide-react'
 import { Card } from '@/components/ui/Card'
 import { EmptyState } from '@/components/ui/EmptyState'
+import { ProjectForm } from '@/features/projects/components/ProjectForm'
 import { ProjectCard } from '@/features/projects/components/ProjectCard'
 import { ProjectFilters } from '@/features/projects/components/ProjectFilters'
 import { ProjectSearch } from '@/features/projects/components/ProjectSearch'
@@ -27,6 +29,7 @@ const PAGE_SIZE = 6
 export function ProjectWorkspace() {
   const [projects, setProjects] = useState<Project[]>([])
   const [loading, setLoading] = useState(true)
+  const [newProjectOpen, setNewProjectOpen] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [deletingId, setDeletingId] = useState<string | null>(null)
 
@@ -131,13 +134,12 @@ export function ProjectWorkspace() {
           </p>
         </div>
 
-        <Link
-          href="/projects/new"
+        <button type="button" onClick={() => setNewProjectOpen(true)}
           className="inline-flex h-11 items-center justify-center gap-2 rounded-xl bg-[#163DFF] px-4 text-xs font-semibold text-white shadow-[0_10px_25px_rgba(22,61,255,0.2)] transition hover:bg-[#3155ff] hover:shadow-[0_14px_30px_rgba(22,61,255,0.3)] focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-[#163DFF]/30"
         >
           <Plus size={16} />
           Nuevo proyecto
-        </Link>
+        </button>
       </header>
 
       {error ? (
@@ -288,17 +290,27 @@ export function ProjectWorkspace() {
                 Limpiar búsqueda y filtros
               </button>
             ) : (
-              <Link
-                href="/projects/new"
+              <button type="button" onClick={() => setNewProjectOpen(true)}
                 className="inline-flex h-10 items-center gap-2 rounded-lg bg-[#163DFF] px-4 text-xs font-semibold text-white transition hover:bg-[#3155ff]"
               >
                 <Plus size={14} />
                 Agregar proyecto
-              </Link>
+              </button>
             )
           }
         />
       )}
+      {newProjectOpen ? (
+        <div className="fixed inset-0 z-[120] flex items-start justify-center overflow-y-auto bg-slate-950/60 p-3 backdrop-blur-sm sm:p-6">
+          <section role="dialog" aria-modal="true" aria-label="Nuevo proyecto" className="nedvi-project-create-modal my-auto max-h-[calc(100dvh-1.5rem)] w-full max-w-5xl overflow-y-auto rounded-3xl border border-[#cbddea] bg-[#f9fcff] p-5 shadow-2xl sm:p-8">
+            <header className="mb-6 flex items-start justify-between gap-4 border-b border-[#d7e4ef] pb-5">
+              <div><p className="text-xs font-semibold uppercase tracking-widest text-[#256fa7]">Gestión de proyectos</p><h2 className="mt-2 text-2xl font-bold text-[#102d47]">Nuevo proyecto</h2></div>
+              <button type="button" onClick={() => setNewProjectOpen(false)} aria-label="Cerrar nuevo proyecto" className="rounded-xl border border-[#cbddea] bg-white p-2 text-[#17324b]"><X size={20} /></button>
+            </header>
+            <ProjectForm mode="create" onCancel={() => setNewProjectOpen(false)} onSaved={() => { setNewProjectOpen(false); void loadProjects() }} />
+          </section>
+        </div>
+      ) : null}
     </div>
   )
 }
