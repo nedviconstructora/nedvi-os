@@ -1530,3 +1530,30 @@ textarea {
 .theme-dark .nedvi-main-content :is(.nedvi-card,.crm-table-shell) button:not([class*="text-"]) {
   color: #fff;
 }
+
+
+/* Navigation dark glass — no impact on the approved light theme. */
+.theme-dark .nedvi-app-sidebar,
+.theme-dark .nedvi-app-header {
+  background: linear-gradient(130deg,rgba(15,17,21,.95),rgba(27,30,36,.92)) !important;
+  border-color: rgba(255,255,255,.10) !important;
+  color: #f8fafc !important;
+  -webkit-backdrop-filter: blur(20px) saturate(125%) !important;
+  backdrop-filter: blur(20px) saturate(125%) !important;
+}
+.theme-dark .nedvi-app-sidebar {
+  box-shadow: 12px 0 32px rgba(0,0,0,.24) !important;
+}
+.theme-dark .nedvi-app-header {
+  box-shadow: 0 6px 26px rgba(0,0,0,.18) !important;
+}
+.theme-dark .nedvi-app-sidebar .pointer-events-none.absolute.inset-0 {
+  opacity: .14;
+}
+.theme-dark .nedvi-app-sidebar a:hover {
+  background-color: rgba(255,255,255,.09);
+}
+.theme-dark .nedvi-app-sidebar a[aria-current="page"] {
+  background-color: rgba(123,174,227,.18);
+  color: #fff;
+}
