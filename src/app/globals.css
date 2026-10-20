@@ -1176,3 +1176,23 @@ textarea {
   background-color: #e7f3fe !important;
   color: #12324d !important;
 }
+
+
+/* Folio search field must remain readable in both themes regardless of
+   global form overrides or native browser color-scheme behavior. */
+.theme-dark .nedvi-main-content input.nedvi-folio-search-input,
+.theme-light .nedvi-main-content input.nedvi-folio-search-input {
+  background: rgba(234, 246, 255, .86) !important;
+  border: 1px solid rgba(139, 188, 226, .8) !important;
+  color: #102e47 !important;
+  caret-color: #102e47;
+  -webkit-text-fill-color: #102e47;
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+}
+.theme-dark .nedvi-main-content input.nedvi-folio-search-input::placeholder,
+.theme-light .nedvi-main-content input.nedvi-folio-search-input::placeholder {
+  color: #4c708c !important;
+  opacity: 1;
+  -webkit-text-fill-color: #4c708c;
+}
