@@ -145,7 +145,7 @@ export default function InspectionsPage() {
           <h1 className="mt-2 text-3xl font-bold">Inspecciones de obra</h1>
           <p className="mt-2 text-sm text-[var(--muted)]">Checklists, observaciones y fotografías vinculadas a proyectos.</p></div>
         <div className="flex gap-2"><button onClick={()=>void load()} className={btnClass}><RefreshCw size={15}/> Actualizar</button>
-          <button onClick={newInspection} className="inline-flex items-center gap-2 rounded-lg bg-[#5496CC] px-4 py-2.5 text-sm font-semibold text-white"><Plus size={16}/> Nueva inspección</button></div>
+          <button onClick={newInspection} className="nedvi-dark-white-create inline-flex items-center gap-2 rounded-lg bg-[#5496CC] px-4 py-2.5 text-sm font-semibold text-white"><Plus size={16}/> Nueva inspección</button></div>
       </header>
       {error && <div role="alert" className="rounded-xl border border-red-400/30 bg-red-400/10 p-4 text-sm text-red-500">{error}</div>}
       <div className="rounded-xl border border-[var(--border)] bg-[var(--surface)] p-4">
@@ -188,7 +188,7 @@ export default function InspectionsPage() {
           {!!photos.length && <div className="mt-3 space-y-1">{photos.map(p=><div key={p.path} className="flex items-center justify-between gap-2 text-xs"><span>{p.name}</span><button type="button" className="text-red-500" onClick={()=>setPhotos(a=>a.filter(x=>x.path!==p.path))}>Quitar del registro</button></div>)}</div>}
           {!!files.length && <div className="mt-3 space-y-1">{files.map((f,i)=><div key={i} className="flex items-center justify-between gap-2 text-xs"><span>{f.name}</span><button type="button" className="text-red-500" onClick={()=>setFiles(a=>a.filter((_,j)=>j!==i))}>Quitar</button></div>)}</div>}
         </div>
-        <div className="flex justify-end gap-2"><button type="button" onClick={()=>setOpen(false)} className={btnClass}>Cancelar</button><button disabled={saving} type="submit" className="rounded-lg bg-[#5496CC] px-5 py-2.5 text-sm font-semibold text-white disabled:opacity-50">{saving?'Guardando…':'Guardar inspección'}</button></div>
+        <div className="flex justify-end gap-2"><button type="button" onClick={()=>setOpen(false)} className={btnClass}>Cancelar</button><button disabled={saving} type="submit" className="nedvi-dark-white-create rounded-lg bg-[#5496CC] px-5 py-2.5 text-sm font-semibold text-white disabled:opacity-50">{saving?'Guardando…':'Guardar inspección'}</button></div>
       </form></div></div>}
   </AppShell>
 }
