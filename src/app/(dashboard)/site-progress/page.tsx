@@ -405,7 +405,7 @@ export default function SiteProgressPage() {
             <h1 className="mt-2 text-3xl font-bold text-[var(--foreground)]">Avance de obra</h1>
             <p className="mt-2 text-sm text-[var(--muted)]">Control de ejecución por concepto y proyecto en formato de tabla.</p>
           </div>
-          <button onClick={() => openNew()} className="inline-flex h-11 items-center gap-2 rounded-xl bg-[#5496CC] px-4 text-sm font-semibold text-white">
+          <button onClick={() => openNew()} className="nedvi-dark-white-create inline-flex h-11 items-center gap-2 rounded-xl bg-[#5496CC] px-4 text-sm font-semibold text-white">
             <Plus size={16} /> Registrar avance
           </button>
         </header>
@@ -454,13 +454,13 @@ export default function SiteProgressPage() {
                     </div>
                     <div className="flex flex-wrap gap-2">
                       {projectRecords.length ? (
-                        <button type="button" onClick={() => setViewingQuoteId(project.id)} className="inline-flex items-center gap-2 rounded-lg border border-[#5496CC]/40 px-3 py-2 text-xs font-semibold text-[#5496CC] hover:bg-[#5496CC]/10"><Eye size={14} /> Ver historial</button>
+                        <button type="button" onClick={() => setViewingQuoteId(project.id)} className="nedvi-dark-white-create inline-flex items-center gap-2 rounded-lg border border-[#5496CC]/40 px-3 py-2 text-xs font-semibold text-[#5496CC] hover:bg-[#5496CC]/10"><Eye size={14} /> Ver historial</button>
                       ) : null}
                       {projectRecords.length > 0 ? (
                         <button type="button" onClick={() => removeProjectProgress(project)} className="inline-flex items-center gap-2 rounded-lg border border-red-500/30 px-3 py-2 text-xs font-semibold text-red-500 hover:bg-red-500/10"><Trash2 size={14} /> Eliminar avances</button>
                       ) : null}
                       <button type="button" onClick={() => hideLegacyProgressProject(project)} className="inline-flex items-center gap-2 rounded-lg border border-red-500/30 px-3 py-2 text-xs font-semibold text-red-500 hover:bg-red-500/10"><Trash2 size={14} /> Quitar de avances</button>
-                      <button type="button" onClick={() => openNew(project)} className="inline-flex items-center gap-2 rounded-lg bg-[#5496CC] px-3 py-2 text-xs font-semibold text-white"><Plus size={14} /> {latest ? 'Actualizar avance' : 'Registrar avance'}</button>
+                      <button type="button" onClick={() => openNew(project)} className="nedvi-dark-white-create inline-flex items-center gap-2 rounded-lg bg-[#5496CC] px-3 py-2 text-xs font-semibold text-white"><Plus size={14} /> {latest ? 'Actualizar avance' : 'Registrar avance'}</button>
                     </div>
                   </div>
 
@@ -499,7 +499,7 @@ export default function SiteProgressPage() {
                   <div className="flex flex-col gap-3 bg-[var(--surface-soft)] px-4 py-4 sm:flex-row sm:items-center sm:justify-between">
                     <div className="flex flex-wrap items-center gap-3"><span className="rounded-full bg-[#5496CC]/10 px-3 py-1 text-xs font-bold text-[#5496CC]">{record.percent}%</span><span className="text-sm font-semibold">{formatDate(record.date)}</span>{index === 0 ? <span className="rounded-full bg-emerald-500/10 px-2.5 py-1 text-[10px] font-bold uppercase text-emerald-500">Actual</span> : null}</div>
                     <div className="flex items-center gap-2">
-                      <button type="button" onClick={() => openEdit(record)} className="inline-flex items-center gap-1.5 rounded-lg border border-[#5496CC]/30 px-3 py-2 text-xs font-semibold text-[#5496CC] hover:bg-[#5496CC]/10"><Pencil size={15}/> Editar</button>
+                      <button type="button" onClick={() => openEdit(record)} className="nedvi-dark-white-create inline-flex items-center gap-1.5 rounded-lg border border-[#5496CC]/30 px-3 py-2 text-xs font-semibold text-[#5496CC] hover:bg-[#5496CC]/10"><Pencil size={15}/> Editar</button>
                       <button type="button" onClick={() => remove(record.id)} className="inline-flex items-center gap-1.5 rounded-lg border border-red-500/25 px-3 py-2 text-xs font-semibold text-red-500 hover:bg-red-500/10"><Trash2 size={15}/> Eliminar</button>
                     </div>
                   </div>
@@ -572,7 +572,7 @@ export default function SiteProgressPage() {
                 </table>
               </div>
 
-              <button type="button" onClick={() => setItems((current) => [...current, newDraftItem()])} className="inline-flex items-center gap-2 rounded-xl border border-[#5496CC]/40 px-4 py-2.5 text-sm font-semibold text-[#5496CC] hover:bg-[#5496CC]/10"><Plus size={15} /> Agregar concepto</button>
+              <button type="button" onClick={() => setItems((current) => [...current, newDraftItem()])} className="nedvi-dark-white-create inline-flex items-center gap-2 rounded-xl border border-[#5496CC]/40 px-4 py-2.5 text-sm font-semibold text-[#5496CC] hover:bg-[#5496CC]/10"><Plus size={15} /> Agregar concepto</button>
 
               <label className="block space-y-2"><span className="text-sm font-semibold">Observaciones</span><textarea rows={3} value={notes} onChange={(event) => setNotes(event.target.value)} className="w-full rounded-xl border border-[var(--border)] bg-transparent px-4 py-3" /></label>
 
