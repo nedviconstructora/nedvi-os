@@ -1952,3 +1952,23 @@ textarea {
 .theme-dark .nedvi-settings-top-action:hover {
   background: #e5e9ef !important;
 }
+
+
+/* Sidebar graphite glass: replace navy with strong neutral charcoal in dark mode. */
+.theme-dark aside.nedvi-app-sidebar,
+.theme-dark .nedvi-app-sidebar {
+  background: linear-gradient(155deg, rgba(54,57,63,.97), rgba(37,40,45,.97)) !important;
+  background-image: linear-gradient(155deg, rgba(54,57,63,.97), rgba(37,40,45,.97)) !important;
+  border-right: 1px solid rgba(255,255,255,.16) !important;
+  box-shadow: 10px 0 35px rgba(0,0,0,.24) !important;
+  backdrop-filter: blur(22px) !important;
+}
+.theme-dark .nedvi-app-sidebar > .pointer-events-none { opacity: 0 !important; }
+.theme-dark .nedvi-app-sidebar :is(a,button):not(.nedvi-sidebar-subitem-active) {
+  background-color: rgba(245,247,250,.84) !important;
+  color: #111827 !important;
+  border-color: rgba(255,255,255,.22) !important;
+}
+.theme-dark .nedvi-app-sidebar :is(a,button):not(.nedvi-sidebar-subitem-active):hover {
+  background-color: #fff !important;
+}
