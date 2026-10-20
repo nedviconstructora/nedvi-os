@@ -307,7 +307,7 @@ export default function RequisitionsPage() {
 
             <Field label="Notas"><textarea rows={3} value={notes} onChange={(e) => setNotes(e.target.value)} placeholder="Justificación, especificaciones, observaciones..." className="req-input" /></Field>
             <div className="rounded-2xl bg-[var(--surface-soft)] p-4"><p className="text-xs uppercase text-[var(--muted)]">Total estimado</p><p className="mt-1 text-xl font-bold text-[var(--foreground)]">{money(formEstimated)}</p></div>
-            <div className="flex justify-end gap-3"><button type="button" onClick={closeForm} className="rounded-xl border border-[var(--border)] px-5 py-3 font-semibold text-[var(--foreground)]">Cancelar</button><button type="submit" className="rounded-xl bg-[#5496CC] px-5 py-3 font-semibold text-white">Crear requisición</button></div>
+            <div className="flex justify-end gap-3"><button type="button" onClick={closeForm} className="rounded-xl border border-[var(--border)] px-5 py-3 font-semibold text-[var(--foreground)]">Cancelar</button><button type="submit" className="nedvi-dark-white-create rounded-xl bg-[#5496CC] px-5 py-3 font-semibold text-white">Crear requisición</button></div>
           </form>
         </div></div>
       ) : null}
