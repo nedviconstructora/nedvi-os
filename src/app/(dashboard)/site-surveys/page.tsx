@@ -545,7 +545,7 @@ export default function SiteSurveysPage() {
             <h1 className="mt-2 text-3xl font-bold tracking-tight text-[var(--foreground)]">Levantamientos</h1>
             <p className="mt-2 max-w-3xl text-sm text-[var(--muted)]">Registra visitas, alcance de obra, tiempos, evidencia, planos y croquis antes de preparar una cotización.</p>
           </div>
-          <button type="button" onClick={openNew} className="inline-flex h-11 items-center gap-2 rounded-xl bg-[#5496CC] px-4 text-sm font-semibold text-white transition hover:brightness-95">
+          <button type="button" onClick={openNew} className="nedvi-dark-white-create inline-flex h-11 items-center gap-2 rounded-xl bg-[#5496CC] px-4 text-sm font-semibold text-white transition hover:brightness-95">
             <Plus size={16} /> Nuevo levantamiento
           </button>
         </header>
