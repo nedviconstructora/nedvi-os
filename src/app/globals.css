@@ -1384,3 +1384,77 @@ textarea {
   color: #fff !important;
   -webkit-text-fill-color: #fff;
 }
+
+
+/* NEDVI OS · Dark charcoal theme v1 · 2026-10-20.
+   All app panels use graphite neutrals, white text and restrained blue accents.
+   Light form modals are deliberately exempt until separately approved. */
+.theme-dark {
+  --background: #202329;
+  --foreground: #f5f7fb;
+  --muted: #c6cdd7;
+  --subtle: #aeb9c6;
+  --primary: #87bdf1;
+  --card: rgba(47, 51, 59, .94);
+  --surface: rgba(47, 51, 59, .96);
+  --surface-soft: rgba(60, 65, 74, .96);
+  --border: rgba(174, 187, 202, .26);
+  color-scheme: dark;
+}
+.theme-dark .nedvi-main-content {
+  --foreground: #f5f7fb;
+  --muted: #c6cdd7;
+  --subtle: #aeb9c6;
+  --primary: #87bdf1;
+  --card: rgba(47, 51, 59, .94);
+  --surface: rgba(47, 51, 59, .96);
+  --surface-soft: rgba(60, 65, 74, .96);
+  --border: rgba(174, 187, 202, .26);
+  background-color: #202329 !important;
+  background-image: linear-gradient(115deg,rgba(31,34,40,.91),rgba(35,39,47,.91)),url('/construction-premium-pattern.svg') !important;
+  color: #f5f7fb;
+}
+.theme-dark .nedvi-main-content :is(.nedvi-card,.nedvi-dashboard-hero),
+.theme-dark .nedvi-main-content :is(div,section,article)[class*="rounded-"][class*="border"][class*="bg-[var(--surface)"],
+.theme-dark .nedvi-main-content :is(div,section,article)[class*="rounded-"][class*="border"][class*="bg-[var(--card)"] {
+  background: var(--card) !important;
+  border-color: var(--border) !important;
+  color: var(--foreground);
+  box-shadow: 0 12px 32px rgba(8,10,14,.2) !important;
+}
+.theme-dark .nedvi-main-content :is(h1,h2,h3,h4,h5,h6,p,th,td,label):not(.nedvi-quote-form-dialog *):not(.nedvi-customer-create-modal *):not(.nedvi-project-create-modal *):not(.nedvi-standard-modal *):not([class*="text-red"]):not([class*="text-emerald"]):not([class*="text-green"]):not([class*="text-amber"]) {
+  color: var(--foreground);
+}
+.theme-dark .nedvi-main-content :is(input,textarea,select):not(.nedvi-folio-search-input):not(.nedvi-customer-filter-select):not(.nedvi-quote-form-dialog *):not(.nedvi-customer-create-modal *):not(.nedvi-project-create-modal *):not(.nedvi-standard-modal *) {
+  background-color: #3a3f48 !important;
+  color: #f5f7fb !important;
+  -webkit-text-fill-color: #f5f7fb;
+  border-color: #65717e !important;
+  color-scheme: dark;
+}
+.theme-dark .nedvi-main-content :is(input,textarea)::placeholder {
+  color: #c3cbd5 !important;
+  opacity: 1;
+}
+.theme-dark .nedvi-main-content select option {
+  background-color: #343942;
+  color: #fff;
+}
+.theme-dark .nedvi-main-content .nedvi-quick-action {
+  background: rgba(57,62,72,.96) !important;
+  border-color: rgba(174,187,202,.35) !important;
+}
+.theme-dark .nedvi-main-content .nedvi-quick-action:hover { background: #474e59 !important; }
+.theme-dark .nedvi-main-content .nedvi-quick-action-label { color: #f5f7fb !important; }
+.theme-dark .nedvi-main-content .crm-table-shell { background: #30353e !important; }
+.theme-dark .nedvi-main-content .nedvi-customer-filter-select {
+  background: #3a3f48 !important;
+  color: #f5f7fb !important;
+  -webkit-text-fill-color: #f5f7fb;
+  border-color: #65717e !important;
+  color-scheme: dark;
+}
+.theme-dark .nedvi-main-content .nedvi-customer-filter-select option {
+  background: #343942 !important;
+  color: #fff !important;
+}
