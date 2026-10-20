@@ -223,7 +223,7 @@ export default function CrewsPage() {
             <h1 className="mt-2 text-3xl font-bold text-[var(--foreground)]">Cuadrillas</h1>
             <p className="mt-2 text-sm text-[var(--muted)]">Administra responsables, especialidades e integrantes de cada cuadrilla.</p>
           </div>
-          <button onClick={openNew} className="inline-flex h-11 items-center gap-2 rounded-xl bg-[#5496CC] px-4 text-sm font-semibold text-white"><Plus size={16} /> Nueva cuadrilla</button>
+          <button onClick={openNew} className="nedvi-dark-white-create inline-flex h-11 items-center gap-2 rounded-xl bg-[#5496CC] px-4 text-sm font-semibold text-white"><Plus size={16} /> Nueva cuadrilla</button>
         </header>
 
         
@@ -268,7 +268,7 @@ export default function CrewsPage() {
           {importError ? <p role="alert" className="text-sm font-medium text-red-500">{importError}</p> : null}
         </div>
         <label className="flex items-center gap-3 rounded-xl border border-[var(--border)] p-4"><input type="checkbox" checked={form.active} onChange={(e) => setForm((current) => ({ ...current, active: e.target.checked }))} /><span className="text-sm font-semibold">Cuadrilla activa</span></label>
-        <div className="flex justify-end gap-3"><button type="button" onClick={() => setOpen(false)} className="rounded-xl border border-[var(--border)] px-5 py-3 font-semibold">Cancelar</button><button type="submit" disabled={saving} className="rounded-xl bg-[#5496CC] px-5 py-3 font-semibold text-white disabled:opacity-50">{saving ? "Guardando..." : "Guardar cuadrilla"}</button></div>
+        <div className="flex justify-end gap-3"><button type="button" onClick={() => setOpen(false)} className="rounded-xl border border-[var(--border)] px-5 py-3 font-semibold">Cancelar</button><button type="submit" disabled={saving} className="nedvi-dark-white-create rounded-xl bg-[#5496CC] px-5 py-3 font-semibold text-white disabled:opacity-50">{saving ? "Guardando..." : "Guardar cuadrilla"}</button></div>
       </form></div></div> : null}
     </AppShell>
   )
