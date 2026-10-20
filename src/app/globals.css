@@ -1278,3 +1278,38 @@ textarea {
   border-color: var(--border);
 }
 .theme-light .nedvi-main-content thead { color: #31536f; }
+
+
+/* Quote editor light theme: consistent surfaces for modal, form, cards and actions.
+   Isolated from main glass rules and global dark-ink overrides. */
+.nedvi-main-content .nedvi-quote-modal .nedvi-quote-form-dialog {
+  --foreground: #17324b;
+  --muted: #516d86;
+  --subtle: #647f96;
+  --card: #ffffff;
+  --surface: #ffffff;
+  --surface-soft: #eef5fb;
+  --border: #ccdae8;
+  color-scheme: light !important;
+  background: #f9fcff !important;
+  color: #17324b !important;
+}
+.theme-light .nedvi-main-content .nedvi-quote-form-dialog :is(section,article,div)[class*="rounded-"][class*="bg-"] {
+  border-color: #d4e2ef;
+}
+.nedvi-main-content .nedvi-quote-form-dialog [class*="dark:bg-slate"],
+.nedvi-main-content .nedvi-quote-form-dialog [class*="dark:bg-[#"] {
+  background-color: #edf5fc !important;
+}
+.nedvi-main-content .nedvi-quote-form-dialog :is(input,select,textarea):not([type="file"]) {
+  background-color: #fff !important;
+  color: #17324b !important;
+  border-color: #c6d7e6 !important;
+}
+.nedvi-main-content .nedvi-quote-form-dialog :is(input,select,textarea):focus-visible {
+  outline: 2px solid #347fba;
+  outline-offset: 1px;
+}
+.nedvi-main-content .nedvi-quote-form-dialog button:not(:disabled) {
+  opacity: 1;
+}
