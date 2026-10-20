@@ -184,7 +184,7 @@ export default function SuppliersPage() {
             <h1 className="mt-2 text-3xl font-bold tracking-tight text-[var(--foreground)]">Proveedores</h1>
             <p className="mt-2 max-w-2xl text-sm text-[var(--muted)]">Administra proveedores, datos fiscales, bancarios, categorías y condiciones de pago.</p>
           </div>
-          <button type="button" onClick={openNew} className="inline-flex h-11 items-center gap-2 rounded-xl bg-[#5496CC] px-4 text-sm font-semibold text-white transition hover:brightness-95">
+          <button type="button" onClick={openNew} className="nedvi-dark-white-create inline-flex h-11 items-center gap-2 rounded-xl bg-[#5496CC] px-4 text-sm font-semibold text-white transition hover:brightness-95">
             <Plus size={16} /> Nuevo proveedor
           </button>
         </header>
@@ -266,7 +266,7 @@ export default function SuppliersPage() {
               <div className="grid gap-4 md:grid-cols-2">
                 <Field label="Notas" wide><textarea rows={3} value={form.notes} onChange={(e) => setForm({ ...form, notes: e.target.value })} className="input" /></Field>
               </div>
-              <div className="flex justify-end gap-3"><button type="button" onClick={closeForm} className="rounded-xl border border-[var(--border)] px-5 py-3 font-semibold text-[var(--foreground)]">Cancelar</button><button type="submit" className="rounded-xl bg-[#5496CC] px-5 py-3 font-semibold text-white">{editingId ? 'Guardar cambios' : 'Crear proveedor'}</button></div>
+              <div className="flex justify-end gap-3"><button type="button" onClick={closeForm} className="rounded-xl border border-[var(--border)] px-5 py-3 font-semibold text-[var(--foreground)]">Cancelar</button><button type="submit" className="nedvi-dark-white-create rounded-xl bg-[#5496CC] px-5 py-3 font-semibold text-white">{editingId ? 'Guardar cambios' : 'Crear proveedor'}</button></div>
             </form>
           </div>
         </div>
