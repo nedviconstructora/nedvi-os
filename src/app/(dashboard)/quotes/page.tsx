@@ -840,9 +840,9 @@ export default function QuotesPage() {
         </div>
 
         {open && (
-          <div role="dialog" aria-modal="true" aria-label="Cotización" className="fixed inset-0 z-[100] flex items-start justify-center overflow-y-auto overscroll-contain bg-black/50 p-2 sm:p-4">
-            <div className="max-h-[calc(100dvh-1rem)] min-h-0 w-full max-w-5xl overflow-y-auto overscroll-contain rounded-2xl bg-white p-4 shadow-2xl dark:bg-slate-900 sm:max-h-[calc(100dvh-2rem)] sm:p-6">
-              <div className="sticky top-0 z-10 mb-5 flex items-start justify-between gap-4 border-b border-[var(--border)] bg-white py-3 dark:bg-slate-900">
+          <div role="dialog" aria-modal="true" aria-label="Cotización" className="nedvi-quote-modal fixed inset-0 z-[100] flex items-start justify-center overflow-y-auto overscroll-contain bg-slate-950/55 p-2 backdrop-blur-sm sm:p-4">
+            <div className="nedvi-quote-form-dialog max-h-[calc(100dvh-1rem)] min-h-0 w-full max-w-5xl overflow-y-auto overscroll-contain rounded-2xl border border-slate-200 bg-white p-4 text-slate-900 shadow-2xl sm:max-h-[calc(100dvh-2rem)] sm:p-6">
+              <div className="sticky top-0 z-10 mb-5 flex items-start justify-between gap-4 border-b border-slate-200 bg-white py-3">
                 <div>
                   <h2 className="text-xl font-bold">{editingId ? 'Editar cotización' : 'Nueva cotización'}</h2>
                   <p className="mt-1 text-xs text-slate-500">{editingId ? 'El folio existente se conserva.' : 'El folio se asignará automáticamente al guardar.'}</p>
