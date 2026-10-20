@@ -1705,3 +1705,21 @@ textarea {
   background: #e9edf2 !important;
   color: #111827 !important;
 }
+
+
+/* Commercial create actions: white in dark theme only, light mode untouched. */
+.theme-dark .nedvi-main-content button.nedvi-dark-white-create {
+  background-color: #f8fafc !important;
+  background-image: none !important;
+  color: #12151b !important;
+  -webkit-text-fill-color: #12151b !important;
+  border: 1px solid #f8fafc !important;
+  box-shadow: 0 8px 22px rgba(0,0,0,.28) !important;
+}
+.theme-dark .nedvi-main-content button.nedvi-dark-white-create :is(svg,span) {
+  color: #12151b !important;
+  stroke: currentColor;
+}
+.theme-dark .nedvi-main-content button.nedvi-dark-white-create:hover {
+  background-color: #e4e9ef !important;
+}
