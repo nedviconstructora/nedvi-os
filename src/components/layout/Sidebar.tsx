@@ -178,7 +178,7 @@ export function Sidebar({
   )
 
   const primaryItemClasses = (active: boolean) =>
-    `group relative flex h-11 w-full items-center gap-3 rounded-xl border px-3 text-left text-[13px] font-medium text-white backdrop-blur-md transition duration-200 ${
+    `nedvi-sidebar-primary group relative flex h-11 w-full items-center gap-3 rounded-xl border px-3 text-left text-[13px] font-medium text-white backdrop-blur-md transition duration-200 ${
       active
         ? 'border-[#53A8FF]/70 bg-[linear-gradient(90deg,#1677e8,#2796ff)] shadow-[0_10px_24px_rgba(16,105,220,0.28)]'
         : 'border-white/[0.08] bg-white/[0.06] hover:bg-white/[0.12]'
