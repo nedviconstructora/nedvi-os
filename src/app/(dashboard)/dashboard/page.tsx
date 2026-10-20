@@ -30,7 +30,7 @@ export default function DashboardPage() {
 
           <Link
             href="/agenda"
-            className="inline-flex h-11 items-center justify-center gap-2 rounded-xl bg-[linear-gradient(90deg,#1677E8,#2796FF)] px-4 text-xs font-semibold text-white shadow-[0_10px_25px_rgba(22,119,232,0.22)] transition hover:brightness-105 hover:shadow-[0_14px_30px_rgba(22,119,232,0.28)] focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-[#1F6FEB]/25"
+            className="nedvi-dashboard-new-activity inline-flex h-11 items-center justify-center gap-2 rounded-xl bg-[linear-gradient(90deg,#1677E8,#2796FF)] px-4 text-xs font-semibold text-white shadow-[0_10px_25px_rgba(22,119,232,0.22)] transition hover:brightness-105 hover:shadow-[0_14px_30px_rgba(22,119,232,0.28)] focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-[#1F6FEB]/25"
           >
             <Plus size={16} strokeWidth={2} />
             Nueva actividad
