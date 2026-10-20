@@ -980,3 +980,72 @@ textarea {
 .theme-dark .nedvi-main-content .nedvi-quick-action:hover {
   background: rgba(57,108,150,.96) !important;
 }
+
+
+/* NEDVI OS · Glass harmonization v5 · 2026-10-20
+   Shared surfaces across dashboard and modules; keep badges, menus, forms
+   and status colors distinct for legibility. */
+.theme-light {
+  --card: rgba(255, 255, 255, .73);
+  --surface: rgba(255, 255, 255, .76);
+  --surface-soft: rgba(237, 246, 255, .73);
+  --border: rgba(131, 170, 206, .38);
+}
+.theme-dark {
+  --card: rgba(54, 91, 124, .55);
+  --surface: rgba(54, 91, 124, .58);
+  --surface-soft: rgba(65, 105, 139, .56);
+  --border: rgba(153, 200, 236, .36);
+}
+.theme-dark .nedvi-main-content {
+  background-color: #254866 !important;
+  background-image:
+    linear-gradient(105deg, rgba(31, 67, 99, .38), rgba(39, 82, 116, .35)),
+    url('/construction-premium-pattern.svg') !important;
+}
+.theme-light .nedvi-main-content {
+  background-color: #e9f3fd !important;
+  background-image:
+    linear-gradient(115deg, rgba(238, 247, 255, .79), rgba(220, 236, 251, .76)),
+    url('/construction-premium-pattern.svg') !important;
+}
+.nedvi-main-content :is(.nedvi-card, .nedvi-dashboard-hero),
+.nedvi-main-content :is(section, article)[class*="rounded-"][class*="border"],
+.nedvi-main-content [class*="bg-[var(--surface)]"][class*="rounded-"],
+.nedvi-main-content [class*="bg-[var(--card)]"][class*="rounded-"] {
+  background: var(--card) !important;
+  border: 1px solid var(--border) !important;
+  box-shadow: 0 12px 34px rgba(18, 47, 76, .10) !important;
+  -webkit-backdrop-filter: blur(14px) saturate(125%);
+  backdrop-filter: blur(14px) saturate(125%);
+}
+.theme-dark .nedvi-main-content :is(.nedvi-card, .nedvi-dashboard-hero),
+.theme-dark .nedvi-main-content :is(section, article)[class*="rounded-"][class*="border"],
+.theme-dark .nedvi-main-content [class*="bg-[var(--surface)]"][class*="rounded-"],
+.theme-dark .nedvi-main-content [class*="bg-[var(--card)]"][class*="rounded-"] {
+  background: var(--card) !important;
+  border-color: var(--border) !important;
+  box-shadow: 0 12px 34px rgba(7, 28, 49, .13) !important;
+}
+.theme-dark .nedvi-main-content .nedvi-quick-action {
+  background: rgba(71, 122, 166, .56) !important;
+  border-color: rgba(167, 211, 244, .45) !important;
+  -webkit-backdrop-filter: blur(12px);
+  backdrop-filter: blur(12px);
+}
+.theme-dark .nedvi-main-content .nedvi-quick-action:hover {
+  background: rgba(81, 141, 188, .72) !important;
+}
+.theme-light .nedvi-main-content .nedvi-quick-action {
+  background: rgba(225, 242, 255, .66) !important;
+  border-color: rgba(116, 172, 216, .47) !important;
+}
+@media print {
+  .nedvi-main-content :is(.nedvi-card, .nedvi-dashboard-hero),
+  .nedvi-main-content :is(section, article)[class*="rounded-"][class*="border"] {
+    background: #fff !important;
+    box-shadow: none !important;
+    -webkit-backdrop-filter: none !important;
+    backdrop-filter: none !important;
+  }
+}
