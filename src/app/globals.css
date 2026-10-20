@@ -1134,3 +1134,24 @@ textarea {
 }
 .theme-light .nedvi-main-content :is(input,textarea,select)::placeholder { color: #59738c; }
 .theme-dark .nedvi-main-content :is(input,textarea,select)::placeholder { color: #c4d8e9; }
+
+
+/* Dark-mode readability experiment: ink text over the lighter blue glass panels.
+   Scope to application main, keep navigation, colored action buttons, badges and modals intact. */
+.theme-dark .nedvi-main-content {
+  --foreground: #071d32;
+  --muted: #173a57;
+  --subtle: #234a68;
+  --primary: #063d70;
+}
+.theme-dark .nedvi-main-content :is(h1,h2,h3,h4,p,th,td,label):not([class*="text-white"]):not([class*="text-red"]):not([class*="text-green"]):not([class*="text-emerald"]):not([class*="text-amber"]) {
+  color: var(--foreground);
+}
+.theme-dark .nedvi-main-content :is(input,textarea,select) {
+  color: #071d32 !important;
+  caret-color: #071d32;
+}
+.theme-dark .nedvi-main-content :is(input,textarea)::placeholder { color: #264d6b !important; opacity: 1; }
+.theme-dark .nedvi-main-content :is(.nedvi-card,.nedvi-dashboard-hero) {
+  color: var(--foreground) !important;
+}
