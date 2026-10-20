@@ -186,7 +186,7 @@ export function Sidebar({
 
   return (
     <aside
-      className={`nedvi-app-sidebar fixed inset-y-0 left-0 z-40 flex w-[280px] flex-col overflow-hidden border-r border-white/10 bg-[linear-gradient(110deg,#235D92_0%,#24669D_52%,#1E5488_100%)] text-white shadow-[12px_0_32px_rgba(8,25,47,0.14)] backdrop-blur-2xl transition-[width,transform] duration-300 ease-out lg:relative lg:z-0 lg:translate-x-0 ${
+      className={`nedvi-app-sidebar fixed inset-y-0 left-0 z-40 flex w-[280px] flex-col overflow-hidden border-r border-white/10 bg-[linear-gradient(145deg,#30343a_0%,#272b30_52%,#202329_100%)] text-white shadow-[12px_0_32px_rgba(8,25,47,0.14)] backdrop-blur-2xl transition-[width,transform] duration-300 ease-out lg:relative lg:z-0 lg:translate-x-0 ${
         collapsed ? 'lg:w-20' : 'lg:w-[280px]'
       } ${mobileOpen ? 'translate-x-0' : '-translate-x-full'}`}
       aria-label="Navegación principal"
@@ -368,7 +368,7 @@ export function Sidebar({
       <button
         type="button"
         onClick={onToggleCollapse}
-        className="absolute right-2 top-[88px] z-30 hidden h-8 w-8 items-center justify-center rounded-xl border border-white/15 bg-[#173a5d]/95 text-white shadow-[0_8px_22px_rgba(0,0,0,0.28)] backdrop-blur-md transition hover:bg-[#22517c] hover:scale-105 lg:flex"
+        className="absolute right-2 top-[88px] z-30 hidden h-8 w-8 items-center justify-center rounded-xl border border-white/15 bg-[#353a41]/95 text-white shadow-[0_8px_22px_rgba(0,0,0,0.28)] backdrop-blur-md transition hover:bg-[#4a5059] hover:scale-105 lg:flex"
         aria-label={collapsed ? 'Expandir menú lateral' : 'Contraer menú lateral'}
         title={collapsed ? 'Expandir menú' : 'Ocultar menú'}
       >
