@@ -105,7 +105,7 @@ export function CustomerWorkspace() {
       <header className="flex flex-col justify-between gap-5 sm:flex-row sm:items-end">
         <div>
           <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[#7187ff]">Gestión comercial</p>
-          <h1 className="mt-2 text-3xl font-semibold tracking-[-0.05em] text-white sm:text-4xl">Clientes</h1>
+          <h1 className="mt-2 text-3xl font-semibold tracking-[-0.05em] text-[var(--foreground)] sm:text-4xl">Clientes</h1>
           <p className="mt-2 max-w-xl text-sm text-[#9CA3AF]">Administra relaciones, oportunidades y el seguimiento comercial de cada cliente de NEDVI.</p>
         </div>
         <Link href="/crm/new" className="inline-flex h-11 items-center justify-center gap-2 rounded-xl bg-[#163DFF] px-4 text-xs font-semibold text-white shadow-[0_10px_25px_rgba(22,61,255,0.2)] transition hover:bg-[#3155ff] hover:shadow-[0_14px_30px_rgba(22,61,255,0.3)] focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-[#163DFF]/30">
@@ -143,7 +143,7 @@ export function CustomerWorkspace() {
       </Card>
 
       {loading ? (
-        <div className="rounded-2xl border border-white/[0.07] bg-[#20232A] p-8 text-sm text-[#9CA3AF]">Cargando clientes desde Supabase...</div>
+        <div className="rounded-2xl border border-white/[0.07] bg-[var(--card)] p-8 text-sm text-[#9CA3AF]">Cargando clientes desde Supabase...</div>
       ) : visibleCustomers.length ? (
         <>
           <CustomerTable customers={visibleCustomers} sortKey={sortKey} sortDirection={sortDirection} onSort={toggleSort} onDelete={handleDelete} />
@@ -201,7 +201,7 @@ function MetricCard({ label, value, detail, icon: Icon, accent = 'blue' }: Metri
         <span className={`flex h-9 w-9 items-center justify-center rounded-xl ${accentClass}`}><Icon size={17} strokeWidth={1.8} /></span>
         <span className="text-[10px] font-semibold uppercase tracking-[0.12em] text-[#646873]">CRM</span>
       </div>
-      <p className="mt-5 text-2xl font-semibold tracking-[-0.04em] text-white">{value}</p>
+      <p className="mt-5 text-2xl font-semibold tracking-[-0.04em] text-[var(--foreground)]">{value}</p>
       <p className="mt-1 text-xs font-medium text-[#d5d7df]">{label}</p>
       <p className="mt-2 text-[11px] text-[#646873]">{detail}</p>
     </Card>
