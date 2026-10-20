@@ -1723,3 +1723,50 @@ textarea {
 .theme-dark .nedvi-main-content button.nedvi-dark-white-create:hover {
   background-color: #e4e9ef !important;
 }
+
+
+/* Dark theme: frosted white sidebar, graphite project workspaces.
+   Light mode remains unchanged. */
+.theme-dark .nedvi-app-sidebar {
+  background: rgba(241,245,249,.91) !important;
+  color: #111827 !important;
+  border-right: 1px solid rgba(255,255,255,.8) !important;
+  box-shadow: 8px 0 28px rgba(0,0,0,.18) !important;
+  -webkit-backdrop-filter: blur(22px) saturate(130%);
+  backdrop-filter: blur(22px) saturate(130%);
+}
+.theme-dark .nedvi-app-sidebar > .pointer-events-none { opacity: 0 !important; }
+.theme-dark .nedvi-app-sidebar :is(a,button):not(.nedvi-sidebar-subitem-active) {
+  background-color: rgba(255,255,255,.47) !important;
+  color: #17212f !important;
+  border-color: rgba(33,48,65,.16) !important;
+}
+.theme-dark .nedvi-app-sidebar :is(a,button):not(.nedvi-sidebar-subitem-active) :is(span,svg) {
+  color: #17212f !important;
+}
+.theme-dark .nedvi-app-sidebar :is(a,button):not(.nedvi-sidebar-subitem-active):hover {
+  background-color: rgba(255,255,255,.88) !important;
+}
+.theme-dark .nedvi-app-sidebar .nedvi-sidebar-subitem-active,
+.theme-dark .nedvi-app-sidebar a[aria-current="page"] {
+  background: #ffffff !important;
+  color: #111827 !important;
+  border-color: rgba(40,55,73,.27) !important;
+  box-shadow: 0 4px 12px rgba(36,50,66,.12) !important;
+}
+.theme-dark .nedvi-app-sidebar .nedvi-sidebar-subitem-active :is(span,svg) {
+  color: #111827 !important;
+}
+/* Restrict neutral graphite treatment to the projects workspace. */
+.theme-dark .nedvi-main-content .nedvi-projects-workspace :is(.nedvi-card,.crm-table-shell),
+.theme-dark .nedvi-main-content .nedvi-projects-workspace :is(div,section,article)[class*="bg-[var(--surface)"],
+.theme-dark .nedvi-main-content .nedvi-projects-workspace :is(div,section,article)[class*="bg-[var(--card)"] {
+  background: rgba(27,29,34,.91) !important;
+  border-color: rgba(255,255,255,.13) !important;
+  color: #f8fafc !important;
+  backdrop-filter: blur(14px);
+}
+.theme-dark .nedvi-main-content .nedvi-projects-workspace .bg-\\[\\#163DFF\\] {
+  background: #f8fafc !important;
+  color: #111827 !important;
+}
