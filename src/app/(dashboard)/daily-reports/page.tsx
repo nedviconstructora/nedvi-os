@@ -699,7 +699,7 @@ export default function DailyReportsPage() {
             <h1 className="mt-2 text-3xl font-bold text-[var(--foreground)]">Reportes diarios</h1>
             <p className="mt-2 text-sm text-[var(--muted)]">Bitácora diaria con información del cliente, avance real por concepto y evidencia fotográfica.</p>
           </div>
-          <button onClick={() => { resetForm(); setOpen(true) }} className="inline-flex h-11 items-center gap-2 rounded-xl bg-[#5496CC] px-4 text-sm font-semibold text-white"><Plus size={16} /> Nuevo reporte</button>
+          <button onClick={() => { resetForm(); setOpen(true) }} className="nedvi-dark-white-create inline-flex h-11 items-center gap-2 rounded-xl bg-[#5496CC] px-4 text-sm font-semibold text-white"><Plus size={16} /> Nuevo reporte</button>
         </header>
 
         <div className="grid gap-4 sm:grid-cols-3">
@@ -761,12 +761,12 @@ export default function DailyReportsPage() {
                         <td className="px-5 py-4 text-[var(--foreground)]">{project.owner || 'Sin responsable'}</td>
                         <td className="px-5 py-4 text-right">
                           <div className="flex flex-wrap items-center justify-end gap-2">
-                            <button type="button" onClick={() => setViewingQuoteId(project.id)} className="inline-flex items-center gap-2 rounded-lg border border-[#5496CC]/40 px-3 py-2 text-xs font-semibold text-[#5496CC] transition hover:bg-[#5496CC]/10">
+                            <button type="button" onClick={() => setViewingQuoteId(project.id)} className="nedvi-dark-white-create inline-flex items-center gap-2 rounded-lg border border-[#5496CC]/40 px-3 py-2 text-xs font-semibold text-[#5496CC] transition hover:bg-[#5496CC]/10">
                               <Eye size={15} /> Ver reportes
                             </button>
                             {latest ? (
                               <>
-                                <button type="button" onClick={() => openEdit(latest)} title="Editar el último reporte" className="inline-flex items-center gap-2 rounded-lg border border-[#5496CC]/30 px-3 py-2 text-xs font-semibold text-[#5496CC] hover:bg-[#5496CC]/10">
+                                <button type="button" onClick={() => openEdit(latest)} title="Editar el último reporte" className="nedvi-dark-white-create inline-flex items-center gap-2 rounded-lg border border-[#5496CC]/30 px-3 py-2 text-xs font-semibold text-[#5496CC] hover:bg-[#5496CC]/10">
                                   <Pencil size={15} /> Editar
                                 </button>
                                 <button type="button" onClick={() => remove(latest.id)} title="Eliminar el último reporte" className="inline-flex items-center gap-2 rounded-lg border border-red-500/25 px-3 py-2 text-xs font-semibold text-red-500 hover:bg-red-500/10">
@@ -812,8 +812,8 @@ export default function DailyReportsPage() {
                           <p className="mt-1 text-sm text-[var(--muted)]">Elaboró: {report.author || 'Sin registrar'}</p>
                         </div>
                         <div className="flex flex-wrap gap-2">
-                          <button type="button" onClick={() => printPdf(report)} className="inline-flex items-center gap-2 rounded-lg border border-[#5496CC]/40 px-3 py-2 text-xs font-semibold text-[#5496CC] hover:bg-[#5496CC]/10"><Printer size={15} /> PDF</button>
-                          <button type="button" onClick={() => openEdit(report)} className="inline-flex items-center gap-2 rounded-lg border border-[#5496CC]/30 px-3 py-2 text-xs font-semibold text-[#5496CC] hover:bg-[#5496CC]/10"><Pencil size={15} /> Editar</button>
+                          <button type="button" onClick={() => printPdf(report)} className="nedvi-dark-white-create inline-flex items-center gap-2 rounded-lg border border-[#5496CC]/40 px-3 py-2 text-xs font-semibold text-[#5496CC] hover:bg-[#5496CC]/10"><Printer size={15} /> PDF</button>
+                          <button type="button" onClick={() => openEdit(report)} className="nedvi-dark-white-create inline-flex items-center gap-2 rounded-lg border border-[#5496CC]/30 px-3 py-2 text-xs font-semibold text-[#5496CC] hover:bg-[#5496CC]/10"><Pencil size={15} /> Editar</button>
                           <button type="button" onClick={() => remove(report.id)} className="inline-flex items-center gap-2 rounded-lg border border-red-500/20 px-3 py-2 text-xs font-semibold text-red-500 hover:bg-red-500/10"><Trash2 size={15} /> Eliminar</button>
                         </div>
                       </div>
