@@ -99,7 +99,9 @@ export default function FolioSearchPage() {
       <div>
         <p className="text-xs font-semibold uppercase tracking-widest text-[#5496CC]">Expediente unificado</p>
         <h1 className="mt-2 text-3xl font-bold">Buscar folio</h1>
-        <div className="mt-3 inline-flex max-w-3xl rounded-xl border border-sky-200/55 bg-sky-200/70 px-4 py-3 shadow-sm backdrop-blur-md dark:border-sky-200/55 dark:bg-sky-200/75">\n          <p className="text-sm font-medium leading-relaxed text-[#102e47]">Consulta toda la información vinculada a un cliente desde su folio NV-0001 o un folio relacionado.</p>\n        </div>
+        <div className="mt-3 inline-flex max-w-3xl rounded-xl border border-sky-200/55 bg-sky-200/70 px-4 py-3 shadow-sm backdrop-blur-md dark:border-sky-200/55 dark:bg-sky-200/75">
+          <p className="text-sm font-medium leading-relaxed text-[#102e47]">Consulta toda la información vinculada a un cliente desde su folio NV-0001 o un folio relacionado.</p>
+        </div>
       </div>
       <form onSubmit={onSubmit} className={panel + ' flex flex-col gap-3 sm:flex-row'}>
         <input aria-label="Número de folio" value={query} onChange={event => setQuery(event.target.value)}
