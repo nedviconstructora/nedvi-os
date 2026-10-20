@@ -1557,3 +1557,41 @@ textarea {
   background-color: rgba(123,174,227,.18);
   color: #fff;
 }
+
+
+/* Dark Glass navigation: preserve the approved light-mode header/sidebar. */
+.theme-dark .nedvi-app-header {
+  background: rgba(18, 20, 24, .88) !important;
+  border-bottom: 1px solid rgba(255,255,255,.10) !important;
+  color: #fff !important;
+  box-shadow: 0 8px 28px rgba(0,0,0,.22) !important;
+  -webkit-backdrop-filter: blur(20px) saturate(125%);
+  backdrop-filter: blur(20px) saturate(125%);
+}
+.theme-dark .nedvi-app-sidebar {
+  background: rgba(18, 20, 24, .92) !important;
+  border-right: 1px solid rgba(255,255,255,.10) !important;
+  color: #fff !important;
+  box-shadow: 12px 0 30px rgba(0,0,0,.22) !important;
+  -webkit-backdrop-filter: blur(20px) saturate(125%);
+  backdrop-filter: blur(20px) saturate(125%);
+}
+.theme-dark .nedvi-app-sidebar > .pointer-events-none {
+  opacity: .13;
+}
+.theme-dark .nedvi-app-sidebar :is(a,button) {
+  color: #f7f8fa;
+}
+.theme-dark .nedvi-app-sidebar :is(a,button):hover {
+  border-color: rgba(255,255,255,.20);
+}
+.theme-dark .nedvi-app-sidebar a[aria-current="page"] {
+  background: rgba(123,174,227,.20) !important;
+  box-shadow: inset 3px 0 #7baee3 !important;
+  color: #fff !important;
+}
+.theme-dark .nedvi-app-header :is(input,select) {
+  background: rgba(34,37,43,.9);
+  border-color: rgba(255,255,255,.12);
+  color: #fff;
+}
