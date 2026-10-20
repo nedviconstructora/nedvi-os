@@ -1196,3 +1196,48 @@ textarea {
   opacity: 1;
   -webkit-text-fill-color: #4c708c;
 }
+
+
+/* Quotation editor: always light, legible and isolated from dark application theme. */
+.nedvi-main-content .nedvi-quote-form-dialog {
+  color-scheme: light;
+  background: #f9fcff !important;
+  color: #172b43 !important;
+  border-color: #cbddeb !important;
+  box-shadow: 0 30px 90px rgba(6,26,49,.32) !important;
+}
+.theme-dark .nedvi-main-content .nedvi-quote-form-dialog :is(h1,h2,h3,h4,p,label,span,th,td),
+.theme-light .nedvi-main-content .nedvi-quote-form-dialog :is(h1,h2,h3,h4,p,label,span,th,td) {
+  color: #193650;
+}
+.nedvi-main-content .nedvi-quote-form-dialog :is(input,select,textarea):not([type="file"]) {
+  background: #ffffff !important;
+  color: #17324b !important;
+  -webkit-text-fill-color: #17324b;
+  border: 1px solid #c6d7e6 !important;
+  caret-color: #17324b;
+  color-scheme: light;
+}
+.nedvi-main-content .nedvi-quote-form-dialog :is(input,textarea)::placeholder {
+  color: #58728a !important;
+  -webkit-text-fill-color: #58728a;
+  opacity: 1;
+}
+.nedvi-main-content .nedvi-quote-form-dialog select option {
+  background: #ffffff !important;
+  color: #17324b !important;
+}
+.nedvi-main-content .nedvi-quote-form-dialog :is(input,textarea,select):focus {
+  border-color: #5496cc !important;
+  box-shadow: 0 0 0 3px rgba(84,150,204,.18);
+}
+.nedvi-main-content .nedvi-quote-form-dialog .dark\\:bg-slate-950,
+.nedvi-main-content .nedvi-quote-form-dialog .dark\\:bg-slate-900 {
+  background: #edf5fd !important;
+}
+.nedvi-main-content .nedvi-quote-form-dialog .dark\\:border-slate-700 {
+  border-color: #d0deeb !important;
+}
+.nedvi-main-content .nedvi-quote-form-dialog button {
+  -webkit-text-fill-color: currentColor;
+}
