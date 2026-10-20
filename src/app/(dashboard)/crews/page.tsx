@@ -237,7 +237,7 @@ export default function CrewsPage() {
             <span><span className="font-semibold text-[var(--foreground)]">Proyecto:</span> {projects.find(p=>p.id===crew.project_id)?.name || 'Sin proyecto asignado'}</span><span><span className="font-semibold text-[var(--foreground)]">Responsable:</span> {crew.foreman || 'Sin asignar'}</span>
             <span className="inline-flex items-center gap-1.5"><UserRound size={14} className="text-[#5496CC]" /><strong className="text-[var(--foreground)]">{crew.members.length}</strong> integrantes</span>
           </div>
-          <button type="button" onClick={() => void viewDetails(crew.id)} className="mt-3 inline-flex items-center rounded-lg border border-[#5496CC]/50 px-3 py-2 text-xs font-semibold text-[#5496CC] transition hover:bg-[#5496CC]/10">Ver expedientes de integrantes</button>
+          <button type="button" onClick={() => void viewDetails(crew.id)} className="nedvi-dark-white-create mt-3 inline-flex items-center rounded-lg border border-[#5496CC]/50 px-3 py-2 text-xs font-semibold text-[#5496CC] transition hover:bg-[#5496CC]/10">Ver expedientes de integrantes</button>
         </article>)}</div>}
       </div>
 
