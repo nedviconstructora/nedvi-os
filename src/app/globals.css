@@ -1688,3 +1688,20 @@ textarea {
 .theme-dark .nedvi-main-content .nedvi-quote-form-dialog div[class*="border-slate-200"] {
   border-color: rgba(255,255,255,.14) !important;
 }
+
+
+/* Dark sidebar: active submenu entries use white selection with dark labels/icons. */
+.theme-dark .nedvi-app-sidebar .nedvi-sidebar-subitem-active {
+  background: #f8fafc !important;
+  color: #111827 !important;
+  border: 1px solid rgba(255,255,255,.92) !important;
+  box-shadow: 0 6px 18px rgba(0,0,0,.22) !important;
+}
+.theme-dark .nedvi-app-sidebar .nedvi-sidebar-subitem-active :is(svg,span) {
+  color: #111827 !important;
+  stroke: currentColor;
+}
+.theme-dark .nedvi-app-sidebar .nedvi-sidebar-subitem-active:hover {
+  background: #e9edf2 !important;
+  color: #111827 !important;
+}
