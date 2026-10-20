@@ -22,7 +22,7 @@ type CustomerFiltersProps = {
 }
 
 const selectClassName =
-  'h-10 w-full appearance-none rounded-lg border border-[var(--border)] bg-[var(--surface-soft)] px-3 text-xs text-[var(--foreground)] outline-none transition hover:border-[var(--primary)] focus:border-[#163DFF] focus:ring-4 focus:ring-[#163DFF]/10 sm:w-auto sm:min-w-36'
+  'nedvi-customer-filter-select h-10 w-full appearance-none rounded-lg border border-[var(--border)] bg-[var(--surface-soft)] px-3 text-xs text-[var(--foreground)] outline-none transition hover:border-[var(--primary)] focus:border-[#163DFF] focus:ring-4 focus:ring-[#163DFF]/10 sm:w-auto sm:min-w-36'
 
 export function CustomerFilters({
   value,
