@@ -171,7 +171,7 @@ export default function InspectionsPage() {
           </div>
         </article>)}</div>}
     </div>
-    {open && <div className="fixed inset-0 z-[80] flex items-center justify-center bg-black/65 p-4"><div className="max-h-[94vh] w-full max-w-3xl overflow-y-auto rounded-2xl bg-[var(--surface)] p-6 shadow-2xl">
+    {open && <div className="fixed inset-0 z-[120] flex items-center justify-center overflow-y-auto bg-slate-950/55 p-4 backdrop-blur-md"><div className="max-h-[94vh] w-full max-w-3xl overflow-y-auto rounded-2xl bg-[var(--surface)] p-6 shadow-2xl">
       <div className="flex justify-between gap-3"><h2 className="text-xl font-bold">{editingId?'Editar inspección':'Nueva inspección'}</h2><button onClick={()=>setOpen(false)} aria-label="Cerrar"><X size={18}/></button></div>
       <form className="mt-5 space-y-4" onSubmit={e=>void save(e)}>
         <label className="block text-sm font-semibold">Proyecto<select required className={inputClass+' mt-1'} value={projectId} onChange={e=>setProjectId(e.target.value)}>
