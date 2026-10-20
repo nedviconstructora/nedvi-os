@@ -476,7 +476,7 @@ export default function PurchaseOrdersPage() {
             <h1 className="mt-2 text-3xl font-bold tracking-tight text-[var(--foreground)]">Órdenes de compra</h1>
             <p className="mt-2 max-w-2xl text-sm text-[var(--muted)]">Controla órdenes, comprobantes y el estado de pago a proveedores.</p>
           </div>
-          <button type="button" onClick={openNewOrder} className="inline-flex h-11 items-center gap-2 rounded-xl bg-[#5496CC] px-4 text-sm font-semibold text-white transition hover:brightness-95"><Plus size={16} /> Nueva orden</button>
+          <button type="button" onClick={openNewOrder} className="nedvi-dark-white-create inline-flex h-11 items-center gap-2 rounded-xl bg-[#5496CC] px-4 text-sm font-semibold text-white transition hover:brightness-95"><Plus size={16} /> Nueva orden</button>
         </header>
 
         <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
@@ -579,14 +579,14 @@ export default function PurchaseOrdersPage() {
               <section className="rounded-2xl border border-[var(--border)] p-4">
                 <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                   <div><h3 className="font-semibold text-[var(--foreground)]">Comprobantes</h3><p className="mt-1 text-xs text-[var(--muted)]">Adjunta imágenes o PDF. Máximo {MAX_PROOF_FILES} archivos de 2 MB cada uno.</p></div>
-                  <label className="inline-flex cursor-pointer items-center justify-center gap-2 rounded-xl border border-[#5496CC]/40 px-4 py-2.5 text-sm font-semibold text-[#5496CC] hover:bg-[#5496CC]/10"><Upload size={16} /> Subir comprobante<input type="file" multiple accept="image/*,application/pdf" onChange={handleProofUpload} className="hidden" /></label>
+                  <label className="nedvi-dark-white-create inline-flex cursor-pointer items-center justify-center gap-2 rounded-xl border border-[#5496CC]/40 px-4 py-2.5 text-sm font-semibold text-[#5496CC] hover:bg-[#5496CC]/10"><Upload size={16} /> Subir comprobante<input type="file" multiple accept="image/*,application/pdf" onChange={handleProofUpload} className="hidden" /></label>
                 </div>
                 {proofFiles.length ? <div className="mt-4 space-y-2">{proofFiles.map((file) => <div key={file.id} className="flex items-center justify-between gap-3 rounded-xl bg-[var(--surface-soft)] px-3 py-3"><div className="min-w-0"><p className="truncate text-sm font-semibold text-[var(--foreground)]">{file.name}</p><p className="mt-0.5 text-xs text-[var(--muted)]">{formatFileSize(file.size)}</p></div><div className="flex gap-2"><a href={file.dataUrl} download={file.name} className="rounded-lg p-2 text-[#5496CC] hover:bg-[#5496CC]/10" title="Descargar"><Download size={15} /></a><button type="button" onClick={() => removeProof(file.id)} className="rounded-lg p-2 text-red-500 hover:bg-red-500/10" title="Quitar"><Trash2 size={15} /></button></div></div>)}</div> : <p className="mt-4 text-sm text-[var(--muted)]">Todavía no hay comprobantes adjuntos.</p>}
               </section>
 
               <Field label="Notas"><textarea rows={3} value={notes} onChange={(e) => setNotes(e.target.value)} placeholder="Condiciones, instrucciones de entrega, observaciones..." className="po-input" /></Field>
               <div className="grid gap-3 rounded-2xl bg-[var(--surface-soft)] p-4 sm:grid-cols-3"><Summary label="Subtotal" value={money(formTotals.subtotal, currency)} /><Summary label={`IVA (${taxRate || 0}%)`} value={money(formTotals.tax, currency)} /><Summary label="Total" value={money(formTotals.total, currency)} accent /></div>
-              <div className="flex justify-end gap-3"><button type="button" onClick={closeForm} className="rounded-xl border border-[var(--border)] px-5 py-3 font-semibold text-[var(--foreground)]">Cancelar</button><button type="submit" className="rounded-xl bg-[#5496CC] px-5 py-3 font-semibold text-white">{editingOrder ? 'Guardar cambios' : 'Crear orden'}</button></div>
+              <div className="flex justify-end gap-3"><button type="button" onClick={closeForm} className="rounded-xl border border-[var(--border)] px-5 py-3 font-semibold text-[var(--foreground)]">Cancelar</button><button type="submit" className="nedvi-dark-white-create rounded-xl bg-[#5496CC] px-5 py-3 font-semibold text-white">{editingOrder ? 'Guardar cambios' : 'Crear orden'}</button></div>
             </form>
           </div>
         </div>
