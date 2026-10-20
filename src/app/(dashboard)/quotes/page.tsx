@@ -793,7 +793,7 @@ export default function QuotesPage() {
             <h1 className="text-3xl font-bold tracking-tight">Cotizaciones</h1>
             <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">El folio se vincula al cliente: NV-0001-C01, NV-0001-C02, etc.</p>
           </div>
-          <button onClick={openNew} className="rounded-xl bg-[#7BAEE3] px-5 py-3 font-semibold text-slate-950 transition hover:brightness-95">+ Nueva cotización</button>
+          <button onClick={openNew} className="nedvi-dark-white-create rounded-xl bg-[#7BAEE3] px-5 py-3 font-semibold text-slate-950 transition hover:brightness-95">+ Nueva cotización</button>
         </div>
 
         <div className="grid gap-3 rounded-2xl border border-[var(--border)] bg-[var(--surface)] p-4 text-[var(--foreground)] shadow-sm md:grid-cols-[1fr_220px]">
