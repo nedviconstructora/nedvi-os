@@ -99,7 +99,7 @@ export default function FolioSearchPage() {
       <div>
         <p className="text-xs font-semibold uppercase tracking-widest text-[#5496CC]">Expediente unificado</p>
         <h1 className="mt-2 text-3xl font-bold">Buscar folio</h1>
-        <div className="mt-3 inline-flex max-w-3xl rounded-xl border border-sky-200/55 bg-sky-200/70 px-4 py-3 shadow-sm backdrop-blur-md dark:border-sky-200/55 dark:bg-sky-200/75">
+        <div className="nedvi-folio-callout mt-3 inline-flex max-w-3xl rounded-xl border border-sky-200/55 bg-sky-200/70 px-4 py-3 shadow-sm backdrop-blur-md dark:border-sky-200/55 dark:bg-sky-200/75">
           <p className="text-sm font-medium leading-relaxed text-[#102e47]">Consulta toda la información vinculada a un cliente desde su folio NV-0001 o un folio relacionado.</p>
         </div>
       </div>
@@ -107,7 +107,7 @@ export default function FolioSearchPage() {
         <input aria-label="Número de folio" value={query} onChange={event => setQuery(event.target.value)}
           placeholder="Ejemplo: NV-0001 o NV-0001-C01"
           className="nedvi-folio-search-input min-w-0 flex-1 rounded-xl border border-[#9dc6e6] bg-[#e9f5ff]/85 p-3 text-sm font-medium text-[#102e47] placeholder:text-[#4c708c] shadow-inner outline-none backdrop-blur-xl focus:border-[#5496CC] focus:ring-2 focus:ring-[#5496CC]/30" />
-        <button disabled={busy || !query.trim()} className="inline-flex items-center justify-center gap-2 rounded-xl bg-[#5496CC] px-6 py-3 font-semibold text-white disabled:opacity-50">
+        <button disabled={busy || !query.trim()} className="nedvi-folio-search-button inline-flex items-center justify-center gap-2 rounded-xl bg-[#5496CC] px-6 py-3 font-semibold text-white disabled:opacity-50">
           {busy ? <RefreshCw className="animate-spin" size={18} /> : <Search size={18} />} Buscar folio
         </button>
       </form>
