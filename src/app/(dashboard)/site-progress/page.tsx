@@ -482,7 +482,7 @@ export default function SiteProgressPage() {
       </div>
 
       {viewingProject ? (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4">
+        <div className="fixed inset-0 z-[120] flex items-center justify-center overflow-y-auto bg-slate-950/55 p-4 backdrop-blur-md">
           <div className="max-h-[94vh] w-full max-w-[1500px] overflow-y-auto rounded-2xl bg-[var(--surface)] shadow-2xl">
             <div className="sticky top-0 z-10 flex items-start justify-between gap-4 border-b border-[var(--border)] bg-[var(--surface)] p-5">
               <div>
@@ -513,7 +513,7 @@ export default function SiteProgressPage() {
       ) : null}
 
       {open ? (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4">
+        <div className="fixed inset-0 z-[120] flex items-center justify-center overflow-y-auto bg-slate-950/55 p-4 backdrop-blur-md">
           <div className="max-h-[94vh] w-full max-w-[1550px] overflow-y-auto rounded-2xl bg-[var(--surface)] shadow-2xl">
             <div className="sticky top-0 z-20 flex items-start justify-between border-b border-[var(--border)] bg-[var(--surface)] p-5">
               <div><p className="text-xs font-semibold uppercase tracking-wide text-[#5496CC]">Operaciones / Obra</p><h2 className="mt-1 text-xl font-bold">{editingRecordId ? "Editar avance por conceptos" : "Registrar avance por conceptos"}</h2></div>
