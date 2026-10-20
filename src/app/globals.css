@@ -1348,3 +1348,39 @@ textarea {
   color: #fff !important;
   -webkit-text-fill-color: #fff;
 }
+
+
+/* Unified in-page creation dialogs: projects, opportunities, suppliers. */
+.nedvi-main-content :is(.nedvi-project-create-modal,.nedvi-standard-modal) {
+  --foreground: #17324b;
+  --muted: #516d86;
+  --surface-soft: #edf5fc;
+  --border: #cbddea;
+  color-scheme: light !important;
+  background: #f9fcff !important;
+  color: #17324b !important;
+  box-shadow: 0 30px 90px rgba(6,26,49,.3) !important;
+}
+.nedvi-main-content :is(.nedvi-project-create-modal,.nedvi-standard-modal) :is(input,textarea,select) {
+  background-color: #fff !important;
+  color: #17324b !important;
+  -webkit-text-fill-color: #17324b;
+  border-color: #cbddea !important;
+  color-scheme: light;
+}
+.nedvi-main-content :is(.nedvi-project-create-modal,.nedvi-standard-modal) :is(input,textarea)::placeholder {
+  color: #647e95 !important;
+  -webkit-text-fill-color: #647e95;
+  opacity: 1;
+}
+.nedvi-main-content :is(.nedvi-project-create-modal,.nedvi-standard-modal) select option {
+  background: #fff !important;
+  color: #17324b !important;
+}
+.nedvi-main-content :is(.nedvi-project-create-modal,.nedvi-standard-modal) :is(h1,h2,h3,h4,label,p) {
+  color: #17324b;
+}
+.nedvi-main-content :is(.nedvi-project-create-modal,.nedvi-standard-modal) button[type="submit"] {
+  color: #fff !important;
+  -webkit-text-fill-color: #fff;
+}
