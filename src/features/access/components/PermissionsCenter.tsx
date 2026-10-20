@@ -152,7 +152,7 @@ export function PermissionsCenter() {
           void refresh()
           setOpen(true)
         }}
-        className="inline-flex h-11 items-center gap-2 rounded-xl border border-[#5496CC]/25 bg-[var(--surface)] px-4 text-sm font-bold text-[#5496CC] shadow-sm transition hover:bg-[#5496CC]/5"
+        className="nedvi-settings-top-action inline-flex h-11 items-center gap-2 rounded-xl border border-[#5496CC]/25 bg-[var(--surface)] px-4 text-sm font-bold text-[#5496CC] shadow-sm transition hover:bg-[#5496CC]/5"
       >
         <SlidersHorizontal size={17} /> Gestionar permisos
       </button>
