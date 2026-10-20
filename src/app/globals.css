@@ -1090,3 +1090,47 @@ textarea {
   -webkit-backdrop-filter: blur(16px) saturate(135%) !important;
   backdrop-filter: blur(16px) saturate(135%) !important;
 }
+
+
+/* NEDVI visual accessibility v7: explicit theme-aware text + glass tokens. */
+.theme-light {
+  --foreground: #152c46;
+  --muted: #455f7b;
+  --subtle: #506985;
+  --primary: #155b9b;
+  --card: rgba(255,255,255,.78);
+  --surface: rgba(255,255,255,.80);
+  --surface-soft: rgba(232,243,253,.80);
+}
+.theme-dark {
+  --foreground: #f4f9ff;
+  --muted: #d5e5f5;
+  --subtle: #c5d9ee;
+  --primary: #a4d8ff;
+  --card: rgba(62,111,151,.67);
+  --surface: rgba(62,111,151,.69);
+  --surface-soft: rgba(77,128,169,.67);
+}
+.theme-light .nedvi-main-content .nedvi-card,
+.theme-light .nedvi-main-content .nedvi-dashboard-hero,
+.theme-light .nedvi-main-content :is(div,section,article)[class*="bg-[var(--surface)"][class*="rounded-"],
+.theme-light .nedvi-main-content :is(div,section,article)[class*="bg-[var(--card)"][class*="rounded-"] {
+  background: var(--card) !important;
+  color: var(--foreground);
+}
+.theme-dark .nedvi-main-content .nedvi-card,
+.theme-dark .nedvi-main-content .nedvi-dashboard-hero,
+.theme-dark .nedvi-main-content :is(div,section,article)[class*="bg-[var(--surface)"][class*="rounded-"],
+.theme-dark .nedvi-main-content :is(div,section,article)[class*="bg-[var(--card)"][class*="rounded-"] {
+  background: var(--card) !important;
+  color: var(--foreground);
+}
+.nedvi-main-content .nedvi-card :is(h1,h2,h3,h4),
+.nedvi-main-content .nedvi-dashboard-hero :is(h1,h2,h3,h4) {
+  color: var(--foreground);
+}
+.nedvi-main-content :is(input,textarea,select) {
+  color: var(--foreground);
+}
+.theme-light .nedvi-main-content :is(input,textarea,select)::placeholder { color: #59738c; }
+.theme-dark .nedvi-main-content :is(input,textarea,select)::placeholder { color: #c4d8e9; }
