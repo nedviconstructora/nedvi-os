@@ -1770,3 +1770,39 @@ textarea {
   background: #f8fafc !important;
   color: #111827 !important;
 }
+
+
+/* Dashboard + sidebar monochrome actions, dark theme only. */
+.theme-dark .nedvi-main-content .nedvi-dashboard-new-activity {
+  background: #f8fafc !important;
+  background-image: none !important;
+  color: #111827 !important;
+  border: 1px solid #f8fafc !important;
+  box-shadow: 0 8px 24px rgba(0,0,0,.22) !important;
+}
+.theme-dark .nedvi-main-content .nedvi-dashboard-new-activity :is(svg,span) {
+  color: #111827 !important;
+  stroke: currentColor;
+}
+.theme-dark .nedvi-main-content .nedvi-dashboard-new-activity:hover {
+  background: #e5e9ef !important;
+}
+/* Top-level sidebar active controls: no blue gradient in dark mode. */
+.theme-dark .nedvi-app-sidebar .nedvi-sidebar-primary {
+  background: rgba(255,255,255,.62) !important;
+  color: #111827 !important;
+  border-color: rgba(30,41,59,.18) !important;
+  box-shadow: none !important;
+}
+.theme-dark .nedvi-app-sidebar .nedvi-sidebar-primary :is(span,svg) {
+  color: #111827 !important;
+}
+.theme-dark .nedvi-app-sidebar .nedvi-sidebar-primary:hover {
+  background: rgba(255,255,255,.94) !important;
+}
+.theme-dark .nedvi-app-sidebar .nedvi-sidebar-primary[class*="border-[#53A8FF]"] {
+  background: #ffffff !important;
+  border-color: #cbd5e1 !important;
+  color: #111827 !important;
+  box-shadow: 0 5px 18px rgba(0,0,0,.12) !important;
+}
