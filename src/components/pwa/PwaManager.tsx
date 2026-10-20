@@ -8,7 +8,25 @@ type InstallPromptEvent = Event & {
   userChoice: Promise<{ outcome: 'accepted' | 'dismissed'; platform: string }>
 }
 
-function navigateToFreshApp(version: string) {
+async function navigateToFreshApp(version: string) {
+  // Clear legacy Cache Storage entries before switching to a new deployment.
+  // This does not touch localStorage, sessionStorage, login credentials or data.
+  if ('caches' in window) {
+    try {
+      const keys = await window.caches.keys()
+      await Promise.all(keys.map((key) => window.caches.delete(key)))
+    } catch (error) {
+      console.warn('No se pudo limpiar la caché antigua de NEDVI OS:', error)
+    }
+  }
+  if ('serviceWorker' in navigator) {
+    try {
+      const registration = await navigator.serviceWorker.getRegistration()
+      await registration?.update()
+    } catch (error) {
+      console.warn('No se pudo actualizar el Service Worker de NEDVI OS:', error)
+    }
+  }
   const url = new URL(window.location.href)
   url.searchParams.set('nedvi_version', version.slice(0, 12))
   window.location.replace(url.toString())
@@ -102,7 +120,7 @@ export function PwaManager({ initialVersion }: { initialVersion: string }) {
       if (lastAttempt && Date.now() - lastAttempt < 5 * 60_000) return
       sessionStorage.setItem(guard, String(Date.now()))
       reloadScheduled = true
-      navigateToFreshApp(pendingVersion)
+      void navigateToFreshApp(pendingVersion)
     }
 
     const onEdit = (event: Event) => {
@@ -153,7 +171,7 @@ export function PwaManager({ initialVersion }: { initialVersion: string }) {
         <div role="status" className="fixed inset-x-3 top-3 z-[100] mx-auto flex max-w-md items-center gap-3 rounded-2xl border border-[#5496CC]/40 bg-[var(--surface)] p-3 text-sm text-[var(--foreground)] shadow-2xl">
           <RefreshCw size={20} className="shrink-0 text-[#5496CC]" />
           <span className="min-w-0 flex-1">Hay una nueva versión de NEDVI OS disponible.</span>
-          <button type="button" onClick={() => navigateToFreshApp(latestVersion || String(Date.now()))} className="rounded-xl bg-[#5496CC] px-3 py-2 text-xs font-semibold text-white">
+          <button type="button" onClick={() => void navigateToFreshApp(latestVersion || String(Date.now()))} className="rounded-xl bg-[#5496CC] px-3 py-2 text-xs font-semibold text-white">
             Actualizar app
           </button>
         </div>
