@@ -282,7 +282,7 @@ export default function AttendancePage() {
             <h1 className="mt-2 text-2xl font-bold leading-tight text-[var(--foreground)] sm:text-3xl">Asistencias · Personal de obra</h1>
             <p className="mt-2 text-sm text-[var(--muted)]">Checador de trabajadores por cuadrilla: el supervisor registra las entradas, salidas y ausencias. No se mezcla con el checador del equipo interno.</p>
           </div>
-          <button onClick={() => setOpen(true)} className="inline-flex min-h-11 w-full items-center justify-center gap-2 rounded-xl bg-[#5496CC] px-4 text-sm font-semibold text-white sm:w-auto"><Plus size={16} /> Registrar asistencia</button>
+          <button onClick={() => setOpen(true)} className="nedvi-dark-white-create inline-flex min-h-11 w-full items-center justify-center gap-2 rounded-xl bg-[#5496CC] px-4 text-sm font-semibold text-white sm:w-auto"><Plus size={16} /> Registrar asistencia</button>
         </header>
 
         <section className="min-w-0 space-y-4 rounded-2xl border border-[var(--border)] bg-[var(--surface)] p-3 sm:p-5">
