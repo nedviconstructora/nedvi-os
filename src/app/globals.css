@@ -1155,3 +1155,24 @@ textarea {
 .theme-dark .nedvi-main-content :is(.nedvi-card,.nedvi-dashboard-hero) {
   color: var(--foreground) !important;
 }
+
+
+/* Customer filters: explicit theme colors override legacy select rules.
+   Native opened option menus use opaque colors for readable browser rendering. */
+.theme-dark .nedvi-main-content select.nedvi-customer-filter-select {
+  background-color: rgba(139, 187, 223, .80) !important;
+  color: #082841 !important;
+  border-color: rgba(192, 226, 250, .72) !important;
+  color-scheme: light;
+}
+.theme-light .nedvi-main-content select.nedvi-customer-filter-select {
+  background-color: rgba(240, 249, 255, .92) !important;
+  color: #12324d !important;
+  border-color: rgba(111, 162, 205, .50) !important;
+  color-scheme: light;
+}
+.nedvi-main-content select.nedvi-customer-filter-select option,
+.nedvi-main-content select.nedvi-customer-filter-select optgroup {
+  background-color: #e7f3fe !important;
+  color: #12324d !important;
+}
