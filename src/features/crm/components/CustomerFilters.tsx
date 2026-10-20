@@ -22,7 +22,7 @@ type CustomerFiltersProps = {
 }
 
 const selectClassName =
-  'h-10 w-full appearance-none rounded-lg border border-white/[0.08] bg-[#17181C] px-3 text-xs text-[#d5d7df] outline-none transition hover:border-white/[0.15] focus:border-[#163DFF] focus:ring-4 focus:ring-[#163DFF]/10 sm:w-auto sm:min-w-36'
+  'h-10 w-full appearance-none rounded-lg border border-[var(--border)] bg-[var(--surface-soft)] px-3 text-xs text-[var(--foreground)] outline-none transition hover:border-[var(--primary)] focus:border-[#163DFF] focus:ring-4 focus:ring-[#163DFF]/10 sm:w-auto sm:min-w-36'
 
 export function CustomerFilters({
   value,
@@ -38,8 +38,8 @@ export function CustomerFilters({
   }
 
   return (
-    <div className="flex flex-col gap-3 border-t border-white/[0.06] pt-4 sm:flex-row sm:flex-wrap sm:items-center">
-      <span className="flex items-center gap-2 text-[11px] font-semibold uppercase tracking-[0.12em] text-[#646873]">
+    <div className="flex flex-col gap-3 border-t border-[var(--border)] pt-4 sm:flex-row sm:flex-wrap sm:items-center">
+      <span className="flex items-center gap-2 text-[11px] font-semibold uppercase tracking-[0.12em] text-[var(--muted)]">
         <Filter size={14} />
         Filtros
       </span>
@@ -105,7 +105,7 @@ export function CustomerFilters({
         <button
           type="button"
           onClick={onClear}
-          className="inline-flex h-10 items-center justify-center gap-2 rounded-lg px-3 text-xs font-medium text-[#9CA3AF] transition hover:bg-white/[0.05] hover:text-white"
+          className="inline-flex h-10 items-center justify-center gap-2 rounded-lg px-3 text-xs font-medium text-[var(--muted)] transition hover:bg-white/[0.05] hover:text-[var(--primary)]"
         >
           <RotateCcw size={13} />
           Limpiar filtros
