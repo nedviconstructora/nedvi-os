@@ -382,7 +382,7 @@ export default function DocumentsPage() {
             type="button"
             onClick={() => setOpen(true)}
             disabled={projects.length === 0}
-            className="inline-flex h-11 items-center justify-center gap-2 rounded-xl bg-[#5496CC] px-5 text-sm font-semibold text-white transition hover:brightness-95 disabled:cursor-not-allowed disabled:opacity-50"
+            className="nedvi-dark-white-create inline-flex h-11 items-center justify-center gap-2 rounded-xl bg-[#5496CC] px-5 text-sm font-semibold text-white transition hover:brightness-95 disabled:cursor-not-allowed disabled:opacity-50"
           >
             <FileUp size={17} />
             Subir documento
