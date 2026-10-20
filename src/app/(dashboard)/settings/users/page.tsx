@@ -593,7 +593,7 @@ export default function UsersAndPermissionsPage() {
           >
             <ArrowLeft size={16} /> Volver a NEDVI OS
           </Link>
-          <button type="button" onClick={() => void handleManualRefresh()} disabled={refreshing} className="mb-5 ml-2 inline-flex items-center gap-2 rounded-xl border border-[#5496CC] px-3 py-2 text-sm font-semibold text-[#5496CC] transition hover:bg-[#5496CC]/10 disabled:opacity-60">
+          <button type="button" onClick={() => void handleManualRefresh()} disabled={refreshing} className="nedvi-config-secondary-action mb-5 ml-2 inline-flex items-center gap-2 rounded-xl border border-[#5496CC] px-3 py-2 text-sm font-semibold text-[#5496CC] transition hover:bg-[#5496CC]/10 disabled:opacity-60">
             <RefreshCw size={16} className={refreshing ? 'animate-spin' : ''} />
             {refreshing ? 'Actualizando...' : 'Actualizar'}
           </button>
