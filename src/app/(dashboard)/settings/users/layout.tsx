@@ -85,7 +85,7 @@ export default function UsersSettingsLayout({ children }: { children: ReactNode 
           <button
             type="button"
             onClick={() => setOpen(true)}
-            className="inline-flex h-11 items-center gap-2 rounded-xl bg-[#7DC6FF] px-4 text-sm font-bold text-black shadow-sm transition hover:brightness-95"
+            className="nedvi-settings-top-action inline-flex h-11 items-center gap-2 rounded-xl bg-[#7DC6FF] px-4 text-sm font-bold text-black shadow-sm transition hover:brightness-95"
           >
             <UserRoundCog size={17} /> Gestionar roles
           </button>
