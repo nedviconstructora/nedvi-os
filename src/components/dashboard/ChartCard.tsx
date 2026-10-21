@@ -19,7 +19,7 @@ export function ChartCard({
   return (
     <Card className={`overflow-hidden ${className}`}>
       <CardHeader title={title} description={description} action={action} />
-      <div className="p-5 sm:p-6">{children}</div>
+      <div className="p-3.5 sm:p-6">{children}</div>
     </Card>
   )
 }
