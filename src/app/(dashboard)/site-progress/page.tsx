@@ -3,6 +3,7 @@
 import { FormEvent, useEffect, useMemo, useState } from 'react'
 import { BarChart3, Eye, Pencil, Plus, Search, Trash2, X } from 'lucide-react'
 import { AppShell } from '@/components/layout/AppShell'
+import { createPortal } from 'react-dom'
 import {
   PROGRESS_STORAGE_KEY,
   type OperationProject,
@@ -481,9 +482,9 @@ export default function SiteProgressPage() {
         )}
       </div>
 
-      {viewingProject ? (
-        <div className="fixed inset-0 z-[120] flex items-center justify-center overflow-y-auto bg-slate-950/55 p-4 backdrop-blur-md">
-          <div className="max-h-[94vh] w-full max-w-[1500px] overflow-y-auto rounded-2xl bg-[var(--surface)] shadow-2xl">
+      {viewingProject && typeof document !== 'undefined' ? createPortal(
+        <div className="fixed inset-0 z-[200] flex items-center justify-center overflow-y-auto bg-slate-950/65 p-3 backdrop-blur-md sm:p-6">
+          <div className="max-h-[calc(100dvh-1.5rem)] w-full max-w-[1500px] overflow-y-auto rounded-2xl bg-[var(--surface)] shadow-2xl sm:max-h-[calc(100dvh-3rem)]">
             <div className="sticky top-0 z-10 flex items-start justify-between gap-4 border-b border-[var(--border)] bg-[var(--surface)] p-5">
               <div>
                 <p className="text-xs font-semibold uppercase tracking-[0.14em] text-[#5496CC]">Historial de avance · {viewingProject.folio}</p>
@@ -510,11 +511,11 @@ export default function SiteProgressPage() {
             </div>
           </div>
         </div>
-      ) : null}
+       , document.body) : null}
 
-      {open ? (
-        <div className="fixed inset-0 z-[120] flex items-center justify-center overflow-y-auto bg-slate-950/55 p-4 backdrop-blur-md">
-          <div className="max-h-[94vh] w-full max-w-[1550px] overflow-y-auto rounded-2xl bg-[var(--surface)] shadow-2xl">
+      {open && typeof document !== 'undefined' ? createPortal(
+        <div className="fixed inset-0 z-[200] flex items-center justify-center overflow-y-auto bg-slate-950/65 p-3 backdrop-blur-md sm:p-6">
+          <div className="max-h-[calc(100dvh-1.5rem)] w-full max-w-[1550px] overflow-y-auto rounded-2xl bg-[var(--surface)] shadow-2xl sm:max-h-[calc(100dvh-3rem)]">
             <div className="sticky top-0 z-20 flex items-start justify-between border-b border-[var(--border)] bg-[var(--surface)] p-5">
               <div><p className="text-xs font-semibold uppercase tracking-wide text-[#5496CC]">Operaciones / Obra</p><h2 className="mt-1 text-xl font-bold">{editingRecordId ? "Editar avance por conceptos" : "Registrar avance por conceptos"}</h2></div>
               <button type="button" onClick={() => { setOpen(false); setEditingRecordId(null) }}><X size={18} /></button>
@@ -580,7 +581,7 @@ export default function SiteProgressPage() {
             </form>
           </div>
         </div>
-      ) : null}
+       , document.body) : null}
 
       <style jsx global>{`.table-input{width:100%;border:1px solid var(--border);background:transparent;border-radius:.65rem;padding:.65rem .75rem;outline:none}.table-input:focus{border-color:#5496CC}`}</style>
     </AppShell>
