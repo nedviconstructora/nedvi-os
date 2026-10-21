@@ -1972,3 +1972,59 @@ textarea {
 .theme-dark .nedvi-app-sidebar :is(a,button):not(.nedvi-sidebar-subitem-active):hover {
   background-color: #fff !important;
 }
+
+
+/* Login NEDVI: neutral black-and-white palette ONLY in dark theme. */
+.theme-dark .login-page {
+  background: #050505 !important;
+  color: #ffffff;
+}
+.theme-dark .login-brand-panel {
+  background: radial-gradient(circle at 18% 18%, #181818 0%, #0b0b0b 52%, #000000 100%) !important;
+  border-right-color: rgba(255,255,255,.10);
+}
+.theme-dark .login-construction-pattern {
+  opacity: .21;
+}
+.theme-dark .login-page .login-card {
+  background: rgba(11,11,11,.90) !important;
+  border-color: rgba(255,255,255,.16) !important;
+  box-shadow: 0 28px 90px rgba(0,0,0,.65) !important;
+}
+.theme-dark .login-page .login-primary-action {
+  background: #ffffff !important;
+  color: #080808 !important;
+  border: 1px solid rgba(255,255,255,.92) !important;
+  box-shadow: 0 12px 32px rgba(0,0,0,.35) !important;
+}
+.theme-dark .login-page .login-primary-action:hover {
+  background: #eeeeee !important;
+}
+.theme-dark .login-page .login-recovery-action {
+  background: #ffffff !important;
+  color: #080808 !important;
+}
+.theme-dark .login-page .login-recovery-action:hover {
+  background: #eeeeee !important;
+}
+.theme-dark .login-page .login-card input {
+  background: #101010 !important;
+  border-color: rgba(255,255,255,.20) !important;
+  color: #ffffff !important;
+}
+.theme-dark .login-page .login-theme-toggle {
+  background: #151515 !important;
+  border-color: rgba(255,255,255,.24) !important;
+  color: #ffffff !important;
+}
+.theme-dark .login-page .login-brand-emphasis {
+  background: none !important;
+  color: #ffffff !important;
+  -webkit-text-fill-color: #ffffff !important;
+}
+.theme-dark .login-page .login-card-eyebrow {
+  color: #ffffff !important;
+}
+.theme-dark .login-page .login-logo-accent {
+  color: #ffffff !important;
+}
