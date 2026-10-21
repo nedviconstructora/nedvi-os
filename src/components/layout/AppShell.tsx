@@ -3,6 +3,8 @@
 import type { ReactNode } from 'react'
 import { useEffect, useState } from 'react'
 import { usePathname, useRouter } from 'next/navigation'
+import Link from 'next/link'
+import { LayoutDashboard, UsersRound, FolderKanban, Clock3, Menu as MenuIcon } from 'lucide-react'
 import { Header } from '@/components/layout/Header'
 import { Sidebar } from '@/components/layout/Sidebar'
 import { permissionForPath } from '@/config/roles'
@@ -250,7 +252,7 @@ export function AppShell({ children }: AppShellProps) {
             />
           </div>
 
-          <main className="nedvi-main-content relative z-0 min-w-0 flex-1 bg-[var(--background)] p-5 transition-colors duration-300 sm:p-8 print:bg-white print:p-0">
+          <main className="nedvi-main-content relative z-0 min-w-0 flex-1 bg-[var(--background)] px-3 pb-[calc(6.5rem+env(safe-area-inset-bottom))] pt-4 transition-colors duration-300 sm:p-8 print:bg-white print:p-0">
             {hasRouteAccess ? (
               children
             ) : (
@@ -267,6 +269,29 @@ export function AppShell({ children }: AppShellProps) {
           </main>
         </div>
       </div>
+      <nav aria-label="Accesos rápidos móviles" className="fixed inset-x-0 bottom-0 z-[65] border-t border-[var(--border)] bg-[var(--surface)]/95 px-2 pt-2 pb-[calc(0.45rem+env(safe-area-inset-bottom))] shadow-[0_-12px_40px_rgba(8,30,55,0.12)] backdrop-blur-2xl lg:hidden print:hidden">
+        <div className="mx-auto flex max-w-lg items-center justify-around gap-1">
+          {([
+            { label: 'Inicio', href: '/dashboard', icon: LayoutDashboard, permission: 'dashboard' },
+            { label: 'Clientes', href: '/crm', icon: UsersRound, permission: 'commercial' },
+            { label: 'Proyectos', href: '/projects', icon: FolderKanban, permission: 'projects' },
+            { label: 'Checadas', href: '/time-clock', icon: Clock3, permission: 'time-clock' },
+          ] as const).filter(item => accessUser.permissions.includes(item.permission as typeof accessUser.permissions[number])).map(item => {
+            const Icon = item.icon
+            const active = pathname === item.href || pathname.startsWith(item.href + '/')
+            return (
+              <Link key={item.href} href={item.href} aria-current={active ? 'page' : undefined} className={`flex min-w-0 flex-1 flex-col items-center justify-center gap-1 rounded-2xl px-1 py-2 text-[10px] font-semibold transition-colors ${active ? 'bg-[#1f6feb]/10 text-[#1f6feb]' : 'text-[var(--muted)] hover:bg-[var(--surface-soft)]'}`}>
+                <Icon size={21} strokeWidth={active ? 2.4 : 1.9}/>
+                <span className="truncate">{item.label}</span>
+              </Link>
+            )
+          })}
+          <button type="button" onClick={() => setMobileMenuOpen(true)} className="flex min-w-0 flex-1 flex-col items-center justify-center gap-1 rounded-2xl px-1 py-2 text-[10px] font-semibold text-[var(--muted)] hover:bg-[var(--surface-soft)]" aria-label="Abrir todos los módulos">
+            <MenuIcon size={21} strokeWidth={1.9}/>
+            <span>Más</span>
+          </button>
+        </div>
+      </nav>
     </div>
     </>
   )
