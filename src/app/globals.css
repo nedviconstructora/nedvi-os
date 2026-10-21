@@ -2097,3 +2097,12 @@ textarea {
   border-color: rgba(0,0,0,.13) !important;
   box-shadow: 0 10px 30px rgba(0,0,0,.08) !important;
 }
+
+/* Brand icon: black only on the light login theme, unchanged in dark mode. */
+.theme-light .login-page .login-brand-logo {
+  filter: brightness(0) saturate(0) !important;
+  opacity: 1 !important;
+}
+.theme-dark .login-page .login-brand-logo {
+  filter: none !important;
+}
