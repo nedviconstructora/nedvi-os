@@ -12,7 +12,7 @@ function Logo({ compact = false }: { compact?: boolean }) {
         <img
           src="/icon.png"
           alt="NEDVI Constructora"
-          className="h-full w-full object-contain drop-shadow-[0_10px_24px_rgba(66,153,225,0.2)]"
+          className="login-brand-logo h-full w-full object-contain"
         />
       </span>
       <span
