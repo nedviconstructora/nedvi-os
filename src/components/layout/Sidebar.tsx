@@ -21,6 +21,7 @@ import {
   Globe2,
   HardHat,
   Instagram,
+  Mail,
   LayoutDashboard,
   Ruler,
   Search,
@@ -279,6 +280,13 @@ export function Sidebar({
 
         {canUse('agenda') || canUse('settings') || canUse('coral') ? (
           <div className="my-4 border-t border-white/10" />
+        ) : null}
+
+        {canUse('commercial') ? (
+          <Link href="/mail" title={collapsed ? 'Correo NEDVI (demo)' : undefined} onClick={onCloseMobile} className={`${primaryItemClasses(isPathActive('/mail'))} mb-2`}>
+            <Mail size={18} strokeWidth={1.8} className="shrink-0" />
+            <span className={`whitespace-nowrap transition-opacity duration-200 ${collapsed ? 'lg:hidden' : 'opacity-100'}`}>Correo NEDVI · Demo</span>
+          </Link>
         ) : null}
 
         {canUse('agenda') ? (
