@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from 'react'
 import { AppShell } from '@/components/layout/AppShell'
+import { MailAttachmentViewer, type MailAttachment, attachmentUrl } from '@/components/mail/MailAttachmentViewer'
 import { AlertCircle, ArrowRight, Clock3, Inbox, LockKeyhole, Mail, Paperclip, RefreshCw, Search, ShieldCheck } from 'lucide-react'
 
 type MailListItem = {
@@ -20,7 +21,7 @@ type MailDetail = {
   subject:string
   date:string
   text:string
-  attachments:string[]
+  attachments:MailAttachment[]
   previewLimited?:boolean
   size?:number
 }
@@ -43,6 +44,7 @@ export default function MailPage() {
   const [detail,setDetail]=useState<MailDetail|null>(null)
   const [detailLoading,setDetailLoading]=useState(false)
   const [detailError,setDetailError]=useState('')
+  const [activeAttachment,setActiveAttachment]=useState<MailAttachment|null>(null)
 
   useEffect(()=>{
     const controller=new AbortController()
@@ -66,6 +68,7 @@ export default function MailPage() {
   },[reload])
 
   useEffect(()=>{
+    setActiveAttachment(null)
     if(!selected){setDetail(null);setDetailError('');return}
     const controller=new AbortController()
     setDetail(null)
@@ -139,9 +142,18 @@ export default function MailPage() {
               <p className="mt-1 break-all text-xs text-[var(--muted)]">{detail.email} · {dateLabel(detail.date)}</p>
               <p className="mt-1 text-xs text-[var(--muted)]">Para: pedrog@nedviconstructora.com</p>
             </div>
-            {detail.previewLimited?<div className="mt-4 rounded-xl border border-blue-400/40 bg-blue-500/10 p-3 text-xs leading-5 text-[var(--foreground)]"><strong>Mensaje grande:</strong> mostramos el texto disponible sin descargar videos, imágenes o documentos completos. Algunos adjuntos pueden no aparecer en esta vista. Para descargar o reproducir un video, utiliza Spacemail mientras habilitamos esa función.</div>:null}
+            {detail.previewLimited?<div className="mt-4 rounded-xl border border-blue-400/40 bg-blue-500/10 p-3 text-xs leading-5 text-[var(--foreground)]"><strong>Mensaje grande:</strong> los archivos se consultan por separado sin descargar todo el correo. Algunos adjuntos muy grandes pueden superar el límite permitido.</div>:null}
             <div className="max-h-[410px] overflow-y-auto whitespace-pre-wrap break-words py-6 text-sm leading-7 text-[var(--foreground)]">{detail.text}</div>
-            {detail.attachments.length?<div className="border-t border-[var(--border)] pt-4"><p className="mb-2 flex items-center gap-2 text-sm font-semibold text-[var(--foreground)]"><Paperclip size={16}/> Adjuntos recibidos</p><div className="flex flex-wrap gap-2">{detail.attachments.map((file,i)=><span key={i} className="rounded-lg border border-[var(--border)] px-3 py-2 text-xs text-[var(--foreground)]">{file}</span>)}</div><p className="mt-2 text-xs text-[var(--muted)]">La descarga de adjuntos estará disponible en una próxima fase.</p></div>:null}
+            {detail.attachments.length?<div className="border-t border-[var(--border)] pt-4">
+              <p className="mb-3 flex items-center gap-2 text-sm font-semibold text-[var(--foreground)]"><Paperclip size={16}/> Adjuntos recibidos ({detail.attachments.length})</p>
+              <div className="grid gap-2 sm:grid-cols-2">
+                {detail.attachments.map(file=><div key={file.part} className="flex min-w-0 items-center justify-between gap-2 rounded-xl border border-[var(--border)] bg-[var(--surface-soft)] p-3">
+                  <div className="min-w-0 flex-1"><p className="truncate text-xs font-semibold text-[var(--foreground)]" title={file.name}>{file.name}</p><p className="mt-1 text-[10px] text-[var(--muted)]">{file.category==='image'?'Imagen':file.category==='video'?'Video':file.category==='pdf'?'PDF':'Documento'} · {Math.max(1,Math.round(file.size/1024))} KB aprox.</p></div>
+                  {file.available?<button type="button" onClick={()=>setActiveAttachment(file)} className="shrink-0 rounded-lg bg-[#1f6feb] px-3 py-2 text-xs font-semibold text-white">{file.category==='document'||file.category==='other'?'Abrir':'Ver'}</button>:<span className="text-[10px] text-amber-500">Demasiado grande</span>}
+                </div>)}
+              </div>
+              <p className="mt-3 text-xs text-[var(--muted)]">Imágenes, PDF y videos compatibles se abren dentro de NEDVI OS. Word, Excel y otros formatos pueden descargarse. Los archivos grandes deben abrirse desde Spacemail.</p>
+            </div>:null}
             <div className="mt-7 rounded-xl border border-[var(--border)] bg-[var(--surface-soft)] p-4 text-sm text-[var(--muted)]">
               <div className="flex items-center gap-2 font-semibold text-[var(--foreground)]"><LockKeyhole size={16}/> Solo lectura</div>
               <p className="mt-2">Las respuestas, el envío de mensajes y la carga de adjuntos se habilitarán después de validar esta conexión.</p>
@@ -153,7 +165,8 @@ export default function MailPage() {
           </div>}
         </section>
       </div>
-      <p className="flex items-center gap-2 text-xs text-[var(--muted)]"><Clock3 size={14}/> Los mensajes se consultan cuando abres o actualizas esta pantalla. No se guardan copias en Supabase en esta fase.</p>
+      <p className="flex items-center gap-2 text-xs text-[var(--muted)]"><Clock3 size={14}/> Archivos y mensajes se consultan desde Spacemail al abrirlos. No se guardan copias en Supabase.</p>
     </div>
+    {detail && activeAttachment?<MailAttachmentViewer uid={detail.uid} file={activeAttachment} onClose={()=>setActiveAttachment(null)}/>:null}
   </AppShell>
 }
