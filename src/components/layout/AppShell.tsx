@@ -252,7 +252,7 @@ export function AppShell({ children }: AppShellProps) {
             />
           </div>
 
-          <main className="nedvi-main-content relative z-0 min-w-0 flex-1 bg-[var(--background)] px-3 pb-[calc(6.5rem+env(safe-area-inset-bottom))] pt-4 transition-colors duration-300 sm:p-8 print:bg-white print:p-0">
+          <main className="nedvi-main-content relative z-0 min-w-0 flex-1 overflow-x-hidden bg-[var(--background)] px-3 pb-[calc(6.5rem+env(safe-area-inset-bottom))] pt-4 transition-colors duration-300 sm:p-8 print:bg-white print:p-0">
             {hasRouteAccess ? (
               children
             ) : (
@@ -269,7 +269,7 @@ export function AppShell({ children }: AppShellProps) {
           </main>
         </div>
       </div>
-      <nav aria-label="Accesos rápidos móviles" className="fixed inset-x-0 bottom-0 z-[65] border-t border-[var(--border)] bg-[var(--surface)]/95 px-2 pt-2 pb-[calc(0.45rem+env(safe-area-inset-bottom))] shadow-[0_-12px_40px_rgba(8,30,55,0.12)] backdrop-blur-2xl lg:hidden print:hidden">
+      <nav aria-label="Accesos rápidos móviles" className="fixed inset-x-0 bottom-0 z-[65] border-t border-[var(--border)] bg-[var(--surface)]/95 px-2 pt-1.5 pb-[calc(0.45rem+env(safe-area-inset-bottom))] shadow-[0_-12px_40px_rgba(8,30,55,0.12)] backdrop-blur-2xl lg:hidden print:hidden">
         <div className="mx-auto flex max-w-lg items-center justify-around gap-1">
           {([
             { label: 'Inicio', href: '/dashboard', icon: LayoutDashboard, permission: 'dashboard' },
