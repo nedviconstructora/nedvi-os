@@ -23,7 +23,7 @@ export async function GET(request:NextRequest) {
   try {
     const attachment=await readAttachment(Number(uidRaw),part)
     const bytes=attachment.data
-    const inline=attachment.category==='image'||attachment.category==='video'||attachment.category==='pdf'
+    const inline=(attachment.category==='image'||attachment.category==='video'||attachment.category==='pdf') && request.nextUrl.searchParams.get('download')!=='1'
     // Never serve HTML, scripts, SVG, or arbitrary binary data as a browsable page.
     const mime=inline?attachment.type:'application/octet-stream'
     const safeName=attachment.name.replace(/[\r\n"\\]/g,'_').slice(0,160)
