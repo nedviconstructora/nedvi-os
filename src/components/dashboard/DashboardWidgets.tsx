@@ -86,7 +86,7 @@ export function DashboardStats() {
     dashboardStats.monthlyIncome - dashboardStats.monthlyExpenses
 
   return (
-    <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-6">
+    <div className="grid grid-cols-2 gap-2.5 sm:gap-4 xl:grid-cols-3 2xl:grid-cols-6">
       <StatCard
         label="Proyectos vigentes"
         value={error ? '—' : data ? String(data.projects) : '…'}
@@ -150,7 +150,7 @@ export function RevenueChart() {
     <ChartCard
       title="Ingresos y gastos"
       description="Comparativo mensual de operación"
-      className="min-h-[360px]"
+      className="min-h-[280px] sm:min-h-[360px]"
     >
       <div className="mb-5 flex flex-wrap items-center gap-4 text-[10px] text-[#9CA3AF]">
         <span className="flex items-center gap-2">
