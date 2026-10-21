@@ -1,6 +1,7 @@
 'use client'
 
 import Link from 'next/link'
+import { AppShell } from '@/components/layout/AppShell'
 import { useEffect, useMemo, useState } from 'react'
 import {
   ArrowLeft,
@@ -89,7 +90,7 @@ function generateSecurePassword() {
   return Array.from(bytes, value => alphabet[value % alphabet.length]).join('')
 }
 
-export default function UsersAndPermissionsPage() {
+function UsersAndPermissionsContent() {
   const [tab, setTab] = useState<Tab>('users')
   const [requests, setRequests] = useState<RegistrationRequest[]>([])
   const [passwordRequests, setPasswordRequests] = useState<PasswordResetRequest[]>([])
@@ -1113,5 +1114,14 @@ export default function UsersAndPermissionsPage() {
         </div>
       ) : null}
     </div>
+  )
+}
+
+
+export default function UsersAndPermissionsPage() {
+  return (
+    <AppShell>
+      <UsersAndPermissionsContent />
+    </AppShell>
   )
 }
