@@ -2107,3 +2107,71 @@ textarea {
 .theme-dark .login-page .login-brand-logo {
   filter: none !important;
 }
+
+/* Light application shell: premium white sidebar, charcoal typography and monochrome navigation. */
+.theme-light .nedvi-app-sidebar {
+  background: #ffffff !important;
+  background-image: none !important;
+  color: #151515 !important;
+  border-right: 1px solid #dddddd !important;
+  box-shadow: 8px 0 28px rgba(0,0,0,.055) !important;
+}
+.theme-light .nedvi-app-sidebar > .pointer-events-none {
+  display: none !important;
+}
+.theme-light .nedvi-app-sidebar > div:first-of-type,
+.theme-light .nedvi-app-sidebar nav {
+  color: #171717 !important;
+}
+.theme-light .nedvi-app-sidebar .border-b,
+.theme-light .nedvi-app-sidebar .border-t,
+.theme-light .nedvi-app-sidebar nav .border-l {
+  border-color: #e1e1e1 !important;
+}
+.theme-light .nedvi-app-sidebar img[src="/icon.png"] {
+  filter: grayscale(1) brightness(.56) contrast(1.45) !important;
+}
+.theme-light .nedvi-app-sidebar :is(p,span,svg) {
+  color: #1b1b1b !important;
+}
+.theme-light .nedvi-app-sidebar :is(a,button) {
+  color: #1c1c1c !important;
+  background: #f5f5f5 !important;
+  background-image: none !important;
+  border-color: #dedede !important;
+  box-shadow: none !important;
+}
+.theme-light .nedvi-app-sidebar :is(a,button):hover {
+  background: #e8e8e8 !important;
+}
+.theme-light .nedvi-app-sidebar :is(a,button)[class*="border-[#53A8FF"],
+.theme-light .nedvi-app-sidebar .nedvi-sidebar-subitem-active,
+.theme-light .nedvi-app-sidebar a[aria-current="page"] {
+  background: #191919 !important;
+  background-image: none !important;
+  border-color: #191919 !important;
+  color: #ffffff !important;
+}
+.theme-light .nedvi-app-sidebar :is(a,button)[class*="border-[#53A8FF"] :is(span,svg),
+.theme-light .nedvi-app-sidebar .nedvi-sidebar-subitem-active :is(span,svg),
+.theme-light .nedvi-app-sidebar a[aria-current="page"] :is(span,svg) {
+  color: #ffffff !important;
+}
+.theme-light .nedvi-app-sidebar :is(a,button)[class*="border-[#53A8FF"]:hover,
+.theme-light .nedvi-app-sidebar .nedvi-sidebar-subitem-active:hover {
+  background: #303030 !important;
+}
+.theme-light .nedvi-app-sidebar :is(button,a):disabled {
+  color: #777777 !important;
+  background: #f5f5f5 !important;
+}
+/* Monochrome header in the light app theme, without changing dark mode. */
+.theme-light .nedvi-app-header {
+  background: #151515 !important;
+  background-image: none !important;
+  border-bottom-color: #343434 !important;
+  color: #ffffff !important;
+}
+.theme-light .nedvi-app-header :is(button,svg) {
+  color: #ffffff;
+}
