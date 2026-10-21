@@ -146,7 +146,8 @@ export default function MailPage() {
               </button>):<div className="p-6 text-center text-sm text-[var(--muted)]">No hay mensajes para mostrar.</div>}
           </div>
         </section>
-        <section className={"min-w-0 p-5 sm:p-7 "+(selected===null?"hidden":"")}>\n          <button type="button" onClick={()=>setSelected(null)} className="mb-6 inline-flex items-center gap-2 rounded-xl border border-[var(--border)] bg-[var(--surface-soft)] px-4 py-2.5 text-sm font-semibold text-[var(--foreground)] transition hover:bg-[#1f6feb]/10"><ArrowRight size={17} className="rotate-180" /> Volver a recibidos</button>
+        <section className={"min-w-0 p-5 sm:p-7 "+(selected===null?"hidden":"")}>
+          <button type="button" onClick={()=>setSelected(null)} className="mb-6 inline-flex items-center gap-2 rounded-xl border border-[var(--border)] bg-[var(--surface-soft)] px-4 py-2.5 text-sm font-semibold text-[var(--foreground)] transition hover:bg-[#1f6feb]/10"><ArrowRight size={17} className="rotate-180" /> Volver a recibidos</button>
           {detailLoading?<p className="text-sm text-[var(--muted)]">Abriendo mensaje…</p>:detailError?<div className="rounded-xl border border-amber-400/40 p-4 text-sm text-[var(--foreground)]"><AlertCircle size={20} className="mb-2 text-amber-500"/>{detailError}</div>:detail?<div>
             <div className="border-b border-[var(--border)] pb-5">
               <h2 className="text-xl font-bold text-[var(--foreground)]">{detail.subject}</h2>
