@@ -21,6 +21,8 @@ type MailDetail = {
   date:string
   text:string
   attachments:string[]
+  previewLimited?:boolean
+  size?:number
 }
 function dateLabel(date:string) {
   const value=new Date(date)
@@ -137,6 +139,7 @@ export default function MailPage() {
               <p className="mt-1 break-all text-xs text-[var(--muted)]">{detail.email} · {dateLabel(detail.date)}</p>
               <p className="mt-1 text-xs text-[var(--muted)]">Para: pedrog@nedviconstructora.com</p>
             </div>
+            {detail.previewLimited?<div className="mt-4 rounded-xl border border-blue-400/40 bg-blue-500/10 p-3 text-xs leading-5 text-[var(--foreground)]"><strong>Mensaje grande:</strong> mostramos el texto disponible sin descargar videos, imágenes o documentos completos. Algunos adjuntos pueden no aparecer en esta vista. Para descargar o reproducir un video, utiliza Spacemail mientras habilitamos esa función.</div>:null}
             <div className="max-h-[410px] overflow-y-auto whitespace-pre-wrap break-words py-6 text-sm leading-7 text-[var(--foreground)]">{detail.text}</div>
             {detail.attachments.length?<div className="border-t border-[var(--border)] pt-4"><p className="mb-2 flex items-center gap-2 text-sm font-semibold text-[var(--foreground)]"><Paperclip size={16}/> Adjuntos recibidos</p><div className="flex flex-wrap gap-2">{detail.attachments.map((file,i)=><span key={i} className="rounded-lg border border-[var(--border)] px-3 py-2 text-xs text-[var(--foreground)]">{file}</span>)}</div><p className="mt-2 text-xs text-[var(--muted)]">La descarga de adjuntos estará disponible en una próxima fase.</p></div>:null}
             <div className="mt-7 rounded-xl border border-[var(--border)] bg-[var(--surface-soft)] p-4 text-sm text-[var(--muted)]">
