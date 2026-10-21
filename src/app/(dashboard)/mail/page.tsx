@@ -1,36 +1,156 @@
 'use client'
 
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { AppShell } from '@/components/layout/AppShell'
-import { Archive, ArrowLeft, Check, Clock3, FileText, Image as ImageIcon, Inbox, Mail, Paperclip, Reply, Search, Send, ShieldCheck, X } from 'lucide-react'
+import { AlertCircle, ArrowRight, Clock3, Inbox, LockKeyhole, Mail, Paperclip, RefreshCw, Search, ShieldCheck } from 'lucide-react'
 
-type Message = { id:number; from:string; email:string; subject:string; preview:string; date:string; body:string; files:string[]; unread:boolean }
-const demo: Message[] = [
-  { id:1,from:'Mariana López',email:'mariana.ejemplo@empresa.test',subject:'Solicitud de información sobre servicios',preview:'Nos gustaría conocer los servicios disponibles para nuestras instalaciones.',date:'10:35',body:'Buen día, equipo NEDVI:\n\nNos gustaría conocer sus servicios de construcción, supervisión y adecuación de instalaciones para un próximo proyecto.\n\n¿Podrían compartirnos información general?\n\nSaludos cordiales,\nMariana López',files:[],unread:true },
-  { id:2,from:'Departamento de Compras',email:'compras@empresa.test',subject:'Revisión de propuesta técnica',preview:'Adjuntamos comentarios y quedamos atentos a su respuesta.',date:'Ayer',body:'Buen día:\n\nCompartimos nuestros comentarios de ejemplo sobre la propuesta técnica. Nos gustaría agendar una revisión.\n\nGracias.',files:['Comentarios-propuesta.pdf'],unread:false },
-  { id:3,from:'Carlos Pérez',email:'carlos@empresa.test',subject:'Fotografías del avance de obra',preview:'Comparto fotografías para el seguimiento.',date:'Lun',body:'Hola, equipo NEDVI:\n\nLes envío fotografías de referencia para revisar el avance.\n\nSaludos.',files:['avance-frente.jpg','avance-interior.png'],unread:false },
-]
+type MailListItem = {
+  uid:number
+  from:string
+  email:string
+  subject:string
+  date:string
+  unread:boolean
+  size:number
+}
+type MailDetail = {
+  uid:number
+  from:string
+  email:string
+  subject:string
+  date:string
+  text:string
+  attachments:string[]
+}
+function dateLabel(date:string) {
+  const value=new Date(date)
+  return Number.isNaN(value.getTime())?'Sin fecha':new Intl.DateTimeFormat('es-MX',{day:'2-digit',month:'short',hour:'2-digit',minute:'2-digit'}).format(value)
+}
+async function readJson(response:Response) {
+  const data:unknown = await response.json().catch(()=>null)
+  return data && typeof data==='object'?data as Record<string,unknown>:{}
+}
+
 export default function MailPage() {
-  const [mailboxState,setMailboxState]=useState<'loading'|'missing_credentials'|'pending_validation'|'unavailable'>('loading')
-  useEffect(()=>{let live=true;void fetch('/api/mail/status',{cache:'no-store'}).then(r=>r.ok?r.json():null).then(data=>{if(live)setMailboxState(data?.status==='missing_credentials'?'missing_credentials':data?.status==='pending_validation'?'pending_validation':'unavailable')}).catch(()=>{if(live)setMailboxState('unavailable')});return()=>{live=false}},[])
-  const [folder,setFolder]=useState<'inbox'|'sent'>('inbox')
+  const [messages,setMessages]=useState<MailListItem[]>([])
+  const [loading,setLoading]=useState(true)
+  const [error,setError]=useState('')
+  const [reload,setReload]=useState(0)
   const [query,setQuery]=useState('')
-  const [selected,setSelected]=useState<number|null>(1)
-  const [body,setBody]=useState('')
-  const [files,setFiles]=useState<File[]>([])
-  const [previewSent,setPreviewSent]=useState(false)
-  const fileInput=useRef<HTMLInputElement>(null)
-  const [read,setRead]=useState<number[]>([])
-  const filtered=useMemo(()=>folder==='sent'?[]:demo.filter(m=>[m.from,m.subject,m.preview].join(' ').toLowerCase().includes(query.toLowerCase())),[folder,query])
-  const active=demo.find(m=>m.id===selected)
-  function choose(id:number){setSelected(id);setBody('');setFiles([]);setPreviewSent(false);setRead(current=>[...new Set([...current,id])])}
-  return <AppShell><div className="mx-auto max-w-[1550px] space-y-5">
-    <div className="flex flex-wrap items-center justify-between gap-3"><div><p className="text-xs font-bold uppercase tracking-[.2em] text-[var(--muted)]">COMUNICACIÓN / NEDVI</p><h1 className="mt-1 text-3xl font-bold text-[var(--foreground)]">Correo corporativo</h1><p className="mt-2 text-sm text-[var(--muted)]">Consulta, responde y adjunta documentos desde un solo lugar.</p></div><span className="inline-flex items-center gap-2 rounded-full border border-amber-300/50 bg-amber-100 px-4 py-2 text-xs font-bold text-amber-900"><ShieldCheck size={15}/> {mailboxState==='missing_credentials'?'Pendiente de credenciales':mailboxState==='pending_validation'?'Credenciales detectadas · Falta validar':mailboxState==='loading'?'Comprobando conexión…':'Vista demo · Sin conectar'}</span></div>
-    <div className="grid min-h-[640px] gap-4 overflow-hidden rounded-2xl border border-[var(--border)] bg-[var(--surface)] shadow-sm lg:grid-cols-[205px_330px_minmax(0,1fr)]">
-      <aside className="border-b border-[var(--border)] p-4 lg:border-b-0 lg:border-r"><div className="mb-6 flex items-center gap-2 rounded-xl bg-[var(--surface-soft)] p-3 text-xs font-semibold text-[var(--foreground)]"><Mail size={18}/> pedrog@nedviconstructora.com</div><nav className="space-y-2"><button onClick={()=>{setFolder('inbox');setSelected(1)}} className={`flex w-full items-center gap-3 rounded-xl px-4 py-3 text-left text-sm font-semibold ${folder==='inbox'?'bg-[#1f6feb] text-white':'text-[var(--foreground)] hover:bg-[var(--surface-soft)]'}`}><Inbox size={17}/> Recibidos <span className="ml-auto text-xs">{demo.filter(m=>m.unread&&!read.includes(m.id)).length}</span></button><button onClick={()=>{setFolder('sent');setSelected(null)}} className={`flex w-full items-center gap-3 rounded-xl px-4 py-3 text-left text-sm font-semibold ${folder==='sent'?'bg-[#1f6feb] text-white':'text-[var(--foreground)] hover:bg-[var(--surface-soft)]'}`}><Send size={17}/> Enviados</button></nav><p className="mt-7 text-xs leading-5 text-[var(--muted)]">Los mensajes mostrados son ejemplos ficticios. Ningún correo real se descarga ni se envía desde esta pantalla.</p></aside>
-      <section className="border-b border-[var(--border)] lg:border-b-0 lg:border-r"><div className="border-b border-[var(--border)] p-4"><label className="flex items-center gap-2 rounded-xl border border-[var(--border)] bg-[var(--surface-soft)] px-3"><Search size={17} className="text-[var(--muted)]"/><input value={query} onChange={e=>setQuery(e.target.value)} placeholder="Buscar correo..." className="h-11 min-w-0 flex-1 bg-transparent text-sm text-[var(--foreground)] outline-none"/></label></div><div className="max-h-[560px] overflow-y-auto">{filtered.length?filtered.map(m=><button key={m.id} onClick={()=>choose(m.id)} className={`w-full border-b border-[var(--border)] p-4 text-left transition hover:bg-[var(--surface-soft)] ${selected===m.id?'bg-[#1f6feb]/10':''}`}><div className="flex justify-between gap-2 text-sm text-[var(--foreground)]"><span className={m.unread&&!read.includes(m.id)?'font-bold':'font-medium'}>{m.from}</span><span className="text-xs text-[var(--muted)]">{m.date}</span></div><p className="mt-2 truncate text-sm font-semibold text-[var(--foreground)]">{m.subject}</p><p className="mt-1 line-clamp-2 text-xs leading-5 text-[var(--muted)]">{m.preview}</p></button>):<div className="p-8 text-center text-sm text-[var(--muted)]">No hay mensajes en esta carpeta de demostración.</div>}</div></section>
-      <section className="min-w-0 p-5 sm:p-7">{active&&folder==='inbox'?<><div className="flex items-start justify-between gap-3 border-b border-[var(--border)] pb-5"><div><h2 className="text-xl font-bold text-[var(--foreground)]">{active.subject}</h2><p className="mt-3 text-sm font-semibold text-[var(--foreground)]">{active.from}</p><p className="text-xs text-[var(--muted)]">{active.email} · Para pedrog@nedviconstructora.com</p></div><span className="rounded-lg bg-[var(--surface-soft)] p-2 text-[var(--muted)]"><Clock3 size={19}/></span></div><div className="whitespace-pre-wrap border-b border-[var(--border)] py-7 text-sm leading-7 text-[var(--foreground)]">{active.body}</div>{active.files.length>0?<div className="mt-4 flex flex-wrap gap-2">{active.files.map(f=><span key={f} className="inline-flex items-center gap-2 rounded-lg border border-[var(--border)] px-3 py-2 text-xs text-[var(--foreground)]"><Paperclip size={13}/>{f}<span className="text-[var(--muted)]">(ejemplo)</span></span>)}</div>:null}
-        <div className="mt-7 rounded-xl border border-[var(--border)] bg-[var(--surface-soft)] p-4"><div className="mb-3 flex items-center gap-2 text-sm font-bold text-[var(--foreground)]"><Reply size={18}/> Responder a {active.from}</div><textarea value={body} onChange={e=>{setBody(e.target.value);setPreviewSent(false)}} rows={5} placeholder="Escribe tu respuesta..." className="w-full resize-y rounded-lg border border-[var(--border)] bg-[var(--surface)] p-3 text-sm text-[var(--foreground)] outline-none focus:border-[#1f6feb]"/><input ref={fileInput} type="file" accept=".pdf,.doc,.docx,.xls,.xlsx,.jpg,.jpeg,.png,.dwg,.dxf" multiple className="hidden" onChange={e=>setFiles(prev=>[...prev,...Array.from(e.target.files||[]).filter(f=>f.size<=10*1024*1024)])}/><div className="mt-3 flex flex-wrap gap-2">{files.map((f,i)=><span key={i} className="inline-flex items-center gap-1 rounded-lg border border-[var(--border)] px-2 py-1 text-xs text-[var(--foreground)]"><Paperclip size={12}/>{f.name}<button aria-label={`Quitar ${f.name}`} onClick={()=>setFiles(items=>items.filter((_,j)=>j!==i))}><X size={14}/></button></span>)}</div><div className="mt-4 flex flex-wrap items-center justify-between gap-3"><button onClick={()=>fileInput.current?.click()} className="inline-flex items-center gap-2 rounded-lg border border-[var(--border)] px-3 py-2 text-sm text-[var(--foreground)] hover:bg-[var(--surface)]"><Paperclip size={16}/> Adjuntar archivo o imagen</button><button onClick={()=>setPreviewSent(true)} disabled={!body.trim()} className="inline-flex items-center gap-2 rounded-lg bg-[#1f6feb] px-4 py-2.5 text-sm font-bold text-white disabled:cursor-not-allowed disabled:opacity-40"><Send size={15}/> Simular respuesta</button></div>{previewSent?<p role="status" className="mt-3 flex items-center gap-2 text-sm text-emerald-600"><Check size={16}/> Vista previa completada. No se envió ningún mensaje real.</p>:null}<p className="mt-4 text-xs text-[var(--muted)]">Los archivos seleccionados permanecen únicamente en esta vista hasta salir de la página.</p></div>
-      </>:<div className="flex min-h-[490px] flex-col items-center justify-center gap-3 text-center text-[var(--muted)]"><Archive size={36}/><h2 className="font-bold text-[var(--foreground)]">Bandeja de demostración</h2><p className="max-w-xs text-sm">Selecciona un mensaje recibido para revisar el diseño y simular una respuesta con adjuntos.</p></div>}</section>
-    </div></div></AppShell>
+  const [selected,setSelected]=useState<number|null>(null)
+  const [detail,setDetail]=useState<MailDetail|null>(null)
+  const [detailLoading,setDetailLoading]=useState(false)
+  const [detailError,setDetailError]=useState('')
+
+  useEffect(()=>{
+    const controller=new AbortController()
+    setLoading(true)
+    setError('')
+    void fetch('/api/mail/inbox',{cache:'no-store',signal:controller.signal}).then(async response=>{
+      const data=await readJson(response)
+      if(!response.ok) throw new Error(typeof data.error==='string'?data.error:'No se pudo consultar el buzón.')
+      return Array.isArray(data.messages)?data.messages as MailListItem[]:[]
+    }).then(items=>{
+      if(controller.signal.aborted)return
+      setMessages(items)
+      setSelected(previous=>previous && items.some(item=>item.uid===previous)?previous:items[0]?.uid??null)
+    }).catch(e=>{
+      if(controller.signal.aborted)return
+      setError(e instanceof Error?e.message:'No se pudo cargar el correo.')
+      setMessages([])
+      setSelected(null)
+    }).finally(()=>{if(!controller.signal.aborted)setLoading(false)})
+    return()=>controller.abort()
+  },[reload])
+
+  useEffect(()=>{
+    if(!selected){setDetail(null);setDetailError('');return}
+    const controller=new AbortController()
+    setDetail(null)
+    setDetailError('')
+    setDetailLoading(true)
+    void fetch('/api/mail/message?uid='+selected,{cache:'no-store',signal:controller.signal}).then(async response=>{
+      const data=await readJson(response)
+      if(!response.ok)throw new Error(typeof data.error==='string'?data.error:'No se pudo abrir el mensaje.')
+      return data.message as MailDetail
+    }).then(message=>{if(!controller.signal.aborted)setDetail(message)}).catch(e=>{
+      if(!controller.signal.aborted)setDetailError(e instanceof Error?e.message:'No se pudo abrir el mensaje.')
+    }).finally(()=>{if(!controller.signal.aborted)setDetailLoading(false)})
+    return()=>controller.abort()
+  },[selected,reload])
+
+  const filtered=useMemo(()=>messages.filter(item=>(item.from+' '+item.email+' '+item.subject).toLowerCase().includes(query.toLowerCase())),[messages,query])
+  const unread=messages.filter(item=>item.unread).length
+  return <AppShell>
+    <div className="mx-auto max-w-[1550px] space-y-5">
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <div>
+          <p className="text-xs font-bold uppercase tracking-[.18em] text-[var(--muted)]">COMUNICACIÓN / NEDVI OS</p>
+          <h1 className="mt-1 text-3xl font-bold text-[var(--foreground)]">Correo corporativo</h1>
+          <p className="mt-2 text-sm text-[var(--muted)]">Consulta los últimos 30 mensajes de Spacemail en modo de solo lectura.</p>
+        </div>
+        <div className="flex flex-wrap items-center gap-2">
+          <span className={'inline-flex items-center gap-2 rounded-full border px-3 py-2 text-xs font-bold '+(error?'border-amber-400/50 bg-amber-400/10 text-amber-600':'border-emerald-400/40 bg-emerald-400/10 text-emerald-600')}>
+            <ShieldCheck size={15}/>{loading?'Conectando…':error?'Sin conexión IMAP':'Bandeja conectada · Solo lectura'}
+          </span>
+          <button type="button" onClick={()=>setReload(v=>v+1)} disabled={loading} className="inline-flex items-center gap-2 rounded-xl border border-[var(--border)] bg-[var(--surface)] px-4 py-2.5 text-sm font-semibold text-[var(--foreground)] disabled:opacity-50">
+            <RefreshCw size={16} className={loading?'animate-spin':''}/> Actualizar
+          </button>
+        </div>
+      </div>
+      <div className="grid min-h-[620px] overflow-hidden rounded-2xl border border-[var(--border)] bg-[var(--surface)] shadow-sm lg:grid-cols-[205px_330px_minmax(0,1fr)]">
+        <aside className="border-b border-[var(--border)] p-4 lg:border-b-0 lg:border-r">
+          <div className="mb-5 flex items-center gap-2 rounded-xl bg-[var(--surface-soft)] p-3 text-xs font-semibold text-[var(--foreground)]">
+            <Mail size={18} className="shrink-0"/> <span className="min-w-0 break-all">pedrog@nedviconstructora.com</span>
+          </div>
+          <div className="flex items-center gap-3 rounded-xl bg-[#1f6feb] px-4 py-3 text-sm font-semibold text-white">
+            <Inbox size={17}/> Recibidos <span className="ml-auto">{unread}</span>
+          </div>
+          <div className="mt-3 flex items-center gap-2 px-4 text-xs text-[var(--muted)]"><LockKeyhole size={14}/> Envíos y respuestas: próxima fase</div>
+          <div className="mt-6 rounded-xl border border-[var(--border)] bg-[var(--surface-soft)] p-3 text-xs leading-5 text-[var(--muted)]">
+            Abrir un mensaje no lo marcará como leído. No se modifica ni elimina correo en Spacemail.
+          </div>
+        </aside>
+        <section className="min-w-0 border-b border-[var(--border)] lg:border-b-0 lg:border-r">
+          <div className="border-b border-[var(--border)] p-4">
+            <label className="flex items-center gap-2 rounded-xl border border-[var(--border)] bg-[var(--surface-soft)] px-3">
+              <Search size={17} className="text-[var(--muted)]"/>
+              <input value={query} onChange={e=>setQuery(e.target.value)} placeholder="Buscar entre mensajes cargados..." className="h-11 min-w-0 flex-1 bg-transparent text-sm text-[var(--foreground)] outline-none"/>
+            </label>
+            <p className="mt-2 text-xs text-[var(--muted)]">{loading?'Consultando buzón…':messages.length+' mensajes cargados · '+unread+' sin leer'}</p>
+          </div>
+          <div className="max-h-[610px] overflow-y-auto">
+            {loading?<div className="p-6 text-sm text-[var(--muted)]">Cargando correos de Spacemail…</div>:error?<div className="p-5 text-sm text-[var(--muted)]"><AlertCircle size={24} className="mb-3 text-amber-500"/>{error}<p className="mt-2 text-xs">Verifica la configuración IMAP y vuelve a intentar.</p></div>:filtered.length?filtered.map(item=>
+              <button key={item.uid} type="button" onClick={()=>setSelected(item.uid)} className={'w-full border-b border-[var(--border)] p-4 text-left transition hover:bg-[var(--surface-soft)] '+(selected===item.uid?'bg-[#1f6feb]/10':'')}>
+                <div className="flex items-start justify-between gap-2"><span className={'min-w-0 truncate text-sm text-[var(--foreground)] '+(item.unread?'font-bold':'font-medium')}>{item.from}</span><span className="shrink-0 text-[10px] text-[var(--muted)]">{dateLabel(item.date)}</span></div>
+                <p className="mt-2 truncate text-sm font-semibold text-[var(--foreground)]">{item.subject}</p>
+                <p className="mt-1 truncate text-xs text-[var(--muted)]">{item.email}</p>
+                {item.unread?<span className="mt-2 inline-flex items-center gap-1 text-[10px] font-semibold text-[#1f6feb]"><span className="h-1.5 w-1.5 rounded-full bg-[#1f6feb]"/>Sin leer</span>:null}
+              </button>):<div className="p-6 text-center text-sm text-[var(--muted)]">No hay mensajes para mostrar.</div>}
+          </div>
+        </section>
+        <section className="min-w-0 p-5 sm:p-7">
+          {detailLoading?<p className="text-sm text-[var(--muted)]">Abriendo mensaje…</p>:detailError?<div className="rounded-xl border border-amber-400/40 p-4 text-sm text-[var(--foreground)]"><AlertCircle size={20} className="mb-2 text-amber-500"/>{detailError}</div>:detail?<div>
+            <div className="border-b border-[var(--border)] pb-5">
+              <h2 className="text-xl font-bold text-[var(--foreground)]">{detail.subject}</h2>
+              <p className="mt-4 text-sm font-semibold text-[var(--foreground)]">{detail.from}</p>
+              <p className="mt-1 break-all text-xs text-[var(--muted)]">{detail.email} · {dateLabel(detail.date)}</p>
+              <p className="mt-1 text-xs text-[var(--muted)]">Para: pedrog@nedviconstructora.com</p>
+            </div>
+            <div className="max-h-[410px] overflow-y-auto whitespace-pre-wrap break-words py-6 text-sm leading-7 text-[var(--foreground)]">{detail.text}</div>
+            {detail.attachments.length?<div className="border-t border-[var(--border)] pt-4"><p className="mb-2 flex items-center gap-2 text-sm font-semibold text-[var(--foreground)]"><Paperclip size={16}/> Adjuntos recibidos</p><div className="flex flex-wrap gap-2">{detail.attachments.map((file,i)=><span key={i} className="rounded-lg border border-[var(--border)] px-3 py-2 text-xs text-[var(--foreground)]">{file}</span>)}</div><p className="mt-2 text-xs text-[var(--muted)]">La descarga de adjuntos estará disponible en una próxima fase.</p></div>:null}
+            <div className="mt-7 rounded-xl border border-[var(--border)] bg-[var(--surface-soft)] p-4 text-sm text-[var(--muted)]">
+              <div className="flex items-center gap-2 font-semibold text-[var(--foreground)]"><LockKeyhole size={16}/> Solo lectura</div>
+              <p className="mt-2">Las respuestas, el envío de mensajes y la carga de adjuntos se habilitarán después de validar esta conexión.</p>
+            </div>
+          </div>:<div className="flex min-h-[470px] flex-col items-center justify-center gap-3 text-center text-[var(--muted)]">
+            <Inbox size={38}/>
+            <h2 className="text-lg font-semibold text-[var(--foreground)]">{error?'Buzón no disponible':'Selecciona un mensaje'}</h2>
+            <p className="max-w-sm text-sm">{error?'Comprueba la conexión para ver tus correos reales.':'Aquí aparecerá el contenido del correo seleccionado.'}</p>
+          </div>}
+        </section>
+      </div>
+      <p className="flex items-center gap-2 text-xs text-[var(--muted)]"><Clock3 size={14}/> Los mensajes se consultan cuando abres o actualizas esta pantalla. No se guardan copias en Supabase en esta fase.</p>
+    </div>
+  </AppShell>
 }
