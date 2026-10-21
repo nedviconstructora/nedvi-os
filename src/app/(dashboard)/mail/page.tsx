@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState } from 'react'
 import { AppShell } from '@/components/layout/AppShell'
-import { MailAttachmentViewer, type MailAttachment, attachmentUrl } from '@/components/mail/MailAttachmentViewer'
+import { MailAttachmentViewer, type MailAttachment } from '@/components/mail/MailAttachmentViewer'
 import { AlertCircle, ArrowRight, Clock3, Inbox, LockKeyhole, Mail, Paperclip, RefreshCw, Search, ShieldCheck } from 'lucide-react'
 
 type MailListItem = {
@@ -67,7 +67,7 @@ export default function MailPage() {
     }).then(items=>{
       if(controller.signal.aborted)return
       setMessages(items)
-      setSelected(previous=>previous && items.some(item=>item.uid===previous)?previous:items[0]?.uid??null)
+      setSelected(previous=>previous && items.some(item=>item.uid===previous)?previous:null)
     }).catch(e=>{
       if(controller.signal.aborted)return
       setError(e instanceof Error?e.message:'No se pudo cargar el correo.')
@@ -115,8 +115,8 @@ export default function MailPage() {
           </button>
         </div>
       </div>
-      <div className="grid min-h-[620px] overflow-hidden rounded-2xl border border-[var(--border)] bg-[var(--surface)] shadow-sm lg:grid-cols-[205px_330px_minmax(0,1fr)]">
-        <aside className="border-b border-[var(--border)] p-4 lg:border-b-0 lg:border-r">
+      <div className={"grid min-h-[620px] overflow-hidden rounded-2xl border border-[var(--border)] bg-[var(--surface)] shadow-sm "+(selected===null?"lg:grid-cols-[205px_minmax(0,1fr)]":"grid-cols-1")}>
+        <aside className={"border-b border-[var(--border)] p-4 lg:border-b-0 lg:border-r "+(selected!==null?"hidden":"")}>
           <div className="mb-5 flex items-center gap-2 rounded-xl bg-[var(--surface-soft)] p-3 text-xs font-semibold text-[var(--foreground)]">
             <Mail size={18} className="shrink-0"/> <span className="min-w-0 break-all">pedrog@nedviconstructora.com</span>
           </div>
@@ -128,7 +128,7 @@ export default function MailPage() {
             Abrir un mensaje no lo marcará como leído. No se modifica ni elimina correo en Spacemail.
           </div>
         </aside>
-        <section className="min-w-0 border-b border-[var(--border)] lg:border-b-0 lg:border-r">
+        <section className={"min-w-0 border-b border-[var(--border)] lg:border-b-0 lg:border-r "+(selected!==null?"hidden":"")}>
           <div className="border-b border-[var(--border)] p-4">
             <label className="flex items-center gap-2 rounded-xl border border-[var(--border)] bg-[var(--surface-soft)] px-3">
               <Search size={17} className="text-[var(--muted)]"/>
@@ -138,15 +138,15 @@ export default function MailPage() {
           </div>
           <div className="max-h-[610px] overflow-y-auto">
             {loading?<div className="p-6 text-sm text-[var(--muted)]">Cargando correos de Spacemail…</div>:error?<div className="p-5 text-sm text-[var(--muted)]"><AlertCircle size={24} className="mb-3 text-amber-500"/>{error}<p className="mt-2 text-xs">Verifica la configuración IMAP y vuelve a intentar.</p></div>:filtered.length?filtered.map(item=>
-              <button key={item.uid} type="button" onClick={()=>setSelected(item.uid)} className={'w-full border-b border-[var(--border)] p-4 text-left transition hover:bg-[var(--surface-soft)] '+(selected===item.uid?'bg-[#1f6feb]/10':'')}>
-                <div className="flex items-start justify-between gap-2"><span className={'min-w-0 truncate text-sm text-[var(--foreground)] '+(item.unread?'font-bold':'font-medium')}>{item.from}</span><span className="shrink-0 text-[10px] text-[var(--muted)]">{dateLabel(item.date)}</span></div>
-                <p className="mt-2 truncate text-sm font-semibold text-[var(--foreground)]">{item.subject}</p>
+              <button key={item.uid} type="button" onClick={()=>setSelected(item.uid)} className="group w-full border-b border-[var(--border)] px-4 py-5 text-left transition-colors hover:bg-[var(--surface-soft)] focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-[#1f6feb] sm:px-7">
+                <div className="flex items-start justify-between gap-3"><span className={'min-w-0 truncate text-sm text-[var(--foreground)] '+(item.unread?'font-bold':'font-medium')}>{item.from}</span><span className="shrink-0 text-[10px] text-[var(--muted)]">{dateLabel(item.date)}</span></div>
+                <div className="mt-2 flex items-center justify-between gap-3"><p className="min-w-0 truncate text-base font-semibold text-[var(--foreground)]">{item.subject}</p><ArrowRight size={17} className="shrink-0 text-[var(--muted)] opacity-50 transition group-hover:translate-x-1 group-hover:opacity-100" /></div>
                 <p className="mt-1 truncate text-xs text-[var(--muted)]">{item.email}</p>
                 {item.unread?<span className="mt-2 inline-flex items-center gap-1 text-[10px] font-semibold text-[#1f6feb]"><span className="h-1.5 w-1.5 rounded-full bg-[#1f6feb]"/>Sin leer</span>:null}
               </button>):<div className="p-6 text-center text-sm text-[var(--muted)]">No hay mensajes para mostrar.</div>}
           </div>
         </section>
-        <section className="min-w-0 p-5 sm:p-7">
+        <section className={"min-w-0 p-5 sm:p-7 "+(selected===null?"hidden":"")}>\n          <button type="button" onClick={()=>setSelected(null)} className="mb-6 inline-flex items-center gap-2 rounded-xl border border-[var(--border)] bg-[var(--surface-soft)] px-4 py-2.5 text-sm font-semibold text-[var(--foreground)] transition hover:bg-[#1f6feb]/10"><ArrowRight size={17} className="rotate-180" /> Volver a recibidos</button>
           {detailLoading?<p className="text-sm text-[var(--muted)]">Abriendo mensaje…</p>:detailError?<div className="rounded-xl border border-amber-400/40 p-4 text-sm text-[var(--foreground)]"><AlertCircle size={20} className="mb-2 text-amber-500"/>{detailError}</div>:detail?<div>
             <div className="border-b border-[var(--border)] pb-5">
               <h2 className="text-xl font-bold text-[var(--foreground)]">{detail.subject}</h2>
@@ -163,8 +163,8 @@ export default function MailPage() {
               {showHtml?<button type="button" onClick={()=>setExternalImages(v=>!v)} className="rounded-lg border border-[var(--border)] px-3 py-2 text-xs font-semibold text-[var(--foreground)]">{externalImages?'Bloquear imágenes externas':'Cargar imágenes externas'}</button>:null}
             </div>:null}
             {detail.html && showHtml?<div className="mt-4 overflow-hidden rounded-xl border border-[var(--border)] bg-white">
-              <iframe title={'Contenido de correo: '+detail.subject} sandbox="allow-same-origin" referrerPolicy="no-referrer" srcDoc={isolatedEmail(detail.html,externalImages)} className="h-[470px] w-full border-0 bg-white" />
-            </div>:<div className="max-h-[470px] overflow-y-auto whitespace-pre-wrap break-words py-6 text-sm leading-7 text-[var(--foreground)]">{detail.text}</div>}
+              <iframe title={'Contenido de correo: '+detail.subject} sandbox="allow-same-origin" referrerPolicy="no-referrer" srcDoc={isolatedEmail(detail.html,externalImages)} className="h-[min(72vh,850px)] min-h-[480px] w-full border-0 bg-white" />
+            </div>:<div className="max-h-[75vh] overflow-y-auto whitespace-pre-wrap break-words py-6 text-sm leading-7 text-[var(--foreground)]">{detail.text}</div>}
             {detail.html && showHtml?<p className="mt-2 text-xs text-[var(--muted)]">Por seguridad, el contenido del correo se muestra sin ejecutar scripts. Las imágenes externas se mantienen bloqueadas hasta que tú decidas cargarlas.</p>:null}
             {detail.attachments.length?<div className="border-t border-[var(--border)] pt-4">
               <p className="mb-3 flex items-center gap-2 text-sm font-semibold text-[var(--foreground)]"><Paperclip size={16}/> Adjuntos recibidos ({detail.attachments.length})</p>
