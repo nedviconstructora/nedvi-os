@@ -282,10 +282,10 @@ export function Sidebar({
           <div className="my-4 border-t border-white/10" />
         ) : null}
 
-        {canUse('commercial') ? (
-          <Link href="/mail" title={collapsed ? 'Correo NEDVI (demo)' : undefined} onClick={onCloseMobile} className={`${primaryItemClasses(isPathActive('/mail'))} mb-2`}>
+        {(canUse('commercial') && (user.email?.toLowerCase() === 'pedrog@nedviconstructora.com' || user.role === 'DEVELOPER')) ? (
+          <Link href="/mail" title={collapsed ? 'Correo NEDVI' : undefined} onClick={onCloseMobile} className={`${primaryItemClasses(isPathActive('/mail'))} mb-2`}>
             <Mail size={18} strokeWidth={1.8} className="shrink-0" />
-            <span className={`whitespace-nowrap transition-opacity duration-200 ${collapsed ? 'lg:hidden' : 'opacity-100'}`}>Correo NEDVI · Demo</span>
+            <span className={`whitespace-nowrap transition-opacity duration-200 ${collapsed ? 'lg:hidden' : 'opacity-100'}`}>Correo NEDVI</span>
           </Link>
         ) : null}
 
