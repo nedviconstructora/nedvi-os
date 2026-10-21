@@ -315,7 +315,7 @@ export function LoginForm() {
               type="button"
               onClick={() => void requestPasswordReset()}
               disabled={recoverySubmitting}
-              className="h-9 flex-1 rounded-lg bg-[#7DC6FF] px-3 text-xs font-semibold text-black transition hover:brightness-95 disabled:opacity-60"
+              className="login-recovery-action h-9 flex-1 rounded-lg bg-[#7DC6FF] px-3 text-xs font-semibold text-black transition hover:brightness-95 disabled:opacity-60"
             >
               {recoverySubmitting ? 'Enviando...' : 'Enviar enlace'}
             </button>
@@ -325,7 +325,7 @@ export function LoginForm() {
 
       {error ? <p className="text-sm text-red-400">{error}</p> : null}
 
-      <Button type="submit" className="group w-full" disabled={submitting}>
+      <Button type="submit" className="login-primary-action group w-full" disabled={submitting}>
         <span>{submitting ? 'Iniciando sesión...' : 'Iniciar sesión en NEDVI OS'}</span>
         <span
           aria-hidden="true"
