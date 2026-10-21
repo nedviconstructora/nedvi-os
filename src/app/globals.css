@@ -2100,7 +2100,8 @@ textarea {
 
 /* Brand icon: black only on the light login theme, unchanged in dark mode. */
 .theme-light .login-page .login-brand-logo {
-  filter: brightness(0) saturate(0) !important;
+  /* Preserve the original logo's internal bevels and linework. */
+  filter: grayscale(1) brightness(.55) contrast(1.45) !important;
   opacity: 1 !important;
 }
 .theme-dark .login-page .login-brand-logo {
