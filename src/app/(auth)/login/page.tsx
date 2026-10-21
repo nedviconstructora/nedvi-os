@@ -20,7 +20,7 @@ function Logo({ compact = false }: { compact?: boolean }) {
           compact ? 'text-2xl' : 'text-4xl xl:text-[2.7rem]'
         }`}
       >
-        NEDVI <span className="font-medium text-[#8CCBFF]">OS</span>
+        NEDVI <span className="login-logo-accent font-medium text-[#8CCBFF]">OS</span>
       </span>
     </div>
   )
@@ -70,7 +70,7 @@ export default function LoginPage() {
             </p>
             <h1 className="max-w-3xl text-5xl font-semibold leading-[1.02] tracking-[-0.055em] text-white xl:text-7xl">
               El trabajo avanza{' '}
-              <span className="bg-gradient-to-r from-[#B9E2FF] to-[#5AA9F3] bg-clip-text text-transparent">
+              <span className="login-brand-emphasis bg-gradient-to-r from-[#B9E2FF] to-[#5AA9F3] bg-clip-text text-transparent">
                 mejor
               </span>{' '}
               cuando todo se conecta.
@@ -111,7 +111,7 @@ export default function LoginPage() {
 
             <div className="login-card rounded-[22px] border border-white/[0.09] bg-[#181D24]/90 p-7 shadow-[0_28px_90px_rgba(0,0,0,0.5)] backdrop-blur-xl transition-colors duration-300 sm:p-10">
               <div>
-                <p className="mb-4 text-[11px] font-semibold uppercase tracking-[0.22em] text-[#5DAAF2]">
+                <p className="login-card-eyebrow mb-4 text-[11px] font-semibold uppercase tracking-[0.22em] text-[#5DAAF2]">
                   Bienvenido de nuevo
                 </p>
                 <h2 className="text-3xl font-semibold tracking-[-0.045em] text-white sm:text-[2.25rem]">
