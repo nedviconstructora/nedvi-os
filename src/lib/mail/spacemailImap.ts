@@ -240,47 +240,225 @@ function htmlPlain(html: string) {
     .replace(/\n{4,}/g,'\n\n').trim()
 }
 
-export async function inboxDetail(uid: number) {
-  if (!Number.isSafeInteger(uid) || uid<1) throw new Error('Identificador de mensaje no válido.')
-  return useInbox(async client => {
-    // Fetch metadata first. Large emails may include videos, photos, or multi-MB
-    // corporate PDFs; never fetch their full binary contents just to read text.
-    const metadata = await client.command('UID FETCH ' + uid + ' (UID RFC822.SIZE BODY.PEEK[HEADER])')
-    const size = Number(metadata.find(r => r.line.includes('RFC822.SIZE'))?.line.match(/RFC822\.SIZE (\d+)/)?.[1] || 0)
-    if (!size) throw new Error('El mensaje no está disponible.')
-    const messageHeader = metadata.find(r => /\bBODY\[HEADER\]/i.test(r.line) && r.literal)?.literal
-    if (!messageHeader) throw new Error('No fue posible recuperar los encabezados del correo.')
+export async function inboxDetail(uid:number) {
+  return readBodyAndAttachments(uid)
+}
 
-    const previewLimited = size > MAX_MESSAGE_BYTES
-    let raw: Buffer
-    if (previewLimited) {
-      // RFC 3501 partial FETCH: BODY.PEEK[TEXT]<offset.length>
-      // Read only the beginning of the MIME body, never large attachment bytes.
-      const previewRecords = await client.command('UID FETCH ' + uid + ' (UID BODY.PEEK[TEXT]<0.262144>)')
-      const preview = previewRecords.find(r => /\bBODY\[TEXT\]/i.test(r.line) && r.literal)?.literal
-      if (!preview) throw new Error('No se pudo recuperar la vista previa del mensaje.')
-      const cleanHeader = messageHeader.toString('latin1').replace(/(?:\r?\n)+$/, '')
-      raw = Buffer.concat([Buffer.from(cleanHeader + '\r\n\r\n', 'latin1'), preview])
-    } else {
-      const fullRecords = await client.command('UID FETCH ' + uid + ' (UID BODY.PEEK[])')
-      const full = fullRecords.find(r => r.literal)?.literal
-      if (!full) throw new Error('El contenido del mensaje no está disponible.')
-      raw = full
+/**
+ * BODYSTRUCTURE is obtained without fetching MIME bodies (including videos).
+ * IMAP RFC3501: each multipart child is addressable by part number.
+ */
+type BsValue = string | number | null | BsValue[]
+type MimePart = {
+  part: string
+  type: string
+  filename: string
+  encoding: string
+  encodedSize: number
+  disposition: string
+  category: 'image'|'video'|'pdf'|'document'|'other'
+}
+const MAX_ATTACHMENT_WIRE = 24 * 1024 * 1024
+const MAX_ATTACHMENT_PREVIEW = 18 * 1024 * 1024
+
+function bodyStructureTree(record: ImapRecord[]): BsValue {
+  const line = record.map(x=>x.line).find(x=>/\bBODYSTRUCTURE\s*\(/i.test(x))
+  if (!line) throw new Error('Spacemail no devolvió la estructura del mensaje.')
+  const position=line.search(/\bBODYSTRUCTURE\s*\(/i)
+  const input=line.slice(position).replace(/^BODYSTRUCTURE\s*/i,'')
+  let index=0
+  let nodes=0
+  function parse(depth:number):BsValue {
+    if (++nodes>20000 || depth>24) throw new Error('Estructura MIME no admitida.')
+    while (/\s/.test(input[index]||''))index++
+    const char=input[index]
+    if (char==='(') {
+      index++
+      const result:BsValue[]=[]
+      while(index<input.length) {
+        while(/\s/.test(input[index]||''))index++
+        if(input[index]===')'){index++;return result}
+        result.push(parse(depth+1))
+      }
+      throw new Error('Estructura MIME incompleta.')
     }
+    if(char==='"'){
+      index++
+      let out=''
+      while(index<input.length){
+        const v=input[index++]
+        if(v==='"')return out
+        if(v==='\\'){if(index<input.length)out+=input[index++]}
+        else out+=v
+      }
+      throw new Error('Nombre MIME sin terminar.')
+    }
+    const start=index
+    while(index<input.length && !/[\s()]/.test(input[index]))index++
+    const value=input.slice(start,index)
+    if(!value)throw new Error('Valor MIME inesperado.')
+    if(value.toUpperCase()==='NIL')return null
+    return /^\d+$/.test(value)?Number(value):value
+  }
+  return parse(0)
+}
 
-    const headerEnd = raw.indexOf(Buffer.from('\r\n\r\n'))
-    if (headerEnd < 0) throw new Error('Los encabezados del mensaje no son válidos.')
-    const meta = headers(raw.subarray(0, headerEnd).toString('latin1'))
-    const sender = fromHeader(meta.get('from') || '')
-    const body = mimeText(raw)
+function pairs(value:BsValue):Record<string,string> {
+  const entries=Array.isArray(value)?value:[]
+  const result:Record<string,string>={}
+  for(let i=0;i+1<entries.length;i+=2) {
+    const name=entries[i]
+    const val=entries[i+1]
+    if(typeof name==='string' && (typeof val==='string'||typeof val==='number'))result[name.toLowerCase()]=String(val)
+  }
+  return result
+}
+function mimeName(value:string) {
+  let decoded=value
+  try { decoded=decodeURIComponent(value.replace(/^utf-8''/i,'')) } catch { /* preserve original */ }
+  return words(decoded).replace(/[/\\\u0000-\u001f<>:"|?*]/g,'_').trim().slice(0,160)
+}
+
+function mimeCategory(type:string,filename:string):MimePart['category'] {
+  const lower=filename.toLowerCase()
+  if(/^(image\/(jpeg|png|gif|webp))$/.test(type)||/\.(jpe?g|png|gif|webp)$/.test(lower))return 'image'
+  if(/^(video\/(mp4|webm|ogg|quicktime))$/.test(type)||/\.(mp4|webm|ogv|mov)$/.test(lower))return 'video'
+  if(type==='application/pdf'||lower.endsWith('.pdf'))return 'pdf'
+  if(/\.(docx?|xlsx?|pptx?|txt|csv|dwg|dxf|zip)$/.test(lower)||/^(text\/plain|application\/(zip|msword|vnd\.))/.test(type))return 'document'
+  return 'other'
+}
+
+function getParts(tree:BsValue):MimePart[] {
+  const all:MimePart[]=[]
+  function visit(node:BsValue, section:string,depth:number){
+    if(!Array.isArray(node)||depth>12||all.length>150)return
+    if(Array.isArray(node[0])){
+      let n=0
+      for(const value of node) {
+        if(!Array.isArray(value)||!Array.isArray(value[0]) && typeof value[0]!=='string')break
+        visit(value,section?section+'.'+(++n):String(++n),depth+1)
+      }
+      return
+    }
+    const primary=String(node[0]||'').toLowerCase()
+    const subtype=String(node[1]||'').toLowerCase()
+    const type=primary+'/'+subtype
+    const params=pairs(node[2]??null)
+    const dispositionIndex=primary==='text'?9:primary==='message'&&subtype==='rfc822'?11:8
+    const disposition=Array.isArray(node[dispositionIndex])?node[dispositionIndex] as BsValue[]:[]
+    const dispParams=pairs(disposition[1]??null)
+    const filename=mimeName(dispParams['filename*']||dispParams.filename||params['name*']||params.name||'')
+    const name=filename||('adjunto-'+section)
+    all.push({
+      part:section||'1',type,filename:name,
+      encoding:String(node[5]||'7BIT').toUpperCase(),
+      encodedSize:typeof node[6]==='number'?node[6]:0,
+      disposition:String(disposition[0]||'').toLowerCase(),
+      category:mimeCategory(type,filename)
+    })
+  }
+  visit(tree,'',0)
+  return all
+}
+async function partsFor(client:ImapConnection,uid:number):Promise<MimePart[]> {
+  const records=await client.command('UID FETCH '+uid+' (UID BODYSTRUCTURE)')
+  return getParts(bodyStructureTree(records))
+}
+function isActualAttachment(part:MimePart){
+  return part.disposition==='attachment'||Boolean(part.filename&&!/^adjunto-\d+(?:\.\d+)*$/.test(part.filename) && !(part.type==='text/plain'||part.type==='text/html'))||
+    (part.disposition==='inline' && (part.category==='image'||part.category==='video'||part.category==='pdf'))
+}
+function safeAttachment(part:MimePart) {
+  if(part.encodedSize<0||!Number.isSafeInteger(part.encodedSize))throw new Error('Tamaño de adjunto desconocido.')
+  if(part.encodedSize>MAX_ATTACHMENT_WIRE)throw new Error('El adjunto supera el límite de visualización (aprox. 18 MB).')
+  if(!['BASE64','QUOTED-PRINTABLE','7BIT','8BIT','BINARY'].includes(part.encoding))throw new Error('Codificación de archivo no compatible.')
+}
+async function fetchPart(client:ImapConnection,uid:number,part:MimePart,maxWire:number):Promise<Buffer> {
+  if(part.encodedSize>maxWire)throw new Error('Archivo demasiado grande.')
+  const pieces:Buffer[]=[]
+  let offset=0
+  // Limit IMAP literal transfers to 256 KiB each; no entire email is fetched.
+  const chunk=256*1024
+  while(offset<part.encodedSize) {
+    const requested=Math.min(chunk,part.encodedSize-offset)
+    const records=await client.command('UID FETCH '+uid+' (UID BODY.PEEK['+part.part+']<'+offset+'.'+requested+'>)')
+    const response=records.find(x=>x.literal)
+    if(!response?.literal || response.literal.length===0)break
+    pieces.push(response.literal)
+    offset+=response.literal.length
+    if(response.literal.length<requested)break
+  }
+  const raw=Buffer.concat(pieces)
+  if(!raw.length)throw new Error('Spacemail no devolvió el archivo.')
+  return raw
+}
+function decodeTransfer(raw:Buffer,encoding:string):Buffer {
+  if(encoding==='BASE64')return Buffer.from(raw.toString('latin1').replace(/\s/g,''),'base64')
+  if(encoding==='QUOTED-PRINTABLE')return qpBytes(raw.toString('latin1'))
+  return raw
+}
+function safeType(part:MimePart):string {
+  const ext=part.filename.toLowerCase()
+  if(part.category==='pdf')return 'application/pdf'
+  if(part.category==='image') {
+    if(/\.(jpe?g)$/.test(ext)||part.type==='image/jpeg')return 'image/jpeg'
+    if(/\.png$/.test(ext)||part.type==='image/png')return 'image/png'
+    if(/\.webp$/.test(ext)||part.type==='image/webp')return 'image/webp'
+    return 'image/gif'
+  }
+  if(part.category==='video'){
+    if(/\.mp4$/.test(ext)||part.type==='video/mp4')return 'video/mp4'
+    if(/\.webm$/.test(ext)||part.type==='video/webm')return 'video/webm'
+    if(/\.ogv$/.test(ext)||part.type==='video/ogg')return 'video/ogg'
+    return 'video/quicktime'
+  }
+  return 'application/octet-stream'
+}
+export async function readAttachment(uid:number,partName:string) {
+  if(!Number.isSafeInteger(uid)||uid<1||!/^[1-9]\d*(?:\.[1-9]\d*){0,10}$/.test(partName))throw new Error('Identificador de adjunto no válido.')
+  return useInbox(async client=>{
+    const part=(await partsFor(client,uid)).find(p=>p.part===partName && isActualAttachment(p))
+    if(!part)throw new Error('El archivo no está disponible.')
+    safeAttachment(part)
+    const wire=await fetchPart(client,uid,part,MAX_ATTACHMENT_WIRE)
+    const buffer=decodeTransfer(wire,part.encoding)
+    if(buffer.length>MAX_ATTACHMENT_PREVIEW)throw new Error('El adjunto supera el límite permitido (18 MB).')
+    return {data:buffer,type:safeType(part),name:part.filename,category:part.category}
+  })
+}
+
+export async function readBodyAndAttachments(uid:number) {
+  if(!Number.isSafeInteger(uid)||uid<1)throw new Error('Identificador de mensaje no válido.')
+  return useInbox(async client=>{
+    const records=await client.command('UID FETCH '+uid+' (UID RFC822.SIZE BODY.PEEK[HEADER])')
+    const size=Number(records.find(x=>x.line.includes('RFC822.SIZE'))?.line.match(/RFC822\.SIZE (\d+)/)?.[1]||0)
+    if(!size)throw new Error('El mensaje no está disponible.')
+    const header=records.find(x=>x.literal)?.literal
+    if(!header)throw new Error('No se pudo recuperar la cabecera.')
+    const map=headers(header.toString('latin1'))
+    const sender=fromHeader(map.get('from')||'')
+    const parts=await partsFor(client,uid)
+    const attachments=parts.filter(isActualAttachment).slice(0,40).map(part=>({
+      part:part.part,name:part.filename,type:part.type,category:part.category,size:part.encodedSize,
+      available:part.encodedSize>0&&part.encodedSize<=MAX_ATTACHMENT_WIRE
+    }))
+    let plain=''
+    let html=''
+    const texts=parts.filter(p=>!isActualAttachment(p)&&/^(text\/plain|text\/html)$/.test(p.type)).slice(0,12)
+    for(const item of texts){
+      if(item.encodedSize>512*1024)continue
+      const raw=await fetchPart(client,uid,item,512*1024)
+      const decoded=decodeTransfer(raw,item.encoding)
+      const value=charsetDecode(decoded,'utf-8').slice(0,100000)
+      if(item.type==='text/plain'&&!plain)plain=value
+      if(item.type==='text/html'&&!html)html=value
+      if(plain)break
+    }
     return {
-      uid, from:sender.name,email:sender.email,
-      subject:words(meta.get('subject') || '(Sin asunto)'),
-      date:meta.get('date') || '',
-      text:(body.plain || htmlPlain(body.html) || '(Sin texto legible en la vista previa)').slice(0,100000),
-      attachments:body.attachments.slice(0,30),
-      previewLimited,
-      size,
+      uid,from:sender.name,email:sender.email,
+      subject:words(map.get('subject')||'(Sin asunto)'),date:map.get('date')||'',
+      text:(plain||htmlPlain(html)||'(No hay texto disponible en este correo)').slice(0,100000),
+      attachments,previewLimited:size>MAX_MESSAGE_BYTES,size
     }
   })
 }
