@@ -37,9 +37,8 @@ type HeaderProps = {
 
 function BrandMark() {
   return (
-    <span className="relative flex h-8 w-8 shrink-0 items-center justify-center overflow-hidden rounded-[9px] bg-[#5496CC]">
-      <span className="absolute h-3.5 w-1.5 -rotate-45 rounded-full bg-white" />
-      <span className="absolute h-3.5 w-1.5 rotate-45 rounded-full bg-white" />
+    <span className="flex h-8 w-8 shrink-0 items-center justify-center overflow-hidden rounded-[9px] bg-white/10 p-1">
+      <img src="/logo-blanco.svg" alt="" aria-hidden="true" className="h-full w-full object-contain" />
     </span>
   )
 }
@@ -330,20 +329,20 @@ export function Header({ onOpenMenu, isDark, onToggleTheme, showCompanyLogo = fa
   }
 
   return (
-    <header className="nedvi-app-header flex h-[66px] shrink-0 items-center justify-between border-b px-3 text-white backdrop-blur-xl transition-colors duration-300 sm:h-[88px] sm:px-8">
+    <header className="nedvi-app-header flex h-[60px] shrink-0 items-center justify-between gap-1 border-b px-2.5 text-white backdrop-blur-xl transition-colors duration-300 sm:h-[88px] sm:gap-2 sm:px-8">
       <div className="flex min-w-0 items-center gap-2 sm:gap-4">
         <button
           type="button"
           onClick={onOpenMenu}
-          className="rounded-xl bg-white/10 p-2.5 text-white transition hover:bg-white/20 lg:hidden"
+          className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-white/10 text-white transition hover:bg-white/20 lg:hidden"
           aria-label="Abrir navegación"
         >
           <Menu size={23} strokeWidth={1.8} />
         </button>
 
-        <div className="flex items-center gap-2.5 lg:hidden">
+        <div className="flex min-w-0 items-center gap-1.5 lg:hidden sm:gap-2.5">
           <BrandMark />
-          <span className="text-[15px] font-semibold tracking-[-0.04em] text-white">
+          <span className="truncate text-[14px] font-semibold tracking-[-0.04em] text-white sm:text-[15px]">
             NEDVI <span className="font-normal text-[#9ED2F8]">OS</span>
           </span>
         </div>
@@ -362,7 +361,7 @@ export function Header({ onOpenMenu, isDark, onToggleTheme, showCompanyLogo = fa
         </div>
       </div>
 
-      <div className="flex items-center gap-0 sm:gap-2">
+      <div className="flex shrink-0 items-center gap-0 sm:gap-2">
         {showCompanyLogo ? (
           <div className="mr-2 hidden items-center gap-2 sm:flex" aria-label="NEDVI Constructora">
             <span className="flex h-10 w-12 items-center justify-center rounded-xl bg-[#5496CC] p-1.5 shadow-sm">
@@ -404,7 +403,7 @@ export function Header({ onOpenMenu, isDark, onToggleTheme, showCompanyLogo = fa
           <button
             type="button"
             onClick={() => setNotificationsOpen((current) => !current)}
-            className={`relative rounded-xl p-2.5 transition ${
+            className={`relative flex h-10 w-10 items-center justify-center rounded-xl transition sm:h-auto sm:w-auto sm:p-2.5 ${
               notificationsOpen
                 ? 'bg-white/10 text-[#9ED2F8]'
                 : 'text-white/70 hover:bg-white/10 hover:text-white'
@@ -554,7 +553,7 @@ export function Header({ onOpenMenu, isDark, onToggleTheme, showCompanyLogo = fa
 
         <div className="mx-2 hidden h-6 w-px bg-[var(--border)] sm:block" />
 
-        <div className="ml-1 flex items-center gap-2.5 rounded-xl border border-white/[0.10] bg-white/[0.05] px-2.5 py-1.5 sm:px-3">
+        <div className="ml-0 flex items-center gap-1 rounded-xl border border-white/[0.10] bg-white/[0.05] p-1 sm:ml-1 sm:gap-2.5 sm:px-3 sm:py-1.5">
           <input
             ref={avatarInputRef}
             type="file"
@@ -617,7 +616,7 @@ export function Header({ onOpenMenu, isDark, onToggleTheme, showCompanyLogo = fa
         </div>
 
         <button type="button" onClick={() => { clearAccessSession(); router.replace('/login') }}
-          className="ml-1 inline-flex h-10 items-center gap-2 rounded-lg border border-white/15 px-3 text-xs font-semibold text-white/85 transition hover:border-white/25 hover:bg-white/10 hover:text-white"
+          className="ml-0 inline-flex h-10 w-9 items-center justify-center gap-2 rounded-lg border border-white/15 px-1 text-xs font-semibold text-white/85 transition hover:border-white/25 hover:bg-white/10 hover:text-white sm:ml-1 sm:w-auto sm:px-3"
           aria-label="Cerrar sesión" title="Cerrar sesión">
           <LogOut size={20} strokeWidth={1.8} />
           <span className="hidden lg:inline">Cerrar sesión</span>
