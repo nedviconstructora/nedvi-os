@@ -2175,3 +2175,114 @@ textarea {
 .theme-light .nedvi-app-header :is(button,svg) {
   color: #ffffff;
 }
+
+
+/* NEDVI OS application - light setting uses white chrome and black workspace. */
+html.theme-light:has(.nedvi-main-content) body {
+  background: #090909 !important;
+}
+html.theme-light .nedvi-app-sidebar {
+  background: #fff !important;
+  background-image: none !important;
+  border-right: 1px solid #d8d8d8 !important;
+  color: #151515 !important;
+}
+html.theme-light .nedvi-app-sidebar > .pointer-events-none {
+  display: none !important;
+}
+html.theme-light .nedvi-app-sidebar :is(p,span,svg) {
+  color: #191919 !important;
+}
+html.theme-light .nedvi-app-sidebar :is(a,button) {
+  background: #f3f3f3 !important;
+  background-image: none !important;
+  border-color: #dedede !important;
+  color: #151515 !important;
+}
+html.theme-light .nedvi-app-sidebar :is(a,button):hover {
+  background: #e5e5e5 !important;
+}
+html.theme-light .nedvi-app-sidebar :is(a,button)[class*="border-[#53A8FF"],
+html.theme-light .nedvi-app-sidebar .nedvi-sidebar-subitem-active {
+  background: #151515 !important;
+  background-image: none !important;
+  color: #fff !important;
+  border-color: #151515 !important;
+}
+html.theme-light .nedvi-app-sidebar :is(a,button)[class*="border-[#53A8FF"] :is(span,svg),
+html.theme-light .nedvi-app-sidebar .nedvi-sidebar-subitem-active :is(span,svg) {
+  color: #fff !important;
+}
+html.theme-light .nedvi-app-sidebar img[src="/icon.png"] {
+  filter: grayscale(1) brightness(.5) contrast(1.4) !important;
+}
+html.theme-light .nedvi-app-header {
+  background: #fff !important;
+  background-image: none !important;
+  color: #171717 !important;
+  border-bottom: 1px solid #dedede !important;
+  box-shadow: none !important;
+}
+html.theme-light .nedvi-app-header :is(button,svg,span,input) {
+  color: #171717 !important;
+}
+html.theme-light .nedvi-app-header :is(button,input) {
+  border-color: #dadada !important;
+}
+html.theme-light .nedvi-app-header input::placeholder {
+  color: #777 !important;
+}
+html.theme-light .nedvi-main-content {
+  --background: #090909;
+  --foreground: #f6f6f6;
+  --muted: #b8b8b8;
+  --subtle: #a0a0a0;
+  --surface: #181818;
+  --surface-soft: #202020;
+  --card: #181818;
+  --border: #373737;
+  --primary: #fff;
+  background: #090909 !important;
+  background-image: none !important;
+  color: #f6f6f6 !important;
+}
+html.theme-light .nedvi-main-content .nedvi-card {
+  background: #181818 !important;
+  border-color: #373737 !important;
+  color: #f6f6f6 !important;
+}
+html.theme-light .nedvi-main-content .nedvi-dashboard-hero {
+  background: #171717 !important;
+  background-image: none !important;
+  border-color: #3c3c3c !important;
+  color: #fff !important;
+}
+html.theme-light .nedvi-main-content .nedvi-dashboard-hero :is(h1,h2,h3,p,span) {
+  color: #f7f7f7 !important;
+}
+html.theme-light .nedvi-main-content .nedvi-dashboard-new-activity {
+  background: #fff !important;
+  background-image: none !important;
+  color: #101010 !important;
+  border: 1px solid #fff !important;
+}
+html.theme-light .nedvi-main-content .nedvi-dashboard-new-activity :is(svg,span) {
+  color: #101010 !important;
+}
+html.theme-light .nedvi-main-content .nedvi-card :is(h1,h2,h3,h4) {
+  color: #fafafa !important;
+}
+html.theme-light .nedvi-main-content .nedvi-card [class*="bg-[#1F6FEB]"] {
+  background: #292929 !important;
+  color: #f5f5f5 !important;
+}
+html.theme-light .nedvi-main-content .nedvi-card [class*="text-[#1F6FEB]"] {
+  color: #f5f5f5 !important;
+}
+html.theme-light .nedvi-main-content .nedvi-card [class*="bg-[#20232A]"] {
+  background: #181818 !important;
+}
+html.theme-light .nedvi-main-content .nedvi-card [class*="text-[#646873]"] {
+  color: #c0c0c0 !important;
+}
+/* Restrict these overrides to authenticated app pages. Login palette stays separate. */
