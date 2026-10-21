@@ -257,6 +257,7 @@ type MimePart = {
   encodedSize: number
   disposition: string
   category: 'image'|'video'|'pdf'|'document'|'other'
+  contentId: string
 }
 const MAX_ATTACHMENT_WIRE = 24 * 1024 * 1024
 const MAX_ATTACHMENT_PREVIEW = 18 * 1024 * 1024
@@ -354,7 +355,8 @@ function getParts(tree:BsValue):MimePart[] {
       encoding:String(node[5]||'7BIT').toUpperCase(),
       encodedSize:typeof node[6]==='number'?node[6]:0,
       disposition:String(disposition[0]||'').toLowerCase(),
-      category:mimeCategory(type,filename)
+      category:mimeCategory(type,filename),
+      contentId:String(node[3]||'').replace(/^<|>$/g,'').trim().toLowerCase()
     })
   }
   visit(tree,'',0)
@@ -452,12 +454,16 @@ export async function readBodyAndAttachments(uid:number) {
       const value=charsetDecode(decoded,'utf-8').slice(0,100000)
       if(item.type==='text/plain'&&!plain)plain=value
       if(item.type==='text/html'&&!html)html=value
-      if(plain)break
     }
     return {
       uid,from:sender.name,email:sender.email,
       subject:words(map.get('subject')||'(Sin asunto)'),date:map.get('date')||'',
       text:(plain||htmlPlain(html)||'(No hay texto disponible en este correo)').slice(0,100000),
+      html:html.slice(0,180000).replace(/(src|background)\s*=\s*([\"'])(cid:[^\"']+)\2/gi, (_match,attr:string,quote:string,cid:string)=>{
+        const id=cid.slice(4).replace(/^<|>$/g,'').trim().toLowerCase()
+        const target=parts.find(part=>part.contentId===id && isActualAttachment(part) && part.encodedSize<=MAX_ATTACHMENT_WIRE)
+        return target ? `${attr}=${quote}/api/mail/attachment?uid=${uid}&part=${encodeURIComponent(target.part)}${quote}` : `${attr}=${quote}${quote}`
+      }),
       attachments,previewLimited:size>MAX_MESSAGE_BYTES,size
     }
   })
