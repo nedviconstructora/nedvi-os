@@ -13,6 +13,7 @@ import {
   X,
 } from 'lucide-react'
 import { AppShell } from '@/components/layout/AppShell'
+import { createClient } from '@/lib/supabase/client'
 
 type SavedProject = {
   id: string
@@ -45,7 +46,9 @@ type ProjectDocument = {
   fileType: string
   fileSize: number
   uploadedAt: string
-  file: Blob
+  file?: Blob
+  storagePath?: string
+  origin?: 'cloud' | 'local'
 }
 
 const QUOTES_STORAGE_KEY = 'nedvi_quotes'
@@ -115,17 +118,66 @@ function openDatabase(): Promise<IDBDatabase> {
   })
 }
 
-async function getDocuments(): Promise<ProjectDocument[]> {
+async function getLegacyDocuments(): Promise<ProjectDocument[]> {
   const db = await openDatabase()
-
   return new Promise((resolve, reject) => {
-    const transaction = db.transaction(STORE_NAME, 'readonly')
-    const request = transaction.objectStore(STORE_NAME).getAll()
-
-    request.onsuccess = () => resolve(request.result as ProjectDocument[])
+    const tx = db.transaction(STORE_NAME, 'readonly')
+    const request = tx.objectStore(STORE_NAME).getAll()
+    request.onsuccess = () => resolve((request.result as ProjectDocument[]).map(item => ({...item, origin: 'local'})))
     request.onerror = () => reject(request.error)
-    transaction.oncomplete = () => db.close()
+    tx.oncomplete = () => db.close()
   })
+}
+
+async function getDocuments(): Promise<ProjectDocument[]> {
+  const supabase = createClient()
+  const { data: projects, error: projectsError } = await supabase.from('projects').select('id,folio,name,client_name')
+  if (projectsError) throw projectsError
+  const byId = new Map((projects ?? []).map(p => [p.id, p]))
+  const { data, error } = await supabase.from('project_documents').select('*').order('created_at', {ascending:false})
+  if (error) throw error
+  return (data ?? []).map(row => {
+    const project = byId.get(row.project_id)
+    return {
+      id: row.id, quoteId: row.project_id, folio: project?.folio ?? '',
+      project: project?.name ?? 'Proyecto', client: project?.client_name ?? '',
+      name: row.title, category: 'Otro' as DocumentCategory, version: '1.0',
+      notes: row.description ?? '', fileName: row.file_name ?? 'Archivo',
+      fileType: row.mime_type ?? 'application/octet-stream',
+      fileSize: Number(row.file_size ?? 0), uploadedAt: row.created_at,
+      storagePath: row.storage_path, origin: 'cloud' as const,
+    }
+  })
+}
+
+async function cloudUpload(document: ProjectDocument, projectId: string) {
+  if (!document.file) throw new Error('Archivo no disponible')
+  const supabase = createClient()
+  const {data: auth} = await supabase.auth.getUser()
+  if (!auth.user) throw new Error('Inicia sesión para subir documentos')
+  const safeName = document.fileName.replace(/[^a-zA-Z0-9._-]/g, '_').slice(-100)
+  const storagePath = `${projectId}/${document.id}/${safeName}`
+  const {error: uploadError} = await supabase.storage.from('project-documents').upload(storagePath, document.file, {
+    contentType: document.fileType, upsert: false,
+  })
+  if (uploadError) throw uploadError
+  const {error: dbError} = await supabase.from('project_documents').insert({
+    id: document.id, project_id: projectId, title: document.name,
+    description: [`Categoría: ${document.category}`, `Versión: ${document.version}`, document.notes].filter(Boolean).join(' | '),
+    storage_path: storagePath, file_name: document.fileName, mime_type: document.fileType,
+    file_size: document.fileSize, uploaded_by: auth.user.id, visible_to_client: false,
+  })
+  if (dbError) {
+    await supabase.storage.from('project-documents').remove([storagePath])
+    throw dbError
+  }
+}
+
+async function getPrivateUrl(document: ProjectDocument) {
+  if (!document.storagePath) throw new Error('Archivo sin ruta en Storage')
+  const {data,error} = await createClient().storage.from('project-documents').createSignedUrl(document.storagePath, 120)
+  if (error || !data?.signedUrl) throw error ?? new Error('No se pudo abrir el archivo')
+  return data.signedUrl
 }
 
 async function saveDocument(document: ProjectDocument) {
@@ -199,31 +251,24 @@ export default function DocumentsPage() {
   const [previewUrl, setPreviewUrl] = useState<string | null>(null)
 
   const loadData = useCallback(async () => {
-    const currentProjects = readProjects()
-    const currentIds = new Set(currentProjects.map((project) => project.id))
-    let storedDocuments: ProjectDocument[] = []
-
     try {
-      storedDocuments = await getDocuments()
-    } catch (error) {
-      console.error('No se pudieron cargar los documentos:', error)
+      const supabase = createClient()
+      const {data: remoteProjects, error} = await supabase.from('projects').select('id,folio,name,client_name').order('created_at',{ascending:false})
+      if (error) throw error
+      const cloudProjects: SavedProject[] = (remoteProjects ?? []).map(p => ({
+        id:p.id,folio:p.folio ?? '',project:p.name,client:p.client_name ?? '',
+      }))
+      const legacyProjects = readProjects()
+      const combined = [...cloudProjects]
+      for (const p of legacyProjects) if (!combined.some(x=>x.id===p.id)) combined.push(p)
+      setProjects(combined)
+      const [cloud, legacy] = await Promise.all([getDocuments(),getLegacyDocuments()])
+      const cloudIds = new Set(cloud.map(item=>item.id))
+      setDocuments([...cloud, ...legacy.filter(item=>!cloudIds.has(item.id))].sort((a,b)=>b.uploadedAt.localeCompare(a.uploadedAt)))
+    } catch(error) {
+      console.error('No se pudieron consultar documentos:',error)
+      alert('No se pudieron consultar los documentos de Supabase. Los archivos locales no se han borrado.')
     }
-
-    const orphaned = storedDocuments.filter(
-      (document) => !currentIds.has(document.quoteId),
-    )
-
-    if (orphaned.length) {
-      await Promise.all(orphaned.map((document) => removeDocument(document.id)))
-      storedDocuments = storedDocuments.filter((document) =>
-        currentIds.has(document.quoteId),
-      )
-    }
-
-    setProjects(currentProjects)
-    setDocuments(
-      storedDocuments.sort((a, b) => b.uploadedAt.localeCompare(a.uploadedAt)),
-    )
   }, [])
 
   useEffect(() => {
@@ -248,9 +293,14 @@ export default function DocumentsPage() {
       setPreviewUrl(null)
       return
     }
-    const url = URL.createObjectURL(previewDocument.file)
-    setPreviewUrl(url)
-    return () => URL.revokeObjectURL(url)
+    if (previewDocument.file) {
+      const url = URL.createObjectURL(previewDocument.file)
+      setPreviewUrl(url)
+      return () => URL.revokeObjectURL(url)
+    }
+    let cancelled = false
+    void getPrivateUrl(previewDocument).then(url => {if(!cancelled) setPreviewUrl(url)}).catch(error => console.error('No se pudo visualizar:',error))
+    return () => {cancelled = true}
   }, [previewDocument])
 
   const previewKind = previewDocument
@@ -334,31 +384,55 @@ export default function DocumentsPage() {
         file,
       }
 
-      await saveDocument(document)
+      if (!/^[0-9a-f]{8}-[0-9a-f-]{27,}$/i.test(project.id)) throw new Error('Selecciona un proyecto que ya esté en Supabase.')
+      await cloudUpload(document, project.id)
       closeForm()
       await loadData()
     } catch (error) {
       console.error('No se pudo guardar el documento:', error)
-      alert('No se pudo guardar el documento en este navegador.')
+      alert(error instanceof Error ? error.message : 'No se pudo subir el documento a Supabase.')
     } finally {
       setSaving(false)
     }
   }
 
-  function downloadDocument(document: ProjectDocument) {
-    const url = URL.createObjectURL(document.file)
+  async function downloadDocument(document: ProjectDocument) {
+    const url = document.file ? URL.createObjectURL(document.file) : await getPrivateUrl(document)
     const anchor = window.document.createElement('a')
     anchor.href = url
     anchor.download = document.fileName
     window.document.body.appendChild(anchor)
     anchor.click()
     anchor.remove()
-    URL.revokeObjectURL(url)
+    if (document.file) URL.revokeObjectURL(url)
+  }
+
+
+  async function migrateDocument(document: ProjectDocument) {
+    if (!document.file) return
+    const remoteProjects = projects.filter(p => /^[0-9a-f]{8}-[0-9a-f-]{27,}$/i.test(p.id))
+    const match = remoteProjects.find(p => p.folio === document.folio)
+    const options = remoteProjects.map((p,i)=>`${i+1}. ${p.folio} — ${p.project}`).join('\n')
+    const selected = match ? remoteProjects.indexOf(match)+1 : Number(window.prompt(`Elige el proyecto de Supabase para migrar "${document.name}":\n${options}\n\nNúmero del proyecto:`))
+    if (!selected || !remoteProjects[selected-1]) return
+    try {
+      await cloudUpload(document,remoteProjects[selected-1].id)
+      await loadData()
+      alert('Documento respaldado en Supabase. El archivo original sigue guardado en este navegador.')
+    } catch(error) {
+      alert(error instanceof Error ? error.message : 'No se pudo migrar el documento')
+    }
   }
 
   async function deleteDocument(document: ProjectDocument) {
     if (!window.confirm(`¿Eliminar el documento “${document.name}”?`)) return
-    await removeDocument(document.id)
+    if (document.storagePath) {
+      const supabase=createClient()
+      const {error}=await supabase.from('project_documents').delete().eq('id',document.id)
+      if(error) {alert(error.message);return}
+      const {error: fileError}=await supabase.storage.from('project-documents').remove([document.storagePath])
+      if(fileError) console.warn('Archivo pendiente de limpieza:',fileError)
+    } else await removeDocument(document.id)
     await loadData()
   }
 
@@ -406,13 +480,13 @@ export default function DocumentsPage() {
             icon={FileArchive}
             label="Espacio utilizado"
             value={formatSize(totalSize)}
-            detail="Guardado en este navegador"
+            detail="Supabase + archivos locales pendientes"
           />
           <MetricCard
             icon={FileUp}
             label="Proyectos disponibles"
             value={projects.length.toString()}
-            detail="Creados desde cotizaciones"
+            detail="Proyectos disponibles"
           />
         </div>
 
@@ -485,7 +559,7 @@ export default function DocumentsPage() {
                               {document.name}
                             </p>
                             <p className="mt-1 max-w-[260px] truncate text-xs text-[var(--muted)]">
-                              {document.fileName}
+                              {document.origin === 'local' ? '⚠ Local · ' : '☁ En línea · '}{document.fileName}
                             </p>
                           </div>
                         </div>
@@ -510,6 +584,7 @@ export default function DocumentsPage() {
                       </td>
                       <td className="px-5 py-4">
                         <div className="flex gap-2">
+                          {document.origin === "local" && <button type="button" onClick={() => void migrateDocument(document)} className="rounded-lg border border-blue-500 px-3 py-2 text-xs font-semibold text-blue-500">Migrar</button>}
                           <button
                             type="button"
                             onClick={() => setPreviewDocument(document)}
@@ -521,7 +596,7 @@ export default function DocumentsPage() {
                           </button>
                           <button
                             type="button"
-                            onClick={() => downloadDocument(document)}
+                            onClick={() => void downloadDocument(document)}
                             className="rounded-lg border border-[var(--border)] p-2 text-[var(--foreground)] transition hover:border-[#5496CC] hover:text-[#5496CC]"
                             aria-label={`Descargar ${document.name}`}
                           >
@@ -556,7 +631,7 @@ export default function DocumentsPage() {
                 <p className="truncate text-xs text-[var(--muted)]">{previewDocument.fileName} · {formatSize(previewDocument.fileSize)}</p>
               </div>
               <div className="flex items-center gap-2">
-                <button type="button" onClick={() => downloadDocument(previewDocument)} className="inline-flex items-center gap-2 rounded-lg bg-[#5496CC] px-3 py-2 text-xs font-bold text-white"><Download size={15}/> Descargar</button>
+                <button type="button" onClick={() => void downloadDocument(previewDocument)} className="inline-flex items-center gap-2 rounded-lg bg-[#5496CC] px-3 py-2 text-xs font-bold text-white"><Download size={15}/> Descargar</button>
                 <button type="button" onClick={() => setPreviewDocument(null)} className="rounded-lg border border-[var(--border)] p-2 text-[var(--foreground)]" aria-label="Cerrar vista previa"><X size={18}/></button>
               </div>
             </div>
@@ -692,7 +767,7 @@ export default function DocumentsPage() {
               </label>
 
               <p className="rounded-xl bg-[var(--surface-soft)] px-4 py-3 text-xs text-[var(--muted)]">
-                Los archivos se guardan localmente en este navegador durante esta etapa de NEDVI OS.
+                Los nuevos archivos se guardan de forma privada en Supabase. Los archivos antiguos locales se conservan hasta completar su migración.
               </p>
 
               <div className="flex justify-end gap-3">
