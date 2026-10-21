@@ -330,12 +330,12 @@ export function Header({ onOpenMenu, isDark, onToggleTheme, showCompanyLogo = fa
   }
 
   return (
-    <header className="nedvi-app-header flex h-[88px] shrink-0 items-center justify-between border-b px-5 text-white backdrop-blur-xl transition-colors duration-300 sm:px-8">
-      <div className="flex min-w-0 items-center gap-4">
+    <header className="nedvi-app-header flex h-[66px] shrink-0 items-center justify-between border-b px-3 text-white backdrop-blur-xl transition-colors duration-300 sm:h-[88px] sm:px-8">
+      <div className="flex min-w-0 items-center gap-2 sm:gap-4">
         <button
           type="button"
           onClick={onOpenMenu}
-          className="rounded-lg p-2 text-white/75 transition hover:bg-white/10 hover:text-white lg:hidden"
+          className="rounded-xl bg-white/10 p-2.5 text-white transition hover:bg-white/20 lg:hidden"
           aria-label="Abrir navegación"
         >
           <Menu size={23} strokeWidth={1.8} />
@@ -362,7 +362,7 @@ export function Header({ onOpenMenu, isDark, onToggleTheme, showCompanyLogo = fa
         </div>
       </div>
 
-      <div className="flex items-center gap-1 sm:gap-2">
+      <div className="flex items-center gap-0 sm:gap-2">
         {showCompanyLogo ? (
           <div className="mr-2 hidden items-center gap-2 sm:flex" aria-label="NEDVI Constructora">
             <span className="flex h-10 w-12 items-center justify-center rounded-xl bg-[#5496CC] p-1.5 shadow-sm">
@@ -375,7 +375,7 @@ export function Header({ onOpenMenu, isDark, onToggleTheme, showCompanyLogo = fa
         <button
           type="button"
           onClick={onToggleTheme}
-          className="rounded-xl p-2.5 text-[#9ED2F8] transition hover:bg-white/10 hover:text-white"
+          className="hidden rounded-xl p-2.5 text-[#9ED2F8] transition hover:bg-white/10 hover:text-white sm:inline-flex"
           aria-label={isDark ? 'Cambiar a tema claro' : 'Cambiar a tema oscuro'}
           aria-pressed={isDark}
           title={isDark ? 'Tema claro' : 'Tema oscuro'}
@@ -387,7 +387,7 @@ export function Header({ onOpenMenu, isDark, onToggleTheme, showCompanyLogo = fa
           type="button"
           onClick={() => void refreshApp()}
           disabled={refreshing}
-          className="rounded-xl p-2.5 text-white/70 transition hover:bg-white/10 hover:text-white disabled:cursor-wait disabled:opacity-60"
+          className="hidden rounded-xl p-2.5 text-white/70 transition hover:bg-white/10 hover:text-white disabled:cursor-wait disabled:opacity-60 sm:inline-flex"
           aria-label="Actualizar NEDVI OS"
           title={refreshing ? 'Actualizando...' : 'Actualizar información'}
         >
@@ -424,7 +424,7 @@ export function Header({ onOpenMenu, isDark, onToggleTheme, showCompanyLogo = fa
           </button>
 
           {notificationsOpen ? (
-            <div className="fixed inset-x-3 top-[82px] z-[100] max-h-[calc(100dvh-100px)] overflow-hidden rounded-2xl border border-[var(--border)] bg-[var(--surface)] shadow-2xl sm:absolute sm:inset-x-auto sm:right-0 sm:top-[calc(100%+12px)] sm:w-[390px]">
+            <div className="fixed inset-x-3 top-[65px] z-[100] max-h-[calc(100dvh-155px)] overflow-hidden rounded-2xl border border-[var(--border)] bg-[var(--surface)] shadow-2xl sm:absolute sm:inset-x-auto sm:right-0 sm:top-[calc(100%+12px)] sm:w-[390px]">
               <div className="flex items-center justify-between border-b border-[var(--border)] px-4 py-3">
                 <div>
                   <p className="text-sm font-semibold text-[var(--foreground)]">Notificaciones</p>
