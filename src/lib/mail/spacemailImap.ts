@@ -243,22 +243,44 @@ function htmlPlain(html: string) {
 export async function inboxDetail(uid: number) {
   if (!Number.isSafeInteger(uid) || uid<1) throw new Error('Identificador de mensaje no válido.')
   return useInbox(async client => {
-    const met = await client.command('UID FETCH ' + uid + ' (UID RFC822.SIZE)')
-    const size = Number(met.find(r=>r.line.includes('RFC822.SIZE'))?.line.match(/RFC822\.SIZE (\d+)/)?.[1] || 0)
+    // Fetch metadata first. Large emails may include videos, photos, or multi-MB
+    // corporate PDFs; never fetch their full binary contents just to read text.
+    const metadata = await client.command('UID FETCH ' + uid + ' (UID RFC822.SIZE BODY.PEEK[HEADER])')
+    const size = Number(metadata.find(r => r.line.includes('RFC822.SIZE'))?.line.match(/RFC822\.SIZE (\d+)/)?.[1] || 0)
     if (!size) throw new Error('El mensaje no está disponible.')
-    if (size > MAX_MESSAGE_BYTES) throw new Error('El mensaje excede el tamaño permitido de vista previa (2 MB).')
-    const fetched = await client.command('UID FETCH ' + uid + ' (UID BODY.PEEK[])')
-    const raw = fetched.find(r=>r.literal)?.literal
-    if (!raw) throw new Error('El contenido del mensaje no está disponible.')
-    const meta = headers(raw.subarray(0,raw.indexOf(Buffer.from('\r\n\r\n'))).toString('latin1'))
+    const messageHeader = metadata.find(r => /\bBODY\[HEADER\]/i.test(r.line) && r.literal)?.literal
+    if (!messageHeader) throw new Error('No fue posible recuperar los encabezados del correo.')
+
+    const previewLimited = size > MAX_MESSAGE_BYTES
+    let raw: Buffer
+    if (previewLimited) {
+      // RFC 3501 partial FETCH: BODY.PEEK[TEXT]<offset.length>
+      // Read only the beginning of the MIME body, never large attachment bytes.
+      const previewRecords = await client.command('UID FETCH ' + uid + ' (UID BODY.PEEK[TEXT]<0.262144>)')
+      const preview = previewRecords.find(r => /\bBODY\[TEXT\]/i.test(r.line) && r.literal)?.literal
+      if (!preview) throw new Error('No se pudo recuperar la vista previa del mensaje.')
+      const cleanHeader = messageHeader.toString('latin1').replace(/(?:\r?\n)+$/, '')
+      raw = Buffer.concat([Buffer.from(cleanHeader + '\r\n\r\n', 'latin1'), preview])
+    } else {
+      const fullRecords = await client.command('UID FETCH ' + uid + ' (UID BODY.PEEK[])')
+      const full = fullRecords.find(r => r.literal)?.literal
+      if (!full) throw new Error('El contenido del mensaje no está disponible.')
+      raw = full
+    }
+
+    const headerEnd = raw.indexOf(Buffer.from('\r\n\r\n'))
+    if (headerEnd < 0) throw new Error('Los encabezados del mensaje no son válidos.')
+    const meta = headers(raw.subarray(0, headerEnd).toString('latin1'))
     const sender = fromHeader(meta.get('from') || '')
     const body = mimeText(raw)
     return {
       uid, from:sender.name,email:sender.email,
       subject:words(meta.get('subject') || '(Sin asunto)'),
       date:meta.get('date') || '',
-      text:(body.plain || htmlPlain(body.html) || '(Sin texto legible)').slice(0,100000),
+      text:(body.plain || htmlPlain(body.html) || '(Sin texto legible en la vista previa)').slice(0,100000),
       attachments:body.attachments.slice(0,30),
+      previewLimited,
+      size,
     }
   })
 }
