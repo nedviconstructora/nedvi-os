@@ -12,7 +12,7 @@ export function DashboardGreeting() {
   }, [])
 
   return (
-    <h1 className="mt-2 text-3xl font-semibold tracking-[-0.05em] text-[var(--foreground)] sm:text-4xl">
+    <h1 className="mt-2 text-[clamp(1.5rem,6vw,1.85rem)] font-semibold leading-tight tracking-[-0.045em] text-[var(--foreground)] sm:text-4xl">
       Buenos días{firstName ? `, ${firstName}` : ''}
     </h1>
   )
