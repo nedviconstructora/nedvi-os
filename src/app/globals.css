@@ -2108,3 +2108,20 @@ textarea {
   filter: none !important;
 }
 
+
+/* Keep dashboard content clear of the fixed bottom navigation on phones. */
+@media (max-width: 767px) {
+  main.nedvi-main-content {
+    padding-bottom: calc(6.75rem + env(safe-area-inset-bottom)) !important;
+  }
+  .nedvi-mobile-dashboard {
+    min-width: 0;
+  }
+  .nedvi-mobile-dashboard .nedvi-card,
+  .nedvi-mobile-dashboard .nedvi-dashboard-hero {
+    max-width: 100%;
+  }
+  .nedvi-app-header {
+    min-width: 0;
+  }
+}
