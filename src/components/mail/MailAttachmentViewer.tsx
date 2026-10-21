@@ -1,6 +1,6 @@
 'use client'
 
-import { Download, ExternalLink, FileText, Image as ImageIcon, PlayCircle, X } from 'lucide-react'
+import { Download, ExternalLink, FileText, X } from 'lucide-react'
 
 export type MailAttachment = {
   part:string
@@ -33,7 +33,7 @@ export function MailAttachmentViewer({uid,file,onClose}:{uid:number;file:MailAtt
       </header>
       <div className="flex min-h-0 flex-1 items-center justify-center overflow-auto bg-[#10151b] p-2 sm:p-4">
         {file.category==='image'?<img src={src} alt={file.name} className="max-h-full max-w-full object-contain"/>:
-          file.category==='video'?<video key={src} src={src} controls preload="metadata" playsInline className="max-h-full max-w-full" controlsList="nodownload"><track kind="captions" srcLang="es" label="Sin subtítulos"/></video>:
+          file.category==='video'?<video key={src} src={src} controls preload="metadata" playsInline className="max-h-full max-w-full" />:
           file.category==='pdf'?<iframe src={src} title={'Documento: '+file.name} className="h-full w-full rounded-lg bg-white" />:
           <div className="space-y-4 p-6 text-center text-white"><FileText size={50} className="mx-auto text-blue-300"/><p>Este formato se descarga para abrirlo con su aplicación correspondiente.</p><a href={src+'&download=1'} download={file.name} className="inline-flex items-center gap-2 rounded-lg bg-blue-600 px-4 py-3 text-white"><Download size={16}/> Descargar documento</a></div>}
       </div>
