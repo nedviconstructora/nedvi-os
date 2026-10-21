@@ -21,9 +21,17 @@ type MailDetail = {
   subject:string
   date:string
   text:string
+  html?:string
   attachments:MailAttachment[]
   previewLimited?:boolean
   size?:number
+}
+function isolatedEmail(html:string,allowExternal:boolean) {
+  // Mail content runs in a script-disabled, same-origin sandbox.
+  // External tracking images remain blocked unless the user explicitly opts in.
+  const images=allowExternal?"'self' data: blob: https:":"'self' data: blob:"
+  const policy="default-src 'none'; script-src 'none'; img-src "+images+"; style-src 'unsafe-inline'; font-src 'none'; object-src 'none'; frame-src 'none'; connect-src 'none'; form-action 'none'; base-uri 'none'; media-src 'self' data:"
+  return '<!doctype html><html><head><meta charset="utf-8"><meta name="referrer" content="no-referrer"><meta http-equiv="Content-Security-Policy" content="'+policy+'"><style>html,body{margin:0;padding:12px;background:white;color:#16283c;font-family:Arial,sans-serif;overflow-wrap:anywhere;max-width:100%}img{max-width:100%;height:auto}table{max-width:100%}</style></head><body>'+html+'</body></html>'
 }
 function dateLabel(date:string) {
   const value=new Date(date)
@@ -45,6 +53,8 @@ export default function MailPage() {
   const [detailLoading,setDetailLoading]=useState(false)
   const [detailError,setDetailError]=useState('')
   const [activeAttachment,setActiveAttachment]=useState<MailAttachment|null>(null)
+  const [showHtml,setShowHtml]=useState(true)
+  const [externalImages,setExternalImages]=useState(false)
 
   useEffect(()=>{
     const controller=new AbortController()
@@ -69,6 +79,8 @@ export default function MailPage() {
 
   useEffect(()=>{
     setActiveAttachment(null)
+    setShowHtml(true)
+    setExternalImages(false)
     if(!selected){setDetail(null);setDetailError('');return}
     const controller=new AbortController()
     setDetail(null)
@@ -143,7 +155,17 @@ export default function MailPage() {
               <p className="mt-1 text-xs text-[var(--muted)]">Para: pedrog@nedviconstructora.com</p>
             </div>
             {detail.previewLimited?<div className="mt-4 rounded-xl border border-blue-400/40 bg-blue-500/10 p-3 text-xs leading-5 text-[var(--foreground)]"><strong>Mensaje grande:</strong> los archivos se consultan por separado sin descargar todo el correo. Algunos adjuntos muy grandes pueden superar el límite permitido.</div>:null}
-            <div className="max-h-[410px] overflow-y-auto whitespace-pre-wrap break-words py-6 text-sm leading-7 text-[var(--foreground)]">{detail.text}</div>
+            {detail.html?<div className="mt-4 flex flex-wrap items-center justify-between gap-2">
+              <div className="inline-flex gap-1 rounded-lg border border-[var(--border)] bg-[var(--surface-soft)] p-1">
+                <button type="button" onClick={()=>setShowHtml(true)} className={'rounded-md px-3 py-2 text-xs font-semibold '+(showHtml?'bg-[#1f6feb] text-white':'text-[var(--foreground)]')}>Ver diseño original</button>
+                <button type="button" onClick={()=>setShowHtml(false)} className={'rounded-md px-3 py-2 text-xs font-semibold '+(!showHtml?'bg-[#1f6feb] text-white':'text-[var(--foreground)]')}>Solo texto</button>
+              </div>
+              {showHtml?<button type="button" onClick={()=>setExternalImages(v=>!v)} className="rounded-lg border border-[var(--border)] px-3 py-2 text-xs font-semibold text-[var(--foreground)]">{externalImages?'Bloquear imágenes externas':'Cargar imágenes externas'}</button>:null}
+            </div>:null}
+            {detail.html && showHtml?<div className="mt-4 overflow-hidden rounded-xl border border-[var(--border)] bg-white">
+              <iframe title={'Contenido de correo: '+detail.subject} sandbox="allow-same-origin" referrerPolicy="no-referrer" srcDoc={isolatedEmail(detail.html,externalImages)} className="h-[470px] w-full border-0 bg-white" />
+            </div>:<div className="max-h-[470px] overflow-y-auto whitespace-pre-wrap break-words py-6 text-sm leading-7 text-[var(--foreground)]">{detail.text}</div>}
+            {detail.html && showHtml?<p className="mt-2 text-xs text-[var(--muted)]">Por seguridad, el contenido del correo se muestra sin ejecutar scripts. Las imágenes externas se mantienen bloqueadas hasta que tú decidas cargarlas.</p>:null}
             {detail.attachments.length?<div className="border-t border-[var(--border)] pt-4">
               <p className="mb-3 flex items-center gap-2 text-sm font-semibold text-[var(--foreground)]"><Paperclip size={16}/> Adjuntos recibidos ({detail.attachments.length})</p>
               <div className="grid gap-2 sm:grid-cols-2">
