@@ -167,6 +167,12 @@ export function PwaManager({
     }
     const onFocus = () => void checkVersion()
     const onPageShow = () => void checkVersion()
+    const onWorkerChange = () => void checkVersion()
+    const onWorkerMessage = (event: MessageEvent) => {
+      if (event.data?.type === 'NEDVI_SW_ACTIVATED') void checkVersion()
+    }
+    navigator.serviceWorker?.addEventListener('controllerchange', onWorkerChange)
+    navigator.serviceWorker?.addEventListener('message', onWorkerMessage)
     document.addEventListener('input', onEdit, true)
     document.addEventListener('change', onEdit, true)
     document.addEventListener('reset', onReset, true)
@@ -188,6 +194,8 @@ export function PwaManager({
       window.removeEventListener('focus', onFocus)
       window.removeEventListener('pageshow', onPageShow)
       window.removeEventListener('online', onFocus)
+      navigator.serviceWorker?.removeEventListener('controllerchange', onWorkerChange)
+      navigator.serviceWorker?.removeEventListener('message', onWorkerMessage)
     }
   }, [initialVersion, pathname])
 

@@ -10,7 +10,7 @@ export function currentReleaseInfo() {
   const host =
     process.env.VERCEL_PROJECT_PRODUCTION_URL ||
     process.env.NEXT_PUBLIC_VERCEL_PROJECT_PRODUCTION_URL ||
-    ''
+    'nedvi-os.vercel.app'
   // Only expose a syntactically valid host, with no credentials, path or query.
   const productionUrl = /^[a-z0-9.-]+$/i.test(host) ? `https://${host}` : null
   return { version, productionUrl }

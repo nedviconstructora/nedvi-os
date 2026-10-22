@@ -1,6 +1,6 @@
 // NEDVI OS: Do not cache build-fingerprinted Next.js assets.
 // HTML from a different deployment must fetch matching CSS/JS from the network.
-const CACHE_NAME = 'nedvi-os-static-v5'
+const CACHE_NAME = 'nedvi-os-static-v6'
 const STATIC_ASSETS = ['/icon.png', '/logo-blanco.svg']
 
 self.addEventListener('install', (event) => {
@@ -14,6 +14,12 @@ self.addEventListener('activate', (event) => {
     caches.keys()
       .then((keys) => Promise.all(keys.filter((key) => key !== CACHE_NAME).map((key) => caches.delete(key))))
       .then(() => self.clients.claim())
+      .then(() => self.clients.matchAll({ type: 'window', includeUncontrolled: true }))
+      .then((clients) => {
+        for (const client of clients) {
+          client.postMessage({ type: 'NEDVI_SW_ACTIVATED' })
+        }
+      })
   )
 })
 
