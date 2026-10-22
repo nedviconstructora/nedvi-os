@@ -220,7 +220,7 @@ export function Sidebar({
           </Link>
         ) : null}
 
-        {canUse('dashboard') && user.role !== 'Cliente' ? (
+        {user.role !== 'Cliente' ? (
           <Link
             href="/drive-reports"
             title={collapsed ? 'Reportes Drive' : undefined}

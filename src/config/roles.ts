@@ -130,6 +130,9 @@ export function permissionForPath(pathname: string): ModulePermission | undefine
 }
 
 export function canAccessPath(role: AppRole, pathname: string) {
+  if (pathname === '/drive-reports' || pathname.startsWith('/drive-reports/')) {
+    return role !== 'Cliente'
+  }
   const permission = permissionForPath(pathname)
   return permission ? hasModuleAccess(role, permission) : true
 }

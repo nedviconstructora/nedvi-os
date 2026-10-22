@@ -206,7 +206,12 @@ export function AppShell({ children }: AppShellProps) {
 
   const isDark = theme === 'dark'
   const routePermission = permissionForPath(pathname)
-  const hasRouteAccess = routePermission ? accessUser.permissions.includes(routePermission) : true
+  // Staff-wide report access is independent of the other module permissions.
+  // The API and RLS additionally verify the authenticated user's active staff profile.
+  const isDriveReports = pathname === '/drive-reports' || pathname.startsWith('/drive-reports/')
+  const hasRouteAccess = isDriveReports
+    ? accessUser.role !== 'Cliente'
+    : routePermission ? accessUser.permissions.includes(routePermission) : true
   const isHumanResourcesRoute =
     pathname === '/personnel' || pathname === '/hr-attendance' || pathname === '/payroll'
 
