@@ -103,6 +103,7 @@ const navigationGroups: NavigationGroup[] = [
       { label: 'Avance de obra', href: '/site-progress', icon: BarChart3 },
       { label: 'Reportes diarios', href: '/daily-reports', icon: FileText },
       { label: 'Inspecciones de obra', href: '/inspections', icon: ClipboardList },
+      { label: 'Medidor', href: '/medidor', icon: Ruler },
       { label: 'Asistencias · Trabajadores', href: '/attendance', icon: UsersRound },
       { label: 'Cuadrillas', href: '/crews', icon: UserRound },
     ],
