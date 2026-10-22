@@ -1,6 +1,7 @@
 'use client'
 
 import { FormEvent, useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { createPortal } from 'react-dom'
 import {
   Download,
   Eye,
@@ -302,6 +303,15 @@ export default function DocumentsPage() {
     void getPrivateUrl(previewDocument).then(url => {if(!cancelled) setPreviewUrl(url)}).catch(error => console.error('No se pudo visualizar:',error))
     return () => {cancelled = true}
   }, [previewDocument])
+
+  // Keep dialogs fixed to the viewport, outside AppShell's themed layout.
+  // Prevent the page from scrolling while either dialog is visible.
+  useEffect(() => {
+    if (!open && !previewDocument) return
+    const previousOverflow = document.body.style.overflow
+    document.body.style.overflow = 'hidden'
+    return () => { document.body.style.overflow = previousOverflow }
+  }, [open, previewDocument])
 
   const previewKind = previewDocument
     ? previewDocument.fileType === 'application/pdf' || /\\.pdf$/i.test(previewDocument.fileName)
@@ -622,8 +632,8 @@ export default function DocumentsPage() {
 
       </div>
 
-      {previewDocument ? (
-        <div className="fixed inset-0 z-[65] flex items-center justify-center bg-black/70 p-3 backdrop-blur-sm sm:p-6" role="dialog" aria-modal="true" aria-label={`Vista previa de ${previewDocument.name}`}>
+      {previewDocument && typeof document !== 'undefined' ? createPortal(
+        <div className="fixed inset-0 z-[90] flex items-center justify-center bg-black/70 p-3 backdrop-blur-sm sm:p-6" role="dialog" aria-modal="true" aria-label={`Vista previa de ${previewDocument.name}`}>
           <div className="flex h-[90vh] w-full max-w-6xl flex-col overflow-hidden rounded-2xl border border-[var(--border)] bg-[var(--surface)] shadow-2xl">
             <div className="flex flex-wrap items-center justify-between gap-3 border-b border-[var(--border)] px-4 py-3 sm:px-6">
               <div className="min-w-0">
@@ -652,15 +662,16 @@ export default function DocumentsPage() {
               )}
             </div>
           </div>
-        </div>
+        </div>,
+        document.body,
       ) : null}
 
-      {open ? (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/55 p-4">
-          <div className="max-h-[92vh] w-full max-w-2xl overflow-y-auto rounded-2xl bg-[var(--surface)] p-6 shadow-2xl">
+      {open && typeof document !== 'undefined' ? createPortal(
+        <div className="fixed inset-0 z-[90] flex items-center justify-center overflow-y-auto bg-black/60 p-3 backdrop-blur-[2px] sm:p-6" role="dialog" aria-modal="true" aria-labelledby="nedvi-upload-document-title">
+          <div className="max-h-[calc(100dvh-1.5rem)] w-full max-w-2xl overflow-y-auto rounded-2xl border border-[var(--border)] bg-[var(--surface)] p-4 shadow-2xl sm:p-6">
             <div className="mb-5 flex items-start justify-between gap-4">
               <div>
-                <h2 className="text-xl font-bold text-[var(--foreground)]">
+                <h2 id="nedvi-upload-document-title" className="text-xl font-bold text-[var(--foreground)]">
                   Subir documento
                 </h2>
                 <p className="mt-1 text-sm text-[var(--muted)]">
@@ -788,7 +799,8 @@ export default function DocumentsPage() {
               </div>
             </form>
           </div>
-        </div>
+        </div>,
+        document.body,
       ) : null}
     </AppShell>
   )
