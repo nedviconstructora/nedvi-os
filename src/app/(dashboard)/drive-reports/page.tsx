@@ -132,7 +132,7 @@ export default function DriveReportsPage() {
             <p className="text-xs font-bold uppercase tracking-[0.16em] text-[#5496CC]">Gestión documental</p>
             <h1 className="mt-2 text-3xl font-bold text-[var(--foreground)]">Reportes de Google Drive</h1>
             <p className="mt-2 text-sm text-[var(--muted)]">
-              Consulta los reportes de actividades por año, mes y responsable. Solo lectura.
+              Consulta los reportes de actividades por año, mes y responsable. Haz clic en el nombre de un archivo para abrirlo. Solo lectura.
             </p>
           </div>
           <div className="flex flex-wrap gap-2">
@@ -228,10 +228,20 @@ export default function DriveReportsPage() {
                 </thead>
                 <tbody className="divide-y divide-[var(--border)]">
                   {filtered.map(item => (
-                    <tr key={item.file_id} className="hover:bg-[var(--surface-soft)]">
+                    <tr key={item.file_id} className="transition-colors hover:bg-[var(--surface-soft)]">
                       <td className="px-5 py-3">
-                        <p className="max-w-[340px] truncate font-semibold text-[var(--foreground)]" title={item.name}>{item.name}</p>
-                        <p className="mt-1 text-xs text-[var(--muted)]">{fileKind(item.mime_type)}</p>
+                        <a
+                          href={item.web_view_link}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          title={`Abrir ${item.name} en Google Drive`}
+                          aria-label={`Abrir archivo ${item.name} en una pestaña nueva`}
+                          className="group/file inline-flex max-w-[340px] items-center gap-2 rounded-md font-semibold text-[var(--foreground)] underline-offset-4 transition-colors hover:text-[#267bd4] hover:underline focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#267bd4]"
+                        >
+                          <span className="min-w-0 truncate">{item.name}</span>
+                          <ExternalLink size={14} aria-hidden="true" className="shrink-0 text-[#5496CC] opacity-70 transition-opacity group-hover/file:opacity-100" />
+                        </a>
+                        <p className="mt-1 text-xs text-[var(--muted)]">{fileKind(item.mime_type)} · Clic para abrir</p>
                       </td>
                       <td className="px-5 py-3 text-[var(--foreground)]">{item.staff_name || 'Sin clasificar'}</td>
                       <td className="px-5 py-3 text-[var(--muted)]">
@@ -241,7 +251,7 @@ export default function DriveReportsPage() {
                       <td className="px-5 py-3">
                         <a href={item.web_view_link} target="_blank" rel="noopener noreferrer"
                            className="inline-flex items-center gap-2 rounded-lg border border-[var(--border)] px-3 py-2 font-semibold text-[var(--foreground)] transition hover:border-[#5496CC]">
-                          <ExternalLink size={15} /> Abrir en Drive
+                          <ExternalLink size={15} /> Abrir archivo
                         </a>
                       </td>
                     </tr>
