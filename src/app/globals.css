@@ -2170,29 +2170,42 @@ html.theme-light aside.nedvi-app-sidebar .nedvi-sidebar-brand-title {
 html.theme-light aside.nedvi-app-sidebar .nedvi-sidebar-brand-title span {
   color: #307fba !important;
 }
-html.theme-light aside.nedvi-app-sidebar nav > p,
-html.theme-light aside.nedvi-app-sidebar nav > :is(div,section) > p {
-  color: #617083 !important;
+html.theme-light aside.nedvi-app-sidebar nav > p[class],
+html.theme-light aside.nedvi-app-sidebar nav > :is(div,section) > p[class] {
+  color: #111827 !important;
 }
 html.theme-light aside.nedvi-app-sidebar nav > div.border-t,
 html.theme-light aside.nedvi-app-sidebar nav .border-l {
   border-color: #e2e8f0 !important;
 }
-html.theme-light aside.nedvi-app-sidebar nav :is(a,button) {
+/* The original navigation buttons all carry the Tailwind text-white class.
+   Match its specificity so the old global !important rule cannot hide text on white. */
+html.theme-light aside.nedvi-app-sidebar nav :is(a,button)[class] {
   background: #f2f5f9 !important;
   background-image: none !important;
-  color: #223349 !important;
-  border-color: #e0e6ee !important;
+  color: #111827 !important;
+  border-color: #d7dfe9 !important;
   box-shadow: none !important;
 }
-html.theme-light aside.nedvi-app-sidebar nav :is(a,button):hover {
+html.theme-light aside.nedvi-app-sidebar nav :is(a,button)[class]:hover {
   background: #e7edf5 !important;
   border-color: #c6d4e4 !important;
 }
-html.theme-light aside.nedvi-app-sidebar nav :is(a,button) :is(svg,span) {
-  color: inherit !important;
+html.theme-light aside.nedvi-app-sidebar nav :is(a,button)[class] :is(svg,span) {
+  color: #111827 !important;
   stroke: currentColor;
 }
+
+/* Black-first typography for nested navigation links, including disabled
+   submenu entries and social links.  This must remain after legacy rules. */
+html.theme-light aside.nedvi-app-sidebar nav :is(a,button)[class] :is(span,svg)[class] {
+  color: #111827 !important;
+  -webkit-text-fill-color: #111827 !important;
+}
+html.theme-light aside.nedvi-app-sidebar nav :is(a,button)[class] {
+  -webkit-text-fill-color: #111827 !important;
+}
+
 html.theme-light aside.nedvi-app-sidebar nav .nedvi-sidebar-group[aria-expanded="true"]:not([data-active="true"]) {
   background: #e9f0f8 !important;
   border-color: #cbd9e8 !important;
@@ -2202,7 +2215,7 @@ html.theme-light aside.nedvi-app-sidebar nav .nedvi-sidebar-group[data-active="t
 html.theme-light aside.nedvi-app-sidebar nav .nedvi-sidebar-subitem-active {
   background: #e0efff !important;
   background-image: none !important;
-  color: #145b9a !important;
+  color: #111827 !important;
   border-color: #88b4e8 !important;
   box-shadow: inset 3px 0 #3183c7 !important;
 }
@@ -2217,7 +2230,7 @@ html.theme-light aside.nedvi-app-sidebar nav > div[class*="rounded-xl"][class*="
   background: #f8fafc !important;
 }
 html.theme-light aside.nedvi-app-sidebar nav > div[class*="rounded-xl"][class*="backdrop-blur"] > p {
-  color: #64748b !important;
+  color: #111827 !important;
 }
 html.theme-light aside.nedvi-app-sidebar > button[aria-label*="menú lateral"] {
   background: #ffffff !important;
