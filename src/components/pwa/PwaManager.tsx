@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect, useRef, useState } from 'react'
+import { usePathname } from 'next/navigation'
 import { Download, RefreshCw, WifiOff, X } from 'lucide-react'
 
 type InstallPromptEvent = Event & {
@@ -33,6 +34,7 @@ async function navigateToFreshApp(version: string) {
 }
 
 export function PwaManager({ initialVersion }: { initialVersion: string }) {
+  const pathname = usePathname()
   const [installPrompt, setInstallPrompt] = useState<InstallPromptEvent | null>(null)
   const [online, setOnline] = useState(true)
   const [dismissed, setDismissed] = useState(false)
@@ -77,6 +79,10 @@ export function PwaManager({ initialVersion }: { initialVersion: string }) {
 
   useEffect(() => {
     if (initialVersion === 'development') return
+    // Form edits postpone automatic updates to avoid discarding unsaved work.
+    // A completed client-side navigation means the previous form is gone;
+    // allow the latest deployed version to load on the new screen.
+    editingRef.current = false
     sessionStorage.removeItem('nedvi-auto-update-' + initialVersion)
 
     let cancelled = false
@@ -160,7 +166,7 @@ export function PwaManager({ initialVersion }: { initialVersion: string }) {
       window.removeEventListener('focus', onFocus)
       window.removeEventListener('online', onFocus)
     }
-  }, [initialVersion])
+  }, [initialVersion, pathname])
 
   async function manualCheck() {
     if (manualChecking) return
