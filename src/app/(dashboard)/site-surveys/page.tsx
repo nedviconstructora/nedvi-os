@@ -41,6 +41,7 @@ type SurveyAttachment = {
 
 type SiteSurvey = {
   id: string
+  title: string
   clientName: string
   date: string
   location: string
@@ -71,6 +72,7 @@ function today() {
 
 function emptyForm(): SurveyForm {
   return {
+    title: '',
     clientName: '',
     date: today(),
     location: '',
@@ -120,6 +122,8 @@ function readSurveys(): SiteSurvey[] {
       .filter((item): item is Record<string, unknown> => typeof item === 'object' && item !== null)
       .map((item) => ({
         id: typeof item.id === 'string' ? item.id : crypto.randomUUID(),
+        // Older records had no title; preserve them so users can name them later.
+        title: typeof item.title === 'string' ? item.title : '',
         clientName: typeof item.clientName === 'string' ? item.clientName : '',
         date: typeof item.date === 'string' ? item.date : today(),
         location: typeof item.location === 'string' ? item.location : '',
@@ -276,6 +280,7 @@ export default function SiteSurveysPage() {
     return surveys.filter((survey) =>
       [
         survey.clientName,
+        survey.title,
         survey.location,
         survey.requestedBy,
         survey.performedBy,
@@ -302,6 +307,7 @@ export default function SiteSurveysPage() {
     setEditingId(survey.id)
     setEstimatedTimeUnit(estimated.unit)
     setForm({
+      title: survey.title,
       clientName: clientStillExists ? survey.clientName : '',
       date: survey.date,
       location: survey.location,
@@ -382,6 +388,10 @@ export default function SiteSurveysPage() {
       window.alert('Selecciona un cliente registrado en Clientes.')
       return
     }
+    if (!form.title.trim()) {
+      window.alert('Escribe un nombre para identificar este levantamiento.')
+      return
+    }
     if (!form.description.trim()) return
     if (!form.estimatedTime.trim() || Number(form.estimatedTime) <= 0) {
       window.alert('Captura el número del tiempo estimado.')
@@ -399,6 +409,7 @@ export default function SiteSurveysPage() {
               ...survey,
               ...form,
               clientName: selectedCustomer.company,
+              title: form.title.trim(),
               location: form.location.trim(),
               requestedBy: form.requestedBy.trim(),
               performedBy: form.performedBy.trim(),
@@ -414,6 +425,7 @@ export default function SiteSurveysPage() {
           id: crypto.randomUUID(),
           ...form,
           clientName: selectedCustomer.company,
+          title: form.title.trim(),
           location: form.location.trim(),
           requestedBy: form.requestedBy.trim(),
           performedBy: form.performedBy.trim(),
@@ -436,7 +448,7 @@ export default function SiteSurveysPage() {
   }
 
   function deleteSurvey(survey: SiteSurvey) {
-    if (!window.confirm(`¿Eliminar el levantamiento de ${survey.clientName}?`)) return
+    if (!window.confirm(`¿Eliminar “${survey.title || 'Levantamiento sin nombre'}” de ${survey.clientName}?`)) return
     const next = surveys.filter((item) => item.id !== survey.id)
     writeSurveys(next)
     setSurveys(next)
@@ -465,7 +477,7 @@ export default function SiteSurveysPage() {
 <html lang="es">
 <head>
 <meta charset="utf-8" />
-<title>Levantamiento_${escapeHtml(survey.clientName)}_${escapeHtml(survey.date)}</title>
+<title>Levantamiento_${escapeHtml(survey.title || survey.clientName)}_${escapeHtml(survey.date)}</title>
 <style>
   @page { size: A4 portrait; margin: 0; }
   * { box-sizing: border-box; }
@@ -498,12 +510,13 @@ export default function SiteSurveysPage() {
   <div class="header">
     <div style="display:flex;align-items:center;gap:12px">
       <img class="logo" src="${origin}/icon.png" alt="NEDVI" />
-      <div><h1>LEVANTAMIENTO / VISITA</h1><div class="muted">NEDVI Constructora</div></div>
+      <div><h1>LEVANTAMIENTO / VISITA</h1><div class="muted">NEDVI Constructora</div><div class="muted">${escapeHtml(survey.title || 'Levantamiento sin nombre')}</div></div>
     </div>
     <div style="text-align:right"><strong>${escapeHtml(formatDate(survey.date))}</strong><div class="muted">Comercial y Ventas</div></div>
   </div>
 
   <div class="section"><div class="section-title">Datos generales</div><div class="content grid">
+    <div><div class="label">Nombre del levantamiento</div><div class="value">${escapeHtml(survey.title || 'Levantamiento sin nombre')}</div></div>
     <div><div class="label">Nombre del cliente</div><div class="value">${escapeHtml(survey.clientName)}</div></div>
     <div><div class="label">Fecha</div><div class="value">${escapeHtml(formatDate(survey.date))}</div></div>
     <div><div class="label">Ciudad / Zona</div><div class="value">${escapeHtml(survey.location || 'Sin especificar')}</div></div>
@@ -560,7 +573,7 @@ export default function SiteSurveysPage() {
         <div className="rounded-2xl border border-[var(--border)] bg-[var(--surface)] p-4 shadow-sm">
           <div className="relative max-w-2xl">
             <Search size={17} className="absolute left-4 top-1/2 -translate-y-1/2 text-[var(--muted)]" />
-            <input value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Buscar cliente, ciudad, solicita, realiza o descripción..." className="w-full rounded-xl border border-[var(--border)] bg-transparent py-3 pl-11 pr-4 text-sm text-[var(--foreground)] outline-none focus:border-[#5496CC]" />
+            <input value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Buscar nombre del levantamiento, cliente, ciudad o descripción..." className="w-full rounded-xl border border-[var(--border)] bg-transparent py-3 pl-11 pr-4 text-sm text-[var(--foreground)] outline-none focus:border-[#5496CC]" />
           </div>
         </div>
 
@@ -573,14 +586,15 @@ export default function SiteSurveysPage() {
             </div>
           ) : (
             <div className="overflow-x-auto">
-              <table className="w-full min-w-[1250px] text-left text-sm">
+              <table className="w-full min-w-[1430px] text-left text-sm">
                 <thead className="border-b border-[var(--border)] bg-[var(--surface-soft)] text-xs uppercase tracking-wide text-[var(--muted)]">
-                  <tr><th className="px-5 py-4">Cliente</th><th className="px-5 py-4">Fecha</th><th className="px-5 py-4">Ciudad / Zona</th><th className="px-5 py-4">Solicita</th><th className="px-5 py-4">Realiza</th><th className="px-5 py-4">Ejecución</th><th className="px-5 py-4">Archivos</th><th className="px-5 py-4">Acciones</th></tr>
+                  <tr><th className="px-5 py-4">Cliente</th><th className="px-5 py-4">Nombre del levantamiento</th><th className="px-5 py-4">Fecha</th><th className="px-5 py-4">Ciudad / Zona</th><th className="px-5 py-4">Solicita</th><th className="px-5 py-4">Realiza</th><th className="px-5 py-4">Ejecución</th><th className="px-5 py-4">Archivos</th><th className="px-5 py-4">Acciones</th></tr>
                 </thead>
                 <tbody className="divide-y divide-[var(--border)]">
                   {filtered.map((survey) => (
                     <tr key={survey.id} className="hover:bg-[var(--surface-soft)]">
                       <td className="px-5 py-4 font-semibold text-[var(--foreground)]">{survey.clientName}</td>
+                      <td className="max-w-[300px] px-5 py-4 font-medium text-[var(--foreground)]"><span className="block truncate" title={survey.title || 'Levantamiento sin nombre'}>{survey.title || 'Levantamiento sin nombre'}</span></td>
                       <td className="px-5 py-4 text-[var(--foreground)]">{formatDate(survey.date)}</td>
                       <td className="px-5 py-4 text-[var(--foreground)]">{survey.location || 'Sin especificar'}</td>
                       <td className="px-5 py-4 text-[var(--foreground)]">{survey.requestedBy || 'Sin especificar'}</td>
@@ -625,6 +639,7 @@ export default function SiteSurveysPage() {
                     </select>
                     {customerOptions.length === 0 ? <span className="block text-xs text-amber-500">Primero registra un cliente en Comercial y Ventas → Clientes.</span> : null}
                   </Field>
+                  <Field label="Nombre del levantamiento *"><input required maxLength={120} value={form.title} onChange={(e) => setForm({ ...form, title: e.target.value })} placeholder="Ej. Levantamiento de nave industrial - Etapa 1" className="survey-input" /><span className="mt-1 block text-xs text-[var(--muted)]">Usa un nombre distinto para ordenar las visitas de un mismo cliente.</span></Field>
                   <Field label="Fecha"><input type="date" value={form.date} onChange={(e) => setForm({ ...form, date: e.target.value })} className="survey-input" /></Field>
                   <Field label="Ciudad / Zona"><input value={form.location} onChange={(e) => setForm({ ...form, location: e.target.value })} placeholder="Ej. Tijuana, Ensenada, Tecate..." className="survey-input" /></Field>
                   <Field label="Solicita"><input value={form.requestedBy} onChange={(e) => setForm({ ...form, requestedBy: e.target.value })} placeholder="Quién solicita el levantamiento" className="survey-input" /></Field>
@@ -687,9 +702,9 @@ export default function SiteSurveysPage() {
       {viewing ? createPortal((
         <div className="fixed inset-0 z-[100] flex items-start justify-center overflow-y-auto overscroll-contain bg-slate-950/55 p-2 backdrop-blur-md sm:p-4" role="dialog" aria-modal="true">
           <div className="max-h-[calc(100dvh-1rem)] min-h-0 w-full max-w-5xl overflow-y-auto overscroll-contain sm:max-h-[calc(100dvh-2rem)] rounded-2xl bg-[var(--surface)] shadow-2xl">
-            <div className="sticky top-0 z-10 flex items-start justify-between border-b border-[var(--border)] bg-[var(--surface)] p-5"><div><p className="text-xs font-semibold uppercase tracking-[0.14em] text-[#5496CC]">Levantamiento · {formatDate(viewing.date)}</p><h2 className="mt-1 text-2xl font-bold text-[var(--foreground)]">{viewing.clientName}</h2><p className="mt-1 text-sm text-[var(--muted)]">{viewing.location || 'Sin ciudad / zona'}</p></div><button type="button" onClick={() => setViewing(null)} aria-label="Cerrar detalles del levantamiento" title="Cerrar" className="rounded-lg p-2 text-[var(--muted)] hover:bg-[var(--surface-soft)]"><X size={18} /></button></div>
+            <div className="sticky top-0 z-10 flex items-start justify-between border-b border-[var(--border)] bg-[var(--surface)] p-5"><div><p className="text-xs font-semibold uppercase tracking-[0.14em] text-[#5496CC]">Levantamiento · {formatDate(viewing.date)}</p><h2 className="mt-1 text-2xl font-bold text-[var(--foreground)]">{viewing.title || 'Levantamiento sin nombre'}</h2><p className="mt-1 text-sm text-[var(--muted)]">{viewing.clientName} · {viewing.location || 'Sin ciudad / zona'}</p></div><button type="button" onClick={() => setViewing(null)} aria-label="Cerrar detalles del levantamiento" title="Cerrar" className="rounded-lg p-2 text-[var(--muted)] hover:bg-[var(--surface-soft)]"><X size={18} /></button></div>
             <div className="space-y-5 p-5">
-              <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4"><Info label="Fecha" value={formatDate(viewing.date)} /><Info label="Ciudad / Zona" value={viewing.location || 'Sin especificar'} /><Info label="Solicita" value={viewing.requestedBy || 'Sin especificar'} /><Info label="Realiza" value={viewing.performedBy || 'Sin especificar'} /></div>
+              <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4"><Info label="Cliente" value={viewing.clientName} /><Info label="Fecha" value={formatDate(viewing.date)} /><Info label="Ciudad / Zona" value={viewing.location || 'Sin especificar'} /><Info label="Solicita" value={viewing.requestedBy || 'Sin especificar'} /><Info label="Realiza" value={viewing.performedBy || 'Sin especificar'} /></div>
               <section className="rounded-2xl border border-[var(--border)] p-5"><p className="text-xs font-semibold uppercase tracking-wide text-[var(--muted)]">Descripción</p><p className="mt-3 whitespace-pre-wrap text-sm leading-6 text-[var(--foreground)]">{viewing.description}</p></section>
               <div className="grid gap-4 md:grid-cols-2"><section className="rounded-2xl border border-[var(--border)] p-5"><p className="text-xs font-semibold uppercase tracking-wide text-[var(--muted)]">Tiempo de ejecución</p><div className="mt-3 flex flex-wrap gap-2">{viewing.executionTimes.length ? viewing.executionTimes.map((value) => <span key={value} className="rounded-full bg-[#5496CC]/10 px-3 py-1.5 text-xs font-semibold text-[#5496CC]">{value}</span>) : <span className="text-sm text-[var(--muted)]">Sin opciones</span>}</div></section><Info label="Tiempo estimado" value={viewing.estimatedTime || 'Sin especificar'} large /></div>
               {viewing.drawing ? <section className="rounded-2xl border border-[var(--border)] p-5"><p className="text-xs font-semibold uppercase tracking-wide text-[var(--muted)]">Croquis / Plano</p><img src={viewing.drawing} alt="Croquis del levantamiento" className="mt-4 max-h-[480px] w-full rounded-xl border border-[var(--border)] bg-white object-contain" /></section> : null}
