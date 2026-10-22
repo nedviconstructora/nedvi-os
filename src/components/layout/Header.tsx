@@ -37,7 +37,7 @@ type HeaderProps = {
 
 function BrandMark() {
   return (
-    <span className="flex h-8 w-8 shrink-0 items-center justify-center overflow-hidden rounded-[9px] bg-white/10 p-1">
+    <span className="nedvi-header-brand-mark flex h-8 w-8 shrink-0 items-center justify-center overflow-hidden rounded-[9px] bg-white/10 p-1">
       <img src="/logo-blanco.svg" alt="" aria-hidden="true" className="h-full w-full object-contain" />
     </span>
   )
@@ -334,7 +334,7 @@ export function Header({ onOpenMenu, isDark, onToggleTheme, showCompanyLogo = fa
         <button
           type="button"
           onClick={onOpenMenu}
-          className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-white/10 text-white transition hover:bg-white/20 lg:hidden"
+          className="nedvi-header-action flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-white/10 text-white transition hover:bg-white/20 lg:hidden"
           aria-label="Abrir navegación"
         >
           <Menu size={23} strokeWidth={1.8} />
@@ -342,12 +342,12 @@ export function Header({ onOpenMenu, isDark, onToggleTheme, showCompanyLogo = fa
 
         <div className="flex min-w-0 items-center gap-1.5 lg:hidden sm:gap-2.5">
           <BrandMark />
-          <span className="truncate text-[14px] font-semibold tracking-[-0.04em] text-white sm:text-[15px]">
+          <span className="nedvi-header-title truncate text-[14px] font-semibold tracking-[-0.04em] text-white sm:text-[15px]">
             NEDVI <span className="font-normal text-[#9ED2F8]">OS</span>
           </span>
         </div>
 
-        <div className="relative hidden w-[min(360px,32vw)] md:block">
+        <div className="nedvi-header-search relative hidden w-[min(360px,32vw)] md:block">
           <Search className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 text-white/55" size={19} strokeWidth={1.8} />
           <input
             type="search"
@@ -374,7 +374,7 @@ export function Header({ onOpenMenu, isDark, onToggleTheme, showCompanyLogo = fa
         <button
           type="button"
           onClick={onToggleTheme}
-          className="hidden rounded-xl p-2.5 text-[#9ED2F8] transition hover:bg-white/10 hover:text-white sm:inline-flex"
+          className="nedvi-header-action hidden rounded-xl p-2.5 text-[#9ED2F8] transition hover:bg-white/10 hover:text-white sm:inline-flex"
           aria-label={isDark ? 'Cambiar a tema claro' : 'Cambiar a tema oscuro'}
           aria-pressed={isDark}
           title={isDark ? 'Tema claro' : 'Tema oscuro'}
@@ -386,7 +386,7 @@ export function Header({ onOpenMenu, isDark, onToggleTheme, showCompanyLogo = fa
           type="button"
           onClick={() => void refreshApp()}
           disabled={refreshing}
-          className="hidden rounded-xl p-2.5 text-white/70 transition hover:bg-white/10 hover:text-white disabled:cursor-wait disabled:opacity-60 sm:inline-flex"
+          className="nedvi-header-action hidden rounded-xl p-2.5 text-white/70 transition hover:bg-white/10 hover:text-white disabled:cursor-wait disabled:opacity-60 sm:inline-flex"
           aria-label="Actualizar NEDVI OS"
           title={refreshing ? 'Actualizando...' : 'Actualizar información'}
         >
@@ -403,7 +403,7 @@ export function Header({ onOpenMenu, isDark, onToggleTheme, showCompanyLogo = fa
           <button
             type="button"
             onClick={() => setNotificationsOpen((current) => !current)}
-            className={`relative flex h-10 w-10 items-center justify-center rounded-xl transition sm:h-auto sm:w-auto sm:p-2.5 ${
+            className={`nedvi-header-action relative flex h-10 w-10 items-center justify-center rounded-xl transition sm:h-auto sm:w-auto sm:p-2.5 ${
               notificationsOpen
                 ? 'bg-white/10 text-[#9ED2F8]'
                 : 'text-white/70 hover:bg-white/10 hover:text-white'
@@ -553,7 +553,7 @@ export function Header({ onOpenMenu, isDark, onToggleTheme, showCompanyLogo = fa
 
         <div className="mx-2 hidden h-6 w-px bg-[var(--border)] sm:block" />
 
-        <div className="ml-0 flex items-center gap-1 rounded-xl border border-white/[0.10] bg-white/[0.05] p-1 sm:ml-1 sm:gap-2.5 sm:px-3 sm:py-1.5">
+        <div className="nedvi-header-profile ml-0 flex items-center gap-1 rounded-xl border border-white/[0.10] bg-white/[0.05] p-1 sm:ml-1 sm:gap-2.5 sm:px-3 sm:py-1.5">
           <input
             ref={avatarInputRef}
             type="file"
@@ -598,17 +598,17 @@ export function Header({ onOpenMenu, isDark, onToggleTheme, showCompanyLogo = fa
           </button>
 
           <div className="hidden min-w-0 sm:block">
-            <p className="max-w-44 truncate text-sm font-semibold text-white">
+            <p className="nedvi-header-user-name max-w-44 truncate text-sm font-semibold text-white">
               {user.name}
             </p>
-            <p className="mt-0.5 max-w-44 truncate text-xs font-medium text-[#9ED2F8]">
+            <p className="nedvi-header-user-role mt-0.5 max-w-44 truncate text-xs font-medium text-[#9ED2F8]">
               {user.role}
             </p>
             <button
               type="button"
               onClick={() => avatarInputRef.current?.click()}
               disabled={uploadingAvatar}
-              className="mt-1 text-[10px] font-semibold text-white/60 transition hover:text-white disabled:opacity-60"
+              className="nedvi-header-avatar-link mt-1 text-[10px] font-semibold text-white/60 transition hover:text-white disabled:opacity-60"
             >
               {uploadingAvatar ? 'Subiendo...' : avatarUrl ? 'Cambiar foto' : 'Agregar foto'}
             </button>
@@ -616,7 +616,7 @@ export function Header({ onOpenMenu, isDark, onToggleTheme, showCompanyLogo = fa
         </div>
 
         <button type="button" onClick={() => { clearAccessSession(); router.replace('/login') }}
-          className="ml-0 inline-flex h-10 w-9 items-center justify-center gap-2 rounded-lg border border-white/15 px-1 text-xs font-semibold text-white/85 transition hover:border-white/25 hover:bg-white/10 hover:text-white sm:ml-1 sm:w-auto sm:px-3"
+          className="nedvi-header-action ml-0 inline-flex h-10 w-9 items-center justify-center gap-2 rounded-lg border border-white/15 px-1 text-xs font-semibold text-white/85 transition hover:border-white/25 hover:bg-white/10 hover:text-white sm:ml-1 sm:w-auto sm:px-3"
           aria-label="Cerrar sesión" title="Cerrar sesión">
           <LogOut size={20} strokeWidth={1.8} />
           <span className="hidden lg:inline">Cerrar sesión</span>

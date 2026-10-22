@@ -145,7 +145,7 @@ const navigationGroups: NavigationGroup[] = [
 
 function BrandMark() {
   return (
-    <span className="flex h-16 w-16 shrink-0 items-center justify-center">
+    <span className="nedvi-sidebar-brand-logo flex h-16 w-16 shrink-0 items-center justify-center">
       <img
         src="/icon.png"
         alt="NEDVI Constructora"
@@ -190,7 +190,7 @@ export function Sidebar({
   )
 
   const primaryItemClasses = (active: boolean) =>
-    `nedvi-sidebar-primary group relative flex h-11 w-full items-center gap-3 rounded-xl border px-3 text-left text-[13px] font-medium text-white backdrop-blur-md transition duration-200 ${
+    `nedvi-sidebar-primary ${active ? 'nedvi-sidebar-active' : ''} group relative flex h-11 w-full items-center gap-3 rounded-xl border px-3 text-left text-[13px] font-medium text-white backdrop-blur-md transition duration-200 ${
       active
         ? 'border-[#53A8FF]/70 bg-[linear-gradient(90deg,#1677e8,#2796ff)] shadow-[0_10px_24px_rgba(16,105,220,0.28)]'
         : 'border-white/[0.08] bg-white/[0.06] hover:bg-white/[0.12]'
@@ -210,7 +210,7 @@ export function Sidebar({
       <div className={`relative z-10 flex h-[112px] shrink-0 items-center border-b border-white/10 px-4 ${collapsed ? 'lg:justify-center lg:px-0' : 'justify-between'}`}>
         <div className={`flex items-center gap-3 overflow-hidden ${collapsed ? 'lg:w-16 lg:gap-0' : ''}`}>
           <BrandMark />
-          <span className={`whitespace-nowrap text-[27px] font-bold tracking-[-0.045em] text-white transition-opacity duration-200 ${collapsed ? 'lg:hidden' : 'opacity-100'}`}>
+          <span className={`nedvi-sidebar-brand-title whitespace-nowrap text-[27px] font-bold tracking-[-0.045em] text-white transition-opacity duration-200 ${collapsed ? 'lg:hidden' : 'opacity-100'}`}>
             NEDVI <span className="font-medium text-[#9ED2F8]">OS</span>
           </span>
         </div>
@@ -242,7 +242,7 @@ export function Sidebar({
                   type="button"
                   onClick={() => setOpenGroups((current) => ({ ...current, [group.label]: !current[group.label] }))}
                   title={collapsed ? group.label : undefined}
-                  className={`group flex h-11 w-full items-center gap-3 rounded-xl border px-3 text-left text-[13px] font-medium text-white backdrop-blur-md transition duration-200 ${
+                  className={`nedvi-sidebar-group group flex h-11 w-full items-center gap-3 rounded-xl border px-3 text-left text-[13px] font-medium text-white backdrop-blur-md transition duration-200 ${
                     groupActive
                       ? 'border-[#53A8FF]/65 bg-[linear-gradient(90deg,rgba(22,119,232,.95),rgba(39,150,255,.88))] shadow-[0_10px_22px_rgba(16,105,220,.22)]'
                       : isOpen
@@ -250,6 +250,7 @@ export function Sidebar({
                         : 'border-white/[0.07] bg-white/[0.05] hover:bg-white/[0.11]'
                   } ${collapsed ? 'lg:justify-center lg:gap-0 lg:px-0' : ''}`}
                   aria-expanded={isOpen}
+                  data-active={groupActive ? 'true' : 'false'}
                 >
                   <GroupIcon size={18} strokeWidth={groupActive ? 2 : 1.8} className="shrink-0 text-white" />
                   <span className={`min-w-0 flex-1 truncate whitespace-nowrap transition-opacity duration-200 ${collapsed ? 'lg:hidden' : 'opacity-100'}`}>{group.label}</span>

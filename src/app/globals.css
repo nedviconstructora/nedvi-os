@@ -2141,3 +2141,147 @@ textarea {
   background: #f0f3f7 !important;
   color: #192431 !important;
 }
+
+/* NEDVI OS: white navigation chrome in LIGHT theme only.
+   Scoped rules outrank legacy forced-navy / text-white utilities.
+   Dark-theme graphite navigation is deliberately unchanged. */
+html.theme-light aside.nedvi-app-sidebar {
+  background: #ffffff !important;
+  background-image: none !important;
+  color: #1e293b !important;
+  border-right: 1px solid #e2e8f0 !important;
+  box-shadow: 8px 0 28px rgba(31, 48, 72, .06) !important;
+}
+html.theme-light aside.nedvi-app-sidebar > .pointer-events-none {
+  opacity: 0 !important;
+}
+html.theme-light aside.nedvi-app-sidebar > div.border-b {
+  border-color: #e2e8f0 !important;
+}
+html.theme-light aside.nedvi-app-sidebar .nedvi-sidebar-brand-logo {
+  background: #2d343d;
+  border-radius: 14px;
+  margin-right: 2px;
+  box-shadow: 0 4px 12px rgba(20, 35, 50, .08);
+}
+html.theme-light aside.nedvi-app-sidebar .nedvi-sidebar-brand-title {
+  color: #1c2b3d !important;
+}
+html.theme-light aside.nedvi-app-sidebar .nedvi-sidebar-brand-title span {
+  color: #307fba !important;
+}
+html.theme-light aside.nedvi-app-sidebar nav > p,
+html.theme-light aside.nedvi-app-sidebar nav > :is(div,section) > p {
+  color: #617083 !important;
+}
+html.theme-light aside.nedvi-app-sidebar nav > div.border-t,
+html.theme-light aside.nedvi-app-sidebar nav .border-l {
+  border-color: #e2e8f0 !important;
+}
+html.theme-light aside.nedvi-app-sidebar nav :is(a,button) {
+  background: #f2f5f9 !important;
+  background-image: none !important;
+  color: #223349 !important;
+  border-color: #e0e6ee !important;
+  box-shadow: none !important;
+}
+html.theme-light aside.nedvi-app-sidebar nav :is(a,button):hover {
+  background: #e7edf5 !important;
+  border-color: #c6d4e4 !important;
+}
+html.theme-light aside.nedvi-app-sidebar nav :is(a,button) :is(svg,span) {
+  color: inherit !important;
+  stroke: currentColor;
+}
+html.theme-light aside.nedvi-app-sidebar nav .nedvi-sidebar-group[aria-expanded="true"]:not([data-active="true"]) {
+  background: #e9f0f8 !important;
+  border-color: #cbd9e8 !important;
+}
+html.theme-light aside.nedvi-app-sidebar nav .nedvi-sidebar-primary.nedvi-sidebar-active,
+html.theme-light aside.nedvi-app-sidebar nav .nedvi-sidebar-group[data-active="true"],
+html.theme-light aside.nedvi-app-sidebar nav .nedvi-sidebar-subitem-active {
+  background: #e0efff !important;
+  background-image: none !important;
+  color: #145b9a !important;
+  border-color: #88b4e8 !important;
+  box-shadow: inset 3px 0 #3183c7 !important;
+}
+html.theme-light aside.nedvi-app-sidebar nav .nedvi-sidebar-primary.nedvi-sidebar-active > span.absolute {
+  background-color: #3183c7 !important;
+}
+html.theme-light aside.nedvi-app-sidebar nav button:disabled {
+  opacity: .55;
+}
+html.theme-light aside.nedvi-app-sidebar nav > div[class*="rounded-xl"][class*="backdrop-blur"] {
+  border-color: #e2e8f0 !important;
+  background: #f8fafc !important;
+}
+html.theme-light aside.nedvi-app-sidebar nav > div[class*="rounded-xl"][class*="backdrop-blur"] > p {
+  color: #64748b !important;
+}
+html.theme-light aside.nedvi-app-sidebar > button[aria-label*="menú lateral"] {
+  background: #ffffff !important;
+  color: #334155 !important;
+  border-color: #cbd5e1 !important;
+  box-shadow: 0 5px 14px rgba(18, 39, 62, .14) !important;
+}
+html.theme-light aside.nedvi-app-sidebar > button[aria-label*="menú lateral"]:hover {
+  background: #eff6ff !important;
+}
+
+/* Header stays white and readable without recoloring its notification panel
+   or the white marks shown on dark avatar/logo tiles. */
+html.theme-light header.nedvi-app-header {
+  background: #ffffff !important;
+  background-image: none !important;
+  border-color: #e2e8f0 !important;
+  color: #1e293b !important;
+  box-shadow: 0 5px 20px rgba(26, 52, 85, .045) !important;
+}
+html.theme-light header.nedvi-app-header .nedvi-header-brand-mark {
+  background: #2d343d !important;
+}
+html.theme-light header.nedvi-app-header .nedvi-header-title,
+html.theme-light header.nedvi-app-header .nedvi-header-user-name,
+html.theme-light header.nedvi-app-header [aria-label="NEDVI Constructora"] > span:last-child {
+  color: #1e293b !important;
+}
+html.theme-light header.nedvi-app-header .nedvi-header-title > span,
+html.theme-light header.nedvi-app-header .nedvi-header-user-role {
+  color: #2e7ab6 !important;
+}
+html.theme-light header.nedvi-app-header .nedvi-header-search input {
+  background: #f4f7fb !important;
+  color: #1e293b !important;
+  -webkit-text-fill-color: #1e293b !important;
+  border-color: #d7e0eb !important;
+  caret-color: #1e293b;
+}
+html.theme-light header.nedvi-app-header .nedvi-header-search input::placeholder {
+  color: #64748b !important;
+  -webkit-text-fill-color: #64748b !important;
+}
+html.theme-light header.nedvi-app-header .nedvi-header-search :is(svg,kbd) {
+  color: #64748b !important;
+  border-color: #d7e0eb !important;
+}
+html.theme-light header.nedvi-app-header .nedvi-header-action {
+  color: #334155 !important;
+  border-color: #d7e0eb !important;
+  background-color: transparent !important;
+}
+html.theme-light header.nedvi-app-header .nedvi-header-action:hover,
+html.theme-light header.nedvi-app-header .nedvi-header-action[aria-expanded="true"] {
+  background-color: #edf4fb !important;
+  color: #195b94 !important;
+}
+html.theme-light header.nedvi-app-header .nedvi-header-profile {
+  background: #f8fafc !important;
+  border-color: #e1e8f0 !important;
+}
+html.theme-light header.nedvi-app-header .nedvi-header-avatar-link {
+  color: #56657a !important;
+}
+html.theme-light header.nedvi-app-header .nedvi-header-avatar-link:hover {
+  color: #1d65a4 !important;
+}
