@@ -94,6 +94,7 @@ export function hasModuleAccess(role: AppRole, permission: ModulePermission) {
 const ROUTE_PERMISSIONS: Array<{ prefix: string; permission: ModulePermission }> = [
   { prefix: '/client', permission: 'client-portal' },
   { prefix: '/dashboard', permission: 'dashboard' },
+  { prefix: '/drive-reports', permission: 'dashboard' },
   { prefix: '/mail', permission: 'commercial' },
   { prefix: '/crm', permission: 'commercial' },
   { prefix: '/folio-search', permission: 'commercial' },

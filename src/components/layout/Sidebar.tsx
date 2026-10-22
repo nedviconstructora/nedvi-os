@@ -1,7 +1,7 @@
 'use client'
 
 import Link from 'next/link'
-import { useEffect, useState } from 'react'
+import { FolderOpen, useEffect, useState } from 'react'
 import { usePathname, useRouter } from 'next/navigation'
 import type { LucideIcon } from 'lucide-react'
 import {
@@ -216,6 +216,18 @@ export function Sidebar({
             {isPathActive('/dashboard') ? <span className="absolute left-0 h-5 w-0.5 rounded-r-full bg-white" /> : null}
             <LayoutDashboard size={18} strokeWidth={isPathActive('/dashboard') ? 2 : 1.8} className="shrink-0 text-white" />
             <span className={`whitespace-nowrap transition-opacity duration-200 ${collapsed ? 'lg:hidden' : 'opacity-100'}`}>Inicio</span>
+          </Link>
+        ) : null}
+
+        {canUse('dashboard') && user.role !== 'Cliente' ? (
+          <Link
+            href="/drive-reports"
+            title={collapsed ? 'Reportes Drive' : undefined}
+            onClick={onCloseMobile}
+            className={primaryItemClasses(isPathActive('/drive-reports')) + ' mt-2'}
+          >
+            <FolderOpen size={18} className="shrink-0" />
+            <span className={collapsed ? 'lg:hidden' : 'opacity-100'}>Reportes Drive</span>
           </Link>
         ) : null}
 
