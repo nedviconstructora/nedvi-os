@@ -1,5 +1,6 @@
 import type { Metadata, Viewport } from 'next'
 import { PwaManager } from '@/components/pwa/PwaManager'
+import { currentReleaseInfo } from '@/lib/app-release'
 import './globals.css'
 
 export const metadata: Metadata = {
@@ -79,7 +80,7 @@ export default function RootLayout({
           </div>
         </div>
         {children}
-        <PwaManager initialVersion={process.env.VERCEL_GIT_COMMIT_SHA || process.env.NEXT_PUBLIC_APP_VERSION || 'development'} />
+        <PwaManager {...currentReleaseInfo()} />
       </body>
     </html>
   )

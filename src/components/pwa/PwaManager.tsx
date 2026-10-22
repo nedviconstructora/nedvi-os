@@ -33,7 +33,13 @@ async function navigateToFreshApp(version: string) {
   window.location.replace(url.toString())
 }
 
-export function PwaManager({ initialVersion }: { initialVersion: string }) {
+export function PwaManager({
+  initialVersion,
+  productionUrl,
+}: {
+  initialVersion: string
+  productionUrl?: string | null
+}) {
   const pathname = usePathname()
   const [installPrompt, setInstallPrompt] = useState<InstallPromptEvent | null>(null)
   const [online, setOnline] = useState(true)
@@ -43,11 +49,17 @@ export function PwaManager({ initialVersion }: { initialVersion: string }) {
   const [manualStatus, setManualStatus] = useState('')
   const [manualChecking, setManualChecking] = useState(false)
   const [standalone, setStandalone] = useState(false)
-  const editingRef = useRef(false)
+  const [hostname, setHostname] = useState('')
+  const [serverVersion, setServerVersion] = useState('')
+  const [showDiagnostics, setShowDiagnostics] = useState(false)
+  const dirtyFormRef = useRef<HTMLElement | null>(null)
+  const officialHostname = productionUrl ? new URL(productionUrl).hostname : ''
+  const differentDomain = Boolean(hostname && officialHostname && hostname !== officialHostname)
 
   useEffect(() => {
     setOnline(navigator.onLine)
     setStandalone(window.matchMedia('(display-mode: standalone)').matches)
+    setHostname(window.location.hostname)
 
     if ('serviceWorker' in navigator) {
       navigator.serviceWorker.register('/sw.js').catch((error) => {
@@ -78,11 +90,8 @@ export function PwaManager({ initialVersion }: { initialVersion: string }) {
   }, [])
 
   useEffect(() => {
-    if (initialVersion === 'development') return
-    // Form edits postpone automatic updates to avoid discarding unsaved work.
-    // A completed client-side navigation means the previous form is gone;
-    // allow the latest deployed version to load on the new screen.
-    editingRef.current = false
+    // Form edits postpone updates, but a completed navigation allows the next check.
+    dirtyFormRef.current = null
     sessionStorage.removeItem('nedvi-auto-update-' + initialVersion)
 
     let cancelled = false
@@ -102,7 +111,14 @@ export function PwaManager({ initialVersion }: { initialVersion: string }) {
         })
         if (!response.ok) return
         const data = (await response.json()) as { version?: string }
-        if (cancelled || !data.version || data.version === 'development' || data.version === initialVersion) return
+        if (cancelled || !data.version) return
+        setServerVersion(data.version)
+        if (data.version === 'development' || initialVersion === 'development') return
+        if (data.version === initialVersion) {
+          pendingVersion = ''
+          setUpdateAvailable(false)
+          return
+        }
         pendingVersion = data.version
         setLatestVersion(data.version)
         setUpdateAvailable(true)
@@ -123,7 +139,9 @@ export function PwaManager({ initialVersion }: { initialVersion: string }) {
     const attemptUpdate = () => {
       if (!pendingVersion || cancelled || reloadScheduled || !navigator.onLine || document.visibilityState !== 'visible') return
       // Never interrupt a form after the user has started editing it.
-      if (editingRef.current || editingNow()) return
+      // A form removed after saving/closing must not block updates forever.
+      if (dirtyFormRef.current && !dirtyFormRef.current.isConnected) dirtyFormRef.current = null
+      if (dirtyFormRef.current || editingNow()) return
       const guard = 'nedvi-auto-update-' + pendingVersion
       const lastAttempt = Number(sessionStorage.getItem(guard) || 0)
       // Prevent a redirect loop, while allowing another attempt after a failed update.
@@ -135,9 +153,11 @@ export function PwaManager({ initialVersion }: { initialVersion: string }) {
 
     const onEdit = (event: Event) => {
       const target = event.target
-      if (target instanceof HTMLElement && target.closest('form, [contenteditable="true"]')) editingRef.current = true
+      if (!(target instanceof HTMLElement)) return
+      const form = target.closest<HTMLElement>('form, [contenteditable="true"]')
+      if (form) dirtyFormRef.current = form
     }
-    const onReset = () => { editingRef.current = false; attemptUpdate() }
+    const onReset = () => { dirtyFormRef.current = null; attemptUpdate() }
     const onBlur = () => attemptUpdate()
     const onVisibility = () => {
       if (document.visibilityState === 'visible') {
@@ -146,14 +166,16 @@ export function PwaManager({ initialVersion }: { initialVersion: string }) {
       }
     }
     const onFocus = () => void checkVersion()
+    const onPageShow = () => void checkVersion()
     document.addEventListener('input', onEdit, true)
     document.addEventListener('change', onEdit, true)
     document.addEventListener('reset', onReset, true)
     document.addEventListener('focusout', onBlur, true)
     document.addEventListener('visibilitychange', onVisibility)
     window.addEventListener('focus', onFocus)
+    window.addEventListener('pageshow', onPageShow)
     window.addEventListener('online', onFocus)
-    const interval = window.setInterval(() => void checkVersion(), 30_000)
+    const interval = window.setInterval(() => void checkVersion(), 15_000)
     void checkVersion()
     return () => {
       cancelled = true
@@ -164,6 +186,7 @@ export function PwaManager({ initialVersion }: { initialVersion: string }) {
       document.removeEventListener('focusout', onBlur, true)
       document.removeEventListener('visibilitychange', onVisibility)
       window.removeEventListener('focus', onFocus)
+      window.removeEventListener('pageshow', onPageShow)
       window.removeEventListener('online', onFocus)
     }
   }, [initialVersion, pathname])
@@ -185,6 +208,7 @@ export function PwaManager({ initialVersion }: { initialVersion: string }) {
       })
       if (!response.ok) throw new Error('La comprobación no está disponible')
       const data = (await response.json()) as { version?: string }
+      setServerVersion(data.version ?? '')
       if (!data.version || data.version === 'development') {
         setManualStatus('El servidor no informó una versión publicada.')
       } else if (data.version !== initialVersion) {
@@ -192,7 +216,9 @@ export function PwaManager({ initialVersion }: { initialVersion: string }) {
         setUpdateAvailable(true)
         setManualStatus('Nueva versión disponible. Pulsa Actualizar app.')
       } else {
-        setManualStatus('NEDVI OS ya está en la última versión publicada.')
+        setManualStatus(differentDomain
+          ? 'Esta instalación usa otra dirección. Revisa la URL oficial.'
+          : 'Esta instalación indica la misma versión. Si faltan cambios, usa Forzar recarga.')
       }
     } catch {
       setManualStatus('No fue posible comprobar la versión. Inténtalo de nuevo.')
@@ -210,13 +236,38 @@ export function PwaManager({ initialVersion }: { initialVersion: string }) {
 
   return (
     <>
-      {standalone ? (
-        <div className="fixed bottom-4 left-4 z-[80] flex max-w-[calc(100vw-2rem)] items-center gap-2 rounded-xl border border-[var(--border)] bg-[var(--surface)] px-2 py-2 text-[var(--foreground)] shadow-lg">
-          <button type="button" onClick={() => void manualCheck()} disabled={manualChecking} className="inline-flex items-center gap-2 rounded-lg px-3 py-2 text-xs font-semibold hover:bg-[var(--surface-soft)] disabled:opacity-60">
-            <RefreshCw size={15} className={manualChecking ? 'animate-spin' : ''} />
-            {manualChecking ? 'Comprobando...' : 'Buscar actualización'}
-          </button>
-          {manualStatus ? <span role="status" className="max-w-56 text-xs text-[var(--muted)]">{manualStatus}</span> : null}
+      {(standalone || differentDomain) ? (
+        <div className="fixed bottom-4 left-4 z-[80] flex max-w-[calc(100vw-2rem)] flex-col gap-2 rounded-xl border border-[var(--border)] bg-[var(--surface)] px-3 py-2 text-[var(--foreground)] shadow-lg">
+          {differentDomain ? (
+            <div role="alert" className="max-w-sm text-xs leading-5 text-amber-500">
+              Esta instalación usa una dirección distinta de producción.
+              {productionUrl ? (
+                <> <a href={productionUrl} target="_blank" rel="noopener noreferrer" className="font-bold underline">Abrir NEDVI OS oficial</a></>
+              ) : null}
+              <span className="block text-[var(--muted)]">Si guardaste levantamientos aquí, no borres esta instalación: sus registros locales no se transfieren automáticamente a otro dominio.</span>
+            </div>
+          ) : null}
+          <div className="flex flex-wrap items-center gap-1">
+            <button type="button" onClick={() => void manualCheck()} disabled={manualChecking} className="inline-flex items-center gap-2 rounded-lg px-2 py-2 text-xs font-semibold hover:bg-[var(--surface-soft)] disabled:opacity-60">
+              <RefreshCw size={15} className={manualChecking ? 'animate-spin' : ''} />
+              {manualChecking ? 'Comprobando...' : 'Buscar actualización'}
+            </button>
+            <button type="button" onClick={() => void navigateToFreshApp(serverVersion || String(Date.now()))} className="rounded-lg border border-[var(--border)] px-2 py-2 text-xs font-semibold hover:bg-[var(--surface-soft)]">
+              Forzar recarga
+            </button>
+            <button type="button" aria-expanded={showDiagnostics} onClick={() => setShowDiagnostics(value => !value)} className="rounded-lg px-2 py-2 text-xs font-semibold hover:bg-[var(--surface-soft)]">
+              {showDiagnostics ? 'Ocultar datos' : 'Diagnóstico'}
+            </button>
+          </div>
+          {showDiagnostics ? (
+            <div className="max-w-sm space-y-1 rounded-lg bg-[var(--surface-soft)] p-2 text-[11px] text-[var(--muted)]">
+              <p>Versión cargada: <strong className="text-[var(--foreground)]">{initialVersion.slice(0, 12)}</strong></p>
+              <p>Versión del servidor: <strong className="text-[var(--foreground)]">{serverVersion ? serverVersion.slice(0, 12) : 'Sin comprobar'}</strong></p>
+              <p className="break-all">Dominio de esta instalación: {hostname || 'Sin detectar'}</p>
+              <p className="break-all">Dominio oficial: {officialHostname || 'No configurado en Vercel'}</p>
+            </div>
+          ) : null}
+          {manualStatus ? <span role="status" className="max-w-sm text-xs text-[var(--muted)]">{manualStatus}</span> : null}
         </div>
       ) : null}
       {updateAvailable ? (
