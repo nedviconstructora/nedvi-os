@@ -35,6 +35,8 @@ export default function RootLayout({
 }: Readonly<{
   children: React.ReactNode
 }>) {
+  const release = currentReleaseInfo()
+
   return (
     <html lang="es" suppressHydrationWarning>
       <head>
@@ -80,7 +82,7 @@ export default function RootLayout({
           </div>
         </div>
         {children}
-        <PwaManager {...currentReleaseInfo()} />
+        <PwaManager initialVersion={release.version} productionUrl={release.productionUrl} />
       </body>
     </html>
   )
