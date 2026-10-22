@@ -1,7 +1,7 @@
 'use client'
 
 import Link from 'next/link'
-import { FolderOpen, useEffect, useState } from 'react'
+import { useEffect, useState } from 'react'
 import { usePathname, useRouter } from 'next/navigation'
 import type { LucideIcon } from 'lucide-react'
 import {
@@ -18,6 +18,7 @@ import {
   Facebook,
   FileText,
   FolderKanban,
+  FolderOpen,
   Globe2,
   HardHat,
   Instagram,
