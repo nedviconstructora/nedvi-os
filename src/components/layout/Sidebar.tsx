@@ -167,6 +167,15 @@ export function Sidebar({
   const canUse = (permission: ModulePermission) => user.permissions.includes(permission)
   const visibleNavigationGroups = navigationGroups.filter((group) => canUse(group.permission))
 
+  // Keep each team's original access rule; this only groups the navigation.
+  const showDriveReports = user.role !== 'Cliente'
+  const showMail = canUse('commercial') &&
+    (user.email?.toLowerCase() === 'pedrog@nedviconstructora.com' || user.role === 'DEVELOPER')
+  const showAgenda = canUse('agenda')
+  const showAttendance = canUse('time-clock') ||
+    ['DEVELOPER', 'Gerente Operativo', 'Gerente Comercial', 'Gerente Administrativo'].includes(user.role)
+  const showTeamSection = showDriveReports || showMail || showAgenda || showAttendance
+
   const isPathActive = (href?: string) =>
     Boolean(href && (pathname === href || (href !== '/dashboard' && pathname.startsWith(`${href}/`))))
 
@@ -218,18 +227,6 @@ export function Sidebar({
             {isPathActive('/dashboard') ? <span className="absolute left-0 h-5 w-0.5 rounded-r-full bg-white" /> : null}
             <LayoutDashboard size={18} strokeWidth={isPathActive('/dashboard') ? 2 : 1.8} className="shrink-0 text-white" />
             <span className={`whitespace-nowrap transition-opacity duration-200 ${collapsed ? 'lg:hidden' : 'opacity-100'}`}>Inicio</span>
-          </Link>
-        ) : null}
-
-        {user.role !== 'Cliente' ? (
-          <Link
-            href="/drive-reports"
-            title={collapsed ? 'Reportes Drive' : undefined}
-            onClick={onCloseMobile}
-            className={primaryItemClasses(isPathActive('/drive-reports')) + ' mt-2'}
-          >
-            <FolderOpen size={18} className="shrink-0" />
-            <span className={collapsed ? 'lg:hidden' : 'opacity-100'}>Reportes Drive</span>
           </Link>
         ) : null}
 
@@ -292,25 +289,42 @@ export function Sidebar({
           })}
         </div>
 
-        {canUse('agenda') || canUse('settings') || canUse('coral') ? (
-          <div className="my-4 border-t border-white/10" />
+        {showTeamSection ? (
+          <>
+            <div className="my-4 border-t border-white/10" />
+            <p className={`mb-3 px-3 text-[10px] font-semibold uppercase tracking-[0.16em] text-white/70 transition-opacity ${collapsed ? 'lg:text-center lg:opacity-0' : ''}`}>
+              Equipo NEDVI
+            </p>
+          </>
         ) : null}
 
-        {(canUse('commercial') && (user.email?.toLowerCase() === 'pedrog@nedviconstructora.com' || user.role === 'DEVELOPER')) ? (
+        {showDriveReports ? (
+          <Link
+            href="/drive-reports"
+            title={collapsed ? 'Reportes Drive' : undefined}
+            onClick={onCloseMobile}
+            className={`${primaryItemClasses(isPathActive('/drive-reports'))} mb-2`}
+          >
+            <FolderOpen size={18} className="shrink-0" />
+            <span className={`whitespace-nowrap transition-opacity duration-200 ${collapsed ? 'lg:hidden' : 'opacity-100'}`}>Reportes Drive</span>
+          </Link>
+        ) : null}
+
+        {showMail ? (
           <Link href="/mail" title={collapsed ? 'Correo NEDVI' : undefined} onClick={onCloseMobile} className={`${primaryItemClasses(isPathActive('/mail'))} mb-2`}>
             <Mail size={18} strokeWidth={1.8} className="shrink-0" />
             <span className={`whitespace-nowrap transition-opacity duration-200 ${collapsed ? 'lg:hidden' : 'opacity-100'}`}>Correo NEDVI</span>
           </Link>
         ) : null}
 
-        {canUse('agenda') ? (
+        {showAgenda ? (
           <Link href="/agenda" title={collapsed ? 'Agenda' : undefined} onClick={onCloseMobile} className={primaryItemClasses(isPathActive('/agenda'))}>
             <CalendarDays size={18} strokeWidth={isPathActive('/agenda') ? 2 : 1.8} className="shrink-0 text-white" />
             <span className={`whitespace-nowrap transition-opacity duration-200 ${collapsed ? 'lg:hidden' : 'opacity-100'}`}>Agenda</span>
           </Link>
         ) : null}
 
-        {(canUse('time-clock') || ['DEVELOPER','Gerente Operativo','Gerente Comercial','Gerente Administrativo'].includes(user.role)) ? (
+        {showAttendance ? (
           <Link href="/time-clock" title={collapsed ? 'Centro de Asistencia' : undefined} onClick={onCloseMobile} className={`${primaryItemClasses(isPathActive('/time-clock') || isPathActive('/management-attendance'))} mt-2`}>
             <Clock3 size={18} className="shrink-0 text-white"/>
             <span className={`whitespace-nowrap transition-opacity duration-200 ${collapsed ? 'lg:hidden' : 'opacity-100'}`}>Centro de Asistencia</span>
