@@ -2125,3 +2125,19 @@ textarea {
     min-width: 0;
   }
 }
+
+/* Dashboard quick actions: neutral white icon tiles (2026-10-22). */
+.theme-dark .nedvi-main-content .nedvi-quick-action .nedvi-quick-action-icon,
+.theme-light .nedvi-main-content .nedvi-quick-action .nedvi-quick-action-icon,
+:root:not(.theme-dark) .nedvi-main-content .nedvi-quick-action .nedvi-quick-action-icon {
+  background: #ffffff !important;
+  color: #27313d !important;
+  border: 1px solid rgba(255, 255, 255, .88);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, .12);
+}
+.theme-dark .nedvi-main-content .nedvi-quick-action:hover .nedvi-quick-action-icon,
+.theme-light .nedvi-main-content .nedvi-quick-action:hover .nedvi-quick-action-icon,
+:root:not(.theme-dark) .nedvi-main-content .nedvi-quick-action:hover .nedvi-quick-action-icon {
+  background: #f0f3f7 !important;
+  color: #192431 !important;
+}
