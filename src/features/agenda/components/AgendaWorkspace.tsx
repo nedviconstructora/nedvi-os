@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect, useState, type FormEvent } from 'react'
+import { readAccessSession } from '@/features/access/services/accessStorage'
 import {
   CalendarDays,
   CheckCircle2,
@@ -53,6 +54,12 @@ export function AgendaWorkspace() {
   const [modalOpen, setModalOpen] = useState(false)
   const [editingActivityId, setEditingActivityId] = useState<number | null>(null)
   const [filter, setFilter] = useState<AgendaFilter>('Todas')
+  // Display-only hint. Row permissions are enforced by Supabase RLS.
+  const [canEdit, setCanEdit] = useState(false)
+
+  useEffect(() => {
+    setCanEdit(Boolean(readAccessSession()?.permissions?.includes('agenda')))
+  }, [])
 
   const [title, setTitle] = useState('')
   const [type, setType] = useState('Tarea')
@@ -169,11 +176,13 @@ export function AgendaWorkspace() {
   }
 
   function openCreateModal() {
+    if (!canEdit) return
     resetForm()
     setModalOpen(true)
   }
 
   function openEditModal(activity: AgendaItem) {
+    if (!canEdit) return
     setEditingActivityId(activity.id)
     setTitle(activity.title)
     setType(activity.type)
@@ -185,7 +194,7 @@ export function AgendaWorkspace() {
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
-    if (!title.trim() || !date || !time || saving) return
+    if (!canEdit || !title.trim() || !date || !time || saving) return
 
     setSaving(true)
     setErrorMessage('')
@@ -233,6 +242,7 @@ export function AgendaWorkspace() {
   }
 
   async function deleteActivity(activity: AgendaItem) {
+    if (!canEdit) return
     const confirmed = window.confirm(
       `¿Eliminar la actividad "${activity.title}"?`
     )
@@ -249,6 +259,7 @@ export function AgendaWorkspace() {
   }
 
   async function toggleCompleted(activity: AgendaItem) {
+    if (!canEdit) return
     const nextStatus: AgendaStatus =
       activity.status === 'Completada' ? 'Pendiente' : 'Completada'
 
@@ -309,14 +320,20 @@ export function AgendaWorkspace() {
             <RefreshCw size={16} className={syncing ? 'animate-spin' : ''} />
             {syncing ? 'Sincronizando…' : 'Sincronizar ahora'}
           </button>
-          <button
-            type="button"
-            onClick={openCreateModal}
-            className="nedvi-dark-white-create inline-flex h-11 items-center justify-center gap-2 rounded-xl bg-[#5496CC] px-4 text-xs font-semibold text-white shadow-[0_12px_30px_rgba(84,150,204,0.28)] transition hover:bg-[#6aa9dc] focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-[#5496CC]/30"
-          >
-            <Plus size={16} strokeWidth={2} />
-            Nueva actividad
-          </button>
+          {canEdit ? (
+            <button
+              type="button"
+              onClick={openCreateModal}
+              className="nedvi-dark-white-create inline-flex h-11 items-center justify-center gap-2 rounded-xl bg-[#5496CC] px-4 text-xs font-semibold text-white shadow-[0_12px_30px_rgba(84,150,204,0.28)] transition hover:bg-[#6aa9dc] focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-[#5496CC]/30"
+            >
+              <Plus size={16} strokeWidth={2} />
+              Nueva actividad
+            </button>
+          ) : (
+            <span className="inline-flex h-11 items-center rounded-xl border border-white/20 px-4 text-xs font-semibold text-white/80">
+              Solo lectura
+            </span>
+          )}
         </div>
       </header>
 
@@ -406,7 +423,8 @@ export function AgendaWorkspace() {
                     <Clock3 size={13} />
                     {activity.time}
                   </span>
-
+                  {canEdit ? (
+                    <>
                   <button
                     type="button"
                     onClick={() => void toggleCompleted(activity)}
@@ -433,6 +451,8 @@ export function AgendaWorkspace() {
                   >
                     <Trash2 size={15} />
                   </button>
+                    </>
+                  ) : null}
                 </div>
               </div>
             ))}
@@ -444,13 +464,13 @@ export function AgendaWorkspace() {
             </div>
             <h3 className="mt-5 text-base font-semibold text-white">No hay actividades en este estado</h3>
             <p className="mt-2 max-w-sm text-sm text-[#7f93a8]">
-              Cambia el filtro o crea una nueva actividad para continuar.
+              {canEdit ? 'Cambia el filtro o crea una nueva actividad para continuar.' : 'Cambia el filtro para consultar las actividades compartidas.'}
             </p>
           </div>
         )}
       </section>
 
-      {modalOpen ? (
+      {modalOpen && canEdit ? (
         <div
           className="fixed inset-0 z-[9999] flex items-center justify-center bg-[#07111c]/80 p-4 backdrop-blur-md"
           onMouseDown={(event) => {
