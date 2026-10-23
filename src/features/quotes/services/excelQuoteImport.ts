@@ -186,7 +186,7 @@ function cellColumnIndex(reference: string) {
   return index - 1
 }
 
-async function parseXlsx(buffer: ArrayBuffer): Promise<CellValue[][]> {
+async function parseXlsx(buffer: ArrayBuffer, preferredSheetNames: readonly string[] = ['importar nedvi os', 'presupuesto']): Promise<CellValue[][]> {
   const files = await unzipEntries(buffer)
   const workbook = xmlFromBytes(files.get('xl/workbook.xml'))
   const rels = xmlFromBytes(files.get('xl/_rels/workbook.xml.rels'))
@@ -196,7 +196,7 @@ async function parseXlsx(buffer: ArrayBuffer): Promise<CellValue[][]> {
   }
 
   const sheets = Array.from(workbook.getElementsByTagNameNS('*', 'sheet'))
-  const firstSheet = sheets.find((sheet) => normalizeText(sheet.getAttribute('name')) === 'importar nedvi os') ?? sheets.find((sheet) => normalizeText(sheet.getAttribute('name')) === 'presupuesto') ?? sheets[0]
+  const firstSheet = preferredSheetNames.map((preferred) => sheets.find((sheet) => normalizeText(sheet.getAttribute('name')) === normalizeText(preferred))).find(Boolean) ?? sheets[0]
   if (!firstSheet) throw new Error('El archivo Excel no contiene hojas.')
 
   const relationshipId =
@@ -258,6 +258,17 @@ async function parseXlsx(buffer: ArrayBuffer): Promise<CellValue[][]> {
   }
 
   return rows.filter((row) => row.some((value) => String(value).trim()))
+}
+
+// Shared, dependency-free Excel reader for the commercial prospecting import.
+// Prefer a named tab so old quote templates continue using their original sheets.
+export async function readSpreadsheetGrid(file: File, preferredSheetNames: readonly string[]): Promise<Array<Array<string | number>>> {
+  const ext = file.name.toLowerCase()
+  if (ext.endsWith('.csv') || ext.endsWith('.tsv')) {
+    return parseCsv(await file.text())
+  }
+  if (!ext.endsWith('.xlsx')) throw new Error('El archivo debe ser XLSX o CSV.')
+  return parseXlsx(await file.arrayBuffer(), preferredSheetNames)
 }
 
 const HEADER_ALIASES = {
