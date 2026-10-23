@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server'
 import { createClient as createServerClient } from '@/utils/supabase/server'
+import { dispatchWebPush } from '@/lib/dispatchWebPush'
 
 const CUSTOMER_SELECT = [
   'id',
@@ -92,6 +93,7 @@ export async function POST(request: Request) {
       )
     }
 
+    await dispatchWebPush('customers_insert', data.id)
     return NextResponse.json({ customer: data }, { status: 201 })
   } catch (error) {
     console.error('Error inesperado creando cliente:', error)
