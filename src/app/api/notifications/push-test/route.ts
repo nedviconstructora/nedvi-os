@@ -30,16 +30,37 @@ export async function POST() {
     if (recent?.length) return NextResponse.json({ error: 'Ya se envió una prueba. Inténtalo después de un minuto.' }, { status: 429 })
 
     const entityId = crypto.randomUUID()
-    const { error } = await admin.from('internal_notifications').insert({
+    const { data: notice, error } = await admin.from('internal_notifications').insert({
       recipient_id: user.id, actor_id: user.id,
       event_type: 'push_test', entity_id: entityId,
       title: 'NEDVI OS · Notificación de prueba',
       body: '¡Las notificaciones Push están conectadas! Puedes cerrar la app y seguir recibiendo avisos.',
       target_path: '/dashboard',
-    })
+    }).select('id').single()
     if (error) throw error
-    await dispatchWebPush('push_test', entityId)
-    return NextResponse.json({ ok: true, message: 'Prueba enviada al servicio Push. Revisa las notificaciones del dispositivo.' })
+    const result = await dispatchWebPush('push_test', entityId)
+    if (!result.ok) {
+      // Failed attempts should not lock the user out of retesting for 60 seconds.
+      if (notice?.id && result.sent === 0) {
+        const { error: cleanupError } = await admin.from('internal_notifications')
+          .delete().eq('id', notice.id).eq('recipient_id', user.id)
+        if (cleanupError) console.warn('Could not discard unsuccessful push test record:', cleanupError.code)
+      }
+      const reason = result.reason === 'no registered devices'
+        ? 'No se encontraron dispositivos Push activos para tu cuenta.'
+        : result.reason === 'no recent notices'
+          ? 'El servidor no encontró el aviso de prueba.'
+          : result.reason || 'El servidor no confirmó el envío al dispositivo.'
+      return NextResponse.json({ error: reason, sent: result.sent, failed: result.failed }, { status: 503 })
+    }
+    return NextResponse.json({
+      ok: true,
+      sent: result.sent,
+      failed: result.failed,
+      message: result.failed > 0
+        ? 'Push aceptado por ' + result.sent + ' dispositivo(s); ' + result.failed + ' intento(s) fallaron.'
+        : 'Push aceptado por ' + result.sent + ' dispositivo(s). Comprueba si aparece la notificación.',
+    })
   } catch (error) {
     console.error('Push test failed:', error)
     return NextResponse.json({ error: 'No se pudo enviar la prueba.' }, { status: 500 })
