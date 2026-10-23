@@ -15,6 +15,7 @@ export const AGENDA_STORAGE_KEY = 'nedvi-agenda-activities'
 export const AGENDA_UPDATED_EVENT = 'nedvi-agenda-updated'
 // Conserva una copia local antes de adoptar por primera vez la versión compartida.
 export const AGENDA_PRE_SYNC_BACKUP_KEY = 'nedvi-agenda-pre-sync-backup-v1'
+export const AGENDA_CLOUD_INITIALIZED_KEY = 'nedvi-agenda-cloud-initialized-v1'
 
 function isAgendaStatus(value: unknown): value is AgendaStatus {
   return (
@@ -118,6 +119,7 @@ export async function loadAgendaActivities(): Promise<AgendaItem[]> {
   if (error) throw error
 
   const items = ((data ?? []) as AgendaRow[]).map(mapRow)
+  if (typeof window !== 'undefined') window.localStorage.setItem(AGENDA_CLOUD_INITIALIZED_KEY, 'true')
   writeAgendaActivities(items)
   return items
 }
@@ -201,13 +203,18 @@ export async function migrateLocalAgendaIfNeeded(): Promise<AgendaItem[]> {
 
   const remote = ((remoteData ?? []) as AgendaRow[]).map(mapRow)
 
-  if (remote.length > 0 || local.length === 0) {
+  // No recuperes automáticamente registros antiguos si la nube ya fue inicializada:
+  // podrían ser actividades borradas desde otra computadora o teléfono.
+  const wasInitialized = typeof window !== 'undefined' &&
+    window.localStorage.getItem(AGENDA_CLOUD_INITIALIZED_KEY) === 'true'
+  if (remote.length > 0 || local.length === 0 || wasInitialized) {
     // No borramos datos locales heredados sin guardar una copia recuperable.
     if (typeof window !== 'undefined' && local.length > 0 &&
         !window.localStorage.getItem(AGENDA_PRE_SYNC_BACKUP_KEY) &&
         JSON.stringify(sortAgendaActivities(local)) !== JSON.stringify(sortAgendaActivities(remote))) {
       window.localStorage.setItem(AGENDA_PRE_SYNC_BACKUP_KEY, JSON.stringify(local))
     }
+    if (typeof window !== 'undefined') window.localStorage.setItem(AGENDA_CLOUD_INITIALIZED_KEY, 'true')
     writeAgendaActivities(remote)
     return remote
   }
@@ -229,6 +236,7 @@ export async function migrateLocalAgendaIfNeeded(): Promise<AgendaItem[]> {
 
   const migrated = ((data ?? []) as AgendaRow[]).map(mapRow)
   const sorted = sortAgendaActivities(migrated)
+  if (typeof window !== 'undefined') window.localStorage.setItem(AGENDA_CLOUD_INITIALIZED_KEY, 'true')
   writeAgendaActivities(sorted)
   return sorted
 }
