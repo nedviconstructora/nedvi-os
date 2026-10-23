@@ -47,9 +47,10 @@ export async function GET() {
   try {
     const ctx = await staffContext()
     if (!ctx) return NextResponse.json({ error: 'Acceso reservado al personal NEDVI.' }, { status: 403 })
-    const publicKey = process.env.NEDVI_VAPID_PUBLIC_KEY?.trim() || ''
+    const { data: publicKey, error } = await ctx.admin.rpc('nedvi_webpush_public_key')
+    if (error) throw error
     return NextResponse.json({
-      configured: Boolean(publicKey && process.env.NEDVI_VAPID_PRIVATE_KEY),
+      configured: typeof publicKey === 'string' && publicKey.length > 0,
       publicKey: publicKey || null,
     }, { headers: { 'Cache-Control': 'private, no-store' } })
   } catch (error) {
@@ -62,7 +63,8 @@ export async function POST(request: Request) {
   try {
     const ctx = await staffContext()
     if (!ctx) return NextResponse.json({ error: 'Acceso reservado al personal NEDVI.' }, { status: 403 })
-    if (!process.env.NEDVI_VAPID_PUBLIC_KEY || !process.env.NEDVI_VAPID_PRIVATE_KEY)
+    const { data: publicKey, error: configError } = await ctx.admin.rpc('nedvi_webpush_public_key')
+    if (configError || !publicKey)
       return NextResponse.json({ error: 'Web Push todavía no está configurado en el servidor.' }, { status: 503 })
     const body = await request.json().catch(() => null) as SubscriptionInput | null
     const endpoint = body?.endpoint
