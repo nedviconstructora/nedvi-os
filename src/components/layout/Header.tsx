@@ -482,7 +482,7 @@ export function Header({ onOpenMenu, isDark, onToggleTheme, showCompanyLogo = fa
             onClick={() => {
               if (!notificationsOpen) window.dispatchEvent(new Event('nedvi-notifications-refresh'))
               setNotificationsOpen(current => !current)
-            }
+            }}
             className={`nedvi-header-action relative flex h-10 w-10 items-center justify-center rounded-xl transition sm:h-auto sm:w-auto sm:p-2.5 ${
               notificationsOpen
                 ? 'bg-white/10 text-[#9ED2F8]'
