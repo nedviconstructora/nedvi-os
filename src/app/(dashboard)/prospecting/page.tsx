@@ -20,7 +20,7 @@ type Prospect = {
   suggested_greeting: string; send_eligible: boolean
   stage: Stage; last_delivery_status: Delivery; last_sent_at: string | null
   last_resend_id: string | null; next_followup_at: string | null; notes: string
-  customer_id: string | null; updated_at: string; created_at: string
+  customer_id: string | null; assigned_to: string | null; updated_at: string; created_at: string
 }
 type ProspectInput = Omit<Prospect, 'id'|'email_normalized'|'customer_id'|'updated_at'|'created_at'>
 type OutreachEvent = {
