@@ -93,7 +93,8 @@ export async function POST(request: Request) {
       )
     }
 
-    await dispatchWebPush('customers_insert', data.id)
+    const createdId = (data as unknown as { id?: string }).id
+    if (createdId) await dispatchWebPush('customers_insert', createdId)
     return NextResponse.json({ customer: data }, { status: 201 })
   } catch (error) {
     console.error('Error inesperado creando cliente:', error)
