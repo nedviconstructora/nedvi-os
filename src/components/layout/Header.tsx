@@ -189,12 +189,12 @@ export function Header({ onOpenMenu, isDark, onToggleTheme, showCompanyLogo = fa
                 if (sw) {
                   await sw.showNotification(notice.title, {
                     body: notice.body, icon: '/icon.png',
-                    tag: 'nedvi-internal-' + notice.id,
+                    tag: 'nedvi-event-' + notice.id,
                   })
                   continue
                 }
               }
-              new Notification(notice.title, { body: notice.body, icon: '/icon.png' })
+              new Notification(notice.title, { body: notice.body, icon: '/icon.png', tag: 'nedvi-event-' + notice.id })
             } catch (e) { console.warn('No se pudo presentar un aviso del sistema:', e) }
           }
         }
