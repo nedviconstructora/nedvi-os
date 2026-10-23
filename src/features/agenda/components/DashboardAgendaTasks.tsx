@@ -13,8 +13,9 @@ import {
   AGENDA_STORAGE_KEY,
   AGENDA_UPDATED_EVENT,
   readAgendaActivities,
+  migrateLocalAgendaIfNeeded,
+  setAgendaActivityStatus,
   sortAgendaActivities,
-  writeAgendaActivities,
 } from '@/features/agenda/services/agendaStorage'
 
 const MAX_VISIBLE_ACTIVITIES = 3
@@ -36,28 +37,54 @@ function formatActivityDate(activity: AgendaItem) {
 
 export function DashboardAgendaTasks() {
   const [activities, setActivities] = useState<AgendaItem[]>([])
+  const [syncError, setSyncError] = useState('')
+  const [completingId, setCompletingId] = useState<number | null>(null)
 
   useEffect(() => {
-    const loadActivities = () => {
-      setActivities(readAgendaActivities())
-    }
+    let mounted = true
+    let inFlight = false
 
-    loadActivities()
-
-    const handleStorage = (event: StorageEvent) => {
-      if (event.key === AGENDA_STORAGE_KEY) {
-        loadActivities()
+    const loadLocal = () => setActivities(readAgendaActivities())
+    const syncFromServer = async () => {
+      if (!mounted || inFlight || document.hidden) return
+      inFlight = true
+      try {
+        const fresh = await migrateLocalAgendaIfNeeded()
+        if (mounted) {
+          setActivities(fresh)
+          setSyncError('')
+        }
+      } catch (error) {
+        console.error('No se pudo sincronizar el resumen de Agenda:', error)
+        if (mounted) setSyncError('No se pudo sincronizar la agenda. Se muestran los datos locales hasta reconectar.')
+      } finally {
+        inFlight = false
       }
     }
 
+    const handleStorage = (event: StorageEvent) => {
+      if (event.key === AGENDA_STORAGE_KEY) loadLocal()
+    }
+    const handleFocus = () => { loadLocal(); void syncFromServer() }
+    const handleVisibility = () => {
+      if (!document.hidden) void syncFromServer()
+    }
+
+    loadLocal()
+    void syncFromServer()
+    const timer = window.setInterval(() => void syncFromServer(), 30000)
     window.addEventListener('storage', handleStorage)
-    window.addEventListener('focus', loadActivities)
-    window.addEventListener(AGENDA_UPDATED_EVENT, loadActivities)
+    window.addEventListener('focus', handleFocus)
+    window.addEventListener(AGENDA_UPDATED_EVENT, loadLocal)
+    document.addEventListener('visibilitychange', handleVisibility)
 
     return () => {
+      mounted = false
+      window.clearInterval(timer)
       window.removeEventListener('storage', handleStorage)
-      window.removeEventListener('focus', loadActivities)
-      window.removeEventListener(AGENDA_UPDATED_EVENT, loadActivities)
+      window.removeEventListener('focus', handleFocus)
+      window.removeEventListener(AGENDA_UPDATED_EVENT, loadLocal)
+      document.removeEventListener('visibilitychange', handleVisibility)
     }
   }, [])
 
@@ -65,17 +92,20 @@ export function DashboardAgendaTasks() {
     .filter((activity) => activity.status !== 'Completada')
     .slice(0, MAX_VISIBLE_ACTIVITIES)
 
-  const completeActivity = (activityId: number) => {
-    setActivities((current) => {
-      const updated = current.map((activity) =>
-        activity.id === activityId
-          ? { ...activity, status: 'Completada' as const }
-          : activity
-      )
-
-      writeAgendaActivities(updated)
-      return updated
-    })
+  const completeActivity = async (activityId: number) => {
+    if (completingId !== null) return
+    setCompletingId(activityId)
+    setSyncError('')
+    try {
+      await setAgendaActivityStatus(activityId, 'Completada')
+      const fresh = await migrateLocalAgendaIfNeeded()
+      setActivities(fresh)
+    } catch (error) {
+      console.error('Error al completar una actividad en Supabase:', error)
+      setSyncError('La actividad no se confirmó en Supabase. Intenta de nuevo con conexión.')
+    } finally {
+      setCompletingId(null)
+    }
   }
 
   return (
@@ -91,6 +121,8 @@ export function DashboardAgendaTasks() {
         }
       />
 
+      {syncError ? <p role="alert" className="px-5 pt-3 text-xs text-red-500">{syncError}</p> : null}
+
       {pendingActivities.length > 0 ? (
         <div className="space-y-1 px-5 py-3 sm:px-6">
           {pendingActivities.map((activity) => (
@@ -100,7 +132,8 @@ export function DashboardAgendaTasks() {
             >
               <button
                 type="button"
-                onClick={() => completeActivity(activity.id)}
+                onClick={() => void completeActivity(activity.id)}
+                disabled={completingId !== null}
                 className="mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-md border border-white/[0.12] text-transparent transition hover:border-[#163DFF] hover:bg-[#163DFF] hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#163DFF]/40"
                 aria-label={`Marcar ${activity.title} como completada`}
                 title="Marcar como completada"
