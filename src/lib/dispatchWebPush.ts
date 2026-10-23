@@ -3,7 +3,7 @@ import 'server-only'
 // Dispatch after the database commit. This cannot block or roll back a valid
 // client or attendance registration when the push provider is unavailable.
 export async function dispatchWebPush(
-  eventType: 'customers_insert' | 'attendance_entrada' | 'attendance_salida',
+  eventType: 'customers_insert' | 'attendance_entrada' | 'attendance_salida' | 'push_test',
   entityId: string,
 ) {
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL
