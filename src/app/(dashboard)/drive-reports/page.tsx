@@ -45,6 +45,24 @@ function displayDate(value: string | null) {
       day: '2-digit', month: 'short', year: 'numeric',
     }).format(date)
 }
+function reportOwner(item: DriveReport): 'pedro' | 'cristian' | 'otros' {
+  const name = (item.staff_name || item.folder_path)
+    .normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase()
+  if (name.includes('pedro')) return 'pedro'
+  if (name.includes('cristian') || name.includes('crisitan')) return 'cristian'
+  return 'otros'
+}
+
+function displaySyncTimestamp(value: string | null) {
+  if (!value) return 'Sin sincronizar'
+  const date = new Date(value)
+  return Number.isNaN(date.getTime()) ? 'Sin sincronizar' :
+    new Intl.DateTimeFormat('es-MX', {
+      day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit',
+      timeZone: 'America/Tijuana',
+    }).format(date) + ' (Tijuana)'
+}
+
 function fileKind(mimeType: string) {
   if (mimeType === 'application/pdf') return 'PDF'
   if (mimeType.includes('spreadsheet') || mimeType.includes('excel')) return 'Excel'
@@ -88,9 +106,17 @@ export default function DriveReportsPage() {
     const session = readAccessSession()
     setCanSync(Boolean(session && managers.has(session.role)))
     void load()
-    // Refresh the indexed view while the module remains open.
-    const timer = window.setInterval(() => { void load(true) }, 5 * 60 * 1000)
-    return () => window.clearInterval(timer)
+    // Update on return to the app as well as periodically; no background
+    // sync requests while the page is hidden.
+    const refresh = () => { if (!document.hidden) void load(true) }
+    const timer = window.setInterval(refresh, 60 * 1000)
+    window.addEventListener('focus', refresh)
+    document.addEventListener('visibilitychange', refresh)
+    return () => {
+      window.clearInterval(timer)
+      window.removeEventListener('focus', refresh)
+      document.removeEventListener('visibilitychange', refresh)
+    }
   }, [load])
 
   const staffNames = useMemo(() => [...new Set(items.map(item => item.staff_name).filter((x): x is string => Boolean(x)))].sort(), [items])
@@ -106,6 +132,17 @@ export default function DriveReportsPage() {
     })
   }, [items, search, staff, year, month])
 
+  const reportsByOwner = useMemo(() => ({
+    pedro: filtered.filter(item => reportOwner(item) === 'pedro'),
+    cristian: filtered.filter(item => reportOwner(item) === 'cristian'),
+    otros: filtered.filter(item => reportOwner(item) === 'otros'),
+  }), [filtered])
+
+  const newestIndexedAt = Math.max(0, ...items.map(item => new Date(item.last_seen_at).getTime()).filter(Number.isFinite))
+  const lastReadByOwner = (owner: 'pedro' | 'cristian') => {
+    const dates = items.filter(item => reportOwner(item) === owner).map(item => item.last_seen_at)
+    return dates.sort().at(-1) || null
+  }
   const pdfCount = items.filter(item => item.mime_type === 'application/pdf').length
   const employeeCount = staffNames.length
 
@@ -114,9 +151,10 @@ export default function DriveReportsPage() {
     setError(null)
     try {
       const response = await fetch('/api/drive-reports/sync', { method: 'POST' })
-      const data = await response.json() as { error?: string }
+      const data = await response.json() as { error?: string; warning?: string | null }
       if (!response.ok) throw new Error(data.error || 'La sincronización no se completó.')
       await load(true)
+      if (data.warning) setWarning(data.warning)
     } catch (cause) {
       setError(cause instanceof Error ? cause.message : 'No se pudo sincronizar.')
     } finally {
@@ -202,65 +240,93 @@ export default function DriveReportsPage() {
           </select>
         </div>
 
-        <div className="overflow-hidden rounded-2xl border border-[var(--border)] bg-[var(--surface)]">
-          <div className="flex items-center justify-between border-b border-[var(--border)] px-4 py-4 sm:px-6">
-            <h2 className="font-bold text-[var(--foreground)]">Archivos disponibles</h2>
-            <span className="text-xs text-[var(--muted)]">{filtered.length} resultados</span>
+        <section aria-labelledby="report-groups-title" className="space-y-4">
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <h2 id="report-groups-title" className="text-xl font-bold text-[var(--foreground)]">Reportes por responsable</h2>
+            <span className="text-sm text-[var(--muted)]">{filtered.length} archivos con los filtros actuales</span>
           </div>
-          {loading ? (
-            <div className="px-6 py-12 text-center text-sm text-[var(--muted)]">Cargando reportes...</div>
-          ) : filtered.length === 0 ? (
-            <div className="px-6 py-12 text-center">
-              <FolderOpen size={33} className="mx-auto text-[#5496CC]" />
-              <p className="mt-3 font-semibold text-[var(--foreground)]">No hay reportes para estos filtros.</p>
-            </div>
-          ) : (
-            <div className="overflow-x-auto">
-              <table className="w-full min-w-[850px] text-left text-sm">
-                <thead className="bg-[var(--surface-soft)] text-xs text-[var(--muted)]">
-                  <tr>
-                    <th className="px-5 py-4">Documento</th>
-                    <th className="px-5 py-4">Responsable</th>
-                    <th className="px-5 py-4">Periodo</th>
-                    <th className="px-5 py-4">Modificado</th>
-                    <th className="px-5 py-4">Acción</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-[var(--border)]">
-                  {filtered.map(item => (
-                    <tr key={item.file_id} className="transition-colors hover:bg-[var(--surface-soft)]">
-                      <td className="px-5 py-3">
-                        <a
-                          href={item.web_view_link}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          title={`Abrir ${item.name} en Google Drive`}
-                          aria-label={`Abrir archivo ${item.name} en una pestaña nueva`}
-                          className="group/file inline-flex max-w-[340px] items-center gap-2 rounded-md font-semibold text-[var(--foreground)] underline-offset-4 transition-colors hover:text-[#267bd4] hover:underline focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#267bd4]"
-                        >
-                          <span className="min-w-0 truncate">{item.name}</span>
-                          <ExternalLink size={14} aria-hidden="true" className="shrink-0 text-[#5496CC] opacity-70 transition-opacity group-hover/file:opacity-100" />
-                        </a>
-                        <p className="mt-1 text-xs text-[var(--muted)]">{fileKind(item.mime_type)} · Clic para abrir</p>
-                      </td>
-                      <td className="px-5 py-3 text-[var(--foreground)]">{item.staff_name || 'Sin clasificar'}</td>
-                      <td className="px-5 py-3 text-[var(--muted)]">
-                        {item.report_month ? months[item.report_month-1] + ' ' : ''}{item.report_year || '—'}
-                      </td>
-                      <td className="px-5 py-3 text-[var(--muted)]">{displayDate(item.modified_time)}</td>
-                      <td className="px-5 py-3">
-                        <a href={item.web_view_link} target="_blank" rel="noopener noreferrer"
-                           className="inline-flex items-center gap-2 rounded-lg border border-[var(--border)] px-3 py-2 font-semibold text-[var(--foreground)] transition hover:border-[#5496CC]">
-                          <ExternalLink size={15} /> Abrir archivo
-                        </a>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          )}
-        </div>
+          <div className="grid grid-cols-1 items-start gap-5 xl:grid-cols-2">
+            {([
+              { key: 'pedro' as const, label: 'Pedro García', caption: 'Sección izquierda' },
+              { key: 'cristian' as const, label: 'Cristian Medina', caption: 'Sección derecha' },
+            ]).map(group => {
+              const reports = reportsByOwner[group.key]
+              const lastRead = lastReadByOwner(group.key)
+              const age = lastRead ? newestIndexedAt - new Date(lastRead).getTime() : 0
+              const needsReview = Boolean(lastRead && newestIndexedAt > 0 && age > 30 * 60 * 1000)
+              return (
+                <article key={group.key} className="min-w-0 overflow-hidden rounded-2xl border border-[var(--border)] bg-[var(--surface)]">
+                  <header className="border-b border-[var(--border)] bg-[var(--surface-soft)] px-5 py-5">
+                    <div className="flex items-center justify-between gap-3">
+                      <div className="flex min-w-0 items-center gap-3">
+                        <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-[#5496CC]/15 text-[#267bd4]">
+                          <FolderOpen size={23} />
+                        </span>
+                        <div className="min-w-0">
+                          <p className="text-lg font-bold text-[var(--foreground)]">{group.label}</p>
+                          <p className="text-xs text-[var(--muted)]">{group.caption}</p>
+                        </div>
+                      </div>
+                      <span className="rounded-full border border-[var(--border)] bg-[var(--surface)] px-3 py-1 text-sm font-bold text-[var(--foreground)]">{reports.length}</span>
+                    </div>
+                    <p className="mt-3 text-xs text-[var(--muted)]">Última revisión registrada: {displaySyncTimestamp(lastRead)}</p>
+                    {needsReview ? (
+                      <p className="mt-2 text-xs font-medium text-amber-600 dark:text-amber-400" role="status">
+                        Esta carpeta no figura en la última revisión del índice. Comprueba sus permisos de Drive.
+                      </p>
+                    ) : null}
+                  </header>
+                  {loading ? (
+                    <div className="px-5 py-12 text-center text-sm text-[var(--muted)]">Cargando reportes…</div>
+                  ) : reports.length === 0 ? (
+                    <div className="px-5 py-12 text-center text-sm text-[var(--muted)]">
+                      No hay reportes de {group.label} para estos filtros.
+                    </div>
+                  ) : (
+                    <ul className="max-h-[780px] divide-y divide-[var(--border)] overflow-y-auto">
+                      {reports.map(item => (
+                        <li key={item.file_id} className="flex min-w-0 items-start gap-3 px-4 py-4 transition-colors hover:bg-[var(--surface-soft)] sm:px-5">
+                          <FileText size={19} className="mt-1 shrink-0 text-[#5496CC]" />
+                          <div className="min-w-0 flex-1">
+                            <a href={item.web_view_link} target="_blank" rel="noopener noreferrer"
+                              className="inline-flex max-w-full items-center gap-1.5 break-words text-sm font-semibold text-[var(--foreground)] hover:text-[#267bd4] hover:underline"
+                              title={'Abrir ' + item.name + ' en Google Drive'}>
+                              <span className="min-w-0 break-all">{item.name}</span>
+                              <ExternalLink size={14} className="shrink-0" aria-hidden="true" />
+                            </a>
+                            <p className="mt-1 text-xs text-[var(--muted)]">
+                              {fileKind(item.mime_type)} · {item.report_month ? months[item.report_month - 1] + ' ' : ''}{item.report_year || 'Sin periodo'} · Modificado {displayDate(item.modified_time)}
+                            </p>
+                          </div>
+                          <a href={item.web_view_link} target="_blank" rel="noopener noreferrer"
+                            aria-label={'Abrir ' + item.name}
+                            className="shrink-0 rounded-lg border border-[var(--border)] px-3 py-2 text-xs font-semibold text-[var(--foreground)] transition hover:border-[#5496CC]">
+                            Abrir
+                          </a>
+                        </li>
+                      ))}
+                    </ul>
+                  )}
+                </article>
+              )
+            })}
+          </div>
+          {reportsByOwner.otros.length > 0 ? (
+            <section className="rounded-2xl border border-[var(--border)] bg-[var(--surface)] p-5">
+              <h3 className="mb-3 font-bold text-[var(--foreground)]">Otros reportes sin responsable identificado ({reportsByOwner.otros.length})</h3>
+              <ul className="space-y-2">
+                {reportsByOwner.otros.map(item => (
+                  <li key={item.file_id}>
+                    <a href={item.web_view_link} target="_blank" rel="noopener noreferrer"
+                      className="text-sm font-medium text-[var(--foreground)] hover:underline">
+                      {item.name} <ExternalLink size={13} className="inline-block" />
+                    </a>
+                  </li>
+                ))}
+              </ul>
+            </section>
+          ) : null}
+        </section>
       </div>
     </AppShell>
   )
