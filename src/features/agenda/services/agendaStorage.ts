@@ -13,6 +13,8 @@ export type AgendaItem = {
 
 export const AGENDA_STORAGE_KEY = 'nedvi-agenda-activities'
 export const AGENDA_UPDATED_EVENT = 'nedvi-agenda-updated'
+// Conserva una copia local antes de adoptar por primera vez la versión compartida.
+export const AGENDA_PRE_SYNC_BACKUP_KEY = 'nedvi-agenda-pre-sync-backup-v1'
 
 function isAgendaStatus(value: unknown): value is AgendaStatus {
   return (
@@ -162,6 +164,19 @@ export async function updateAgendaActivity(
   return mapRow(data as AgendaRow)
 }
 
+export async function setAgendaActivityStatus(id: number, status: AgendaStatus): Promise<AgendaItem> {
+  const supabase = createClient()
+  const { data, error } = await supabase
+    .from('agenda_activities')
+    .update({ status, updated_at: new Date().toISOString() })
+    .eq('id', id)
+    .select('id,title,activity_date,activity_time,type,status')
+    .single()
+
+  if (error) throw error
+  return mapRow(data as AgendaRow)
+}
+
 export async function deleteAgendaActivity(id: number): Promise<void> {
   const supabase = createClient()
   const { error } = await supabase
@@ -187,6 +202,12 @@ export async function migrateLocalAgendaIfNeeded(): Promise<AgendaItem[]> {
   const remote = ((remoteData ?? []) as AgendaRow[]).map(mapRow)
 
   if (remote.length > 0 || local.length === 0) {
+    // No borramos datos locales heredados sin guardar una copia recuperable.
+    if (typeof window !== 'undefined' && local.length > 0 &&
+        !window.localStorage.getItem(AGENDA_PRE_SYNC_BACKUP_KEY) &&
+        JSON.stringify(sortAgendaActivities(local)) !== JSON.stringify(sortAgendaActivities(remote))) {
+      window.localStorage.setItem(AGENDA_PRE_SYNC_BACKUP_KEY, JSON.stringify(local))
+    }
     writeAgendaActivities(remote)
     return remote
   }
