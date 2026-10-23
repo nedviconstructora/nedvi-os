@@ -8,6 +8,7 @@ import {
   LoaderCircle,
   Pencil,
   Plus,
+  RefreshCw,
   RotateCcw,
   Trash2,
   X,
@@ -46,6 +47,8 @@ export function AgendaWorkspace() {
   const [loading, setLoading] = useState(true)
   const [initialSyncDone, setInitialSyncDone] = useState(false)
   const [saving, setSaving] = useState(false)
+  const [syncing, setSyncing] = useState(false)
+  const [syncStatus, setSyncStatus] = useState('')
   const [errorMessage, setErrorMessage] = useState('')
   const [modalOpen, setModalOpen] = useState(false)
   const [editingActivityId, setEditingActivityId] = useState<number | null>(null)
@@ -127,6 +130,23 @@ export function AgendaWorkspace() {
       document.removeEventListener('visibilitychange', onVisible)
     }
   }, [initialSyncDone, modalOpen, saving])
+
+  async function syncNow() {
+    if (syncing || saving || modalOpen) return
+    setSyncing(true)
+    setErrorMessage('')
+    setSyncStatus('')
+    try {
+      const remote = await loadAgendaActivities()
+      setActivities(sortAgendaActivities(remote))
+      setSyncStatus('Sincronizado con Supabase')
+    } catch (error) {
+      console.error('Error en sincronización manual de Agenda:', error)
+      setErrorMessage('No se pudo sincronizar la Agenda. Comprueba tu conexión e inicia sesión nuevamente si es necesario.')
+    } finally {
+      setSyncing(false)
+    }
+  }
 
   function syncActivities(updated: AgendaItem[]) {
     const sorted = sortAgendaActivities(updated)
@@ -266,27 +286,41 @@ export function AgendaWorkspace() {
       <header className="relative z-10 flex flex-col justify-between gap-5 sm:flex-row sm:items-end">
         <div>
           <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[#8ec5ef]">
-            Organización
+            Organización · equipo NEDVI
           </p>
 
           <h1 className="mt-2 text-3xl font-semibold tracking-[-0.05em] text-white sm:text-4xl">
-            Actividades
+            Agenda del equipo
           </h1>
 
           <p className="mt-2 text-sm text-[#b6c4d3]">
-            Organiza tareas, visitas, reuniones y actividades de NEDVI
+            Actividades compartidas entre el personal autorizado de NEDVI
           </p>
         </div>
 
-        <button
-          type="button"
-          onClick={openCreateModal}
-          className="nedvi-dark-white-create inline-flex h-11 items-center justify-center gap-2 rounded-xl bg-[#5496CC] px-4 text-xs font-semibold text-white shadow-[0_12px_30px_rgba(84,150,204,0.28)] transition hover:bg-[#6aa9dc] focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-[#5496CC]/30"
-        >
-          <Plus size={16} strokeWidth={2} />
-          Nueva actividad
-        </button>
+        <div className="flex flex-wrap items-center gap-2">
+          <button
+            type="button"
+            onClick={() => void syncNow()}
+            disabled={syncing || saving || modalOpen}
+            className="inline-flex h-11 items-center justify-center gap-2 rounded-xl border border-[#5496CC]/50 px-4 text-xs font-semibold text-white transition hover:bg-[#5496CC]/10 disabled:opacity-50"
+            title="Consultar las actividades más recientes desde Supabase"
+          >
+            <RefreshCw size={16} className={syncing ? 'animate-spin' : ''} />
+            {syncing ? 'Sincronizando…' : 'Sincronizar ahora'}
+          </button>
+          <button
+            type="button"
+            onClick={openCreateModal}
+            className="nedvi-dark-white-create inline-flex h-11 items-center justify-center gap-2 rounded-xl bg-[#5496CC] px-4 text-xs font-semibold text-white shadow-[0_12px_30px_rgba(84,150,204,0.28)] transition hover:bg-[#6aa9dc] focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-[#5496CC]/30"
+          >
+            <Plus size={16} strokeWidth={2} />
+            Nueva actividad
+          </button>
+        </div>
       </header>
+
+      {syncStatus && !errorMessage ? <p role="status" className="relative z-10 text-xs text-emerald-300">{syncStatus}</p> : null}
 
       {errorMessage ? (
         <div className="relative z-10 rounded-xl border border-red-400/20 bg-red-500/10 px-4 py-3 text-sm text-red-200">
