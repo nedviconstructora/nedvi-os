@@ -171,7 +171,8 @@ export function Sidebar({
   const showDriveReports = user.role !== 'Cliente'
   const showMail = canUse('commercial') &&
     (user.email?.toLowerCase() === 'pedrog@nedviconstructora.com' || user.role === 'DEVELOPER')
-  const showAgenda = canUse('agenda')
+  // Agenda is readable by all NEDVI staff; editing remains permission-controlled.
+  const showAgenda = user.role !== 'Cliente'
   const showAttendance = canUse('time-clock') ||
     ['DEVELOPER', 'Gerente Operativo', 'Gerente Comercial', 'Gerente Administrativo'].includes(user.role)
   const showTeamSection = showDriveReports || showMail || showAgenda || showAttendance
