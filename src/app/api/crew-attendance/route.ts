@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server'
 import { createClient as createAdminClient } from '@supabase/supabase-js'
 import { createClient as createServerClient } from '@/utils/supabase/server'
+import { dispatchWebPush } from '@/lib/dispatchWebPush'
 
 export const dynamic = 'force-dynamic'
 const allowed = new Set(['developer','gerente_comercial','gerente_administrativo','gerente_operativo','administracion','administrador','admin','supervisor','supervisor_obra','obra'])
@@ -74,13 +75,19 @@ export async function POST(request:Request) {
   }else if(action==='salida')payload={check_out:now.toISOString(),exit_photo_path:photoPath}
   else payload={status:'Ausente'}
   let error
+  let entryId:string|null=existing?.id||null
   if(existing) ({error}=await ctx.admin.from('crew_attendance').update({...payload,recorded_by:ctx.user.id,updated_at:now.toISOString()}).eq('id',existing.id))
-  else ({error}=await ctx.admin.from('crew_attendance').insert({worker_id:worker.id,crew_id:worker.crew_id,work_date:date,recorded_by:ctx.user.id,...payload}))
+  else {
+    const created=await ctx.admin.from('crew_attendance').insert({worker_id:worker.id,crew_id:worker.crew_id,work_date:date,recorded_by:ctx.user.id,...payload}).select('id').single()
+    error=created.error
+    entryId=created.data?.id||null
+  }
   if(error) {
    if(photoPath) await ctx.admin.storage.from('nedvi-crew-attendance').remove([photoPath])
    if(error.code==='23505') return NextResponse.json({error:'Esta asistencia ya existe.'},{status:409})
    throw error
   }
+  if(entryId && (action==='entrada'||action==='salida')) await dispatchWebPush(action==='entrada'?'attendance_entrada':'attendance_salida',entryId)
   return NextResponse.json({ok:true},{status:201})
  } catch(error){console.error('Crew attendance write failed',error);return NextResponse.json({error:'No se pudo registrar la asistencia.'},{status:500})}
 }
