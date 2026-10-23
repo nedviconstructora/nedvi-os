@@ -141,7 +141,7 @@ function detailsFromPath(parts: string[]) {
   return { reportYear, reportMonth, staffName }
 }
 
-let activeSync: Promise<{ indexed: number; checkedAt: string }> | null = null
+let activeSync: Promise<{ indexed: number; checkedAt: string; warning: string | null }> | null = null
 
 async function performSync() {
   if (!driveReportsConfigured()) throw new Error('Drive integration not configured')
@@ -185,18 +185,28 @@ async function performSync() {
       .eq('source_folder_id', REPORTS_FOLDER_ID)
     if ((count ?? 0) > 0) throw new Error('Google Drive returned an empty tree; retained prior index')
   }
+  // Detect a partially visible tree before changing the index. Shared folders may
+  // remain listable while their documents are hidden from the service account.
+  const { data: existing, error: existingError } = await admin.from('drive_report_files')
+    .select('file_id,staff_name')
+    .eq('source_folder_id', REPORTS_FOLDER_ID)
+    .limit(MAX_ITEMS)
+  if (existingError) throw existingError
+  const seenIds = new Set(indexed.map(report => report.file_id))
+  const missing = (existing ?? []).filter(report => !seenIds.has(report.file_id))
+  const missingStaff = [...new Set(missing.map(report => report.staff_name || 'sin responsable'))]
+  const warning = missing.length > 0
+    ? `No se pudieron confirmar ${missing.length} archivos existentes en Google Drive (responsables: ${missingStaff.join(', ')}). Se conservaron en el índice para evitar perder reportes. Revisa los permisos de carpetas y documentos.`
+    : null
+
   for (let offset = 0; offset < indexed.length; offset += 200) {
     const { error } = await admin.from('drive_report_files')
       .upsert(indexed.slice(offset, offset + 200), { onConflict: 'file_id' })
     if (error) throw error
   }
-  // Only remove stale metadata after a complete, successful recursive scan.
-  const { error: cleanupError } = await admin.from('drive_report_files')
-    .delete()
-    .eq('source_folder_id', REPORTS_FOLDER_ID)
-    .lt('last_seen_at', stamp)
-  if (cleanupError) throw cleanupError
-  return { indexed: indexed.length, checkedAt: stamp }
+  // Never delete indexed files merely because Google did not return them this
+  // time. An absent item can mean missing permission rather than deletion.
+  return { indexed: indexed.length, checkedAt: stamp, warning }
 }
 
 export async function syncDriveReportIndex() {
