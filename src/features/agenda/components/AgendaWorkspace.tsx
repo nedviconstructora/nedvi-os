@@ -15,6 +15,7 @@ import {
 import {
   createAgendaActivity,
   deleteAgendaActivity,
+  loadAgendaActivities,
   migrateLocalAgendaIfNeeded,
   sortAgendaActivities,
   updateAgendaActivity,
@@ -43,6 +44,7 @@ function getStatusClass(status: AgendaStatus) {
 export function AgendaWorkspace() {
   const [activities, setActivities] = useState<AgendaItem[]>([])
   const [loading, setLoading] = useState(true)
+  const [initialSyncDone, setInitialSyncDone] = useState(false)
   const [saving, setSaving] = useState(false)
   const [errorMessage, setErrorMessage] = useState('')
   const [modalOpen, setModalOpen] = useState(false)
@@ -70,7 +72,7 @@ export function AgendaWorkspace() {
           setErrorMessage('No pudimos cargar tus actividades. Intenta de nuevo.')
         }
       } finally {
-        if (active) setLoading(false)
+        if (active) { setLoading(false); setInitialSyncDone(true) }
       }
     }
 
@@ -91,6 +93,40 @@ export function AgendaWorkspace() {
     window.addEventListener('keydown', handleEscape)
     return () => window.removeEventListener('keydown', handleEscape)
   }, [modalOpen])
+
+  // Recupera cambios hechos desde otros dispositivos sin interrumpir ediciones abiertas.
+  useEffect(() => {
+    if (!initialSyncDone || modalOpen || saving) return
+    let mounted = true
+    let inFlight = false
+    const refresh = async () => {
+      if (!mounted || inFlight || document.hidden) return
+      inFlight = true
+      try {
+        const remote = await loadAgendaActivities()
+        if (mounted) {
+          setActivities(sortAgendaActivities(remote))
+          setErrorMessage('')
+        }
+      } catch (error) {
+        console.error('Error sincronizando actividades:', error)
+        // Conserva los datos en pantalla ante cortes de conexión.
+      } finally {
+        inFlight = false
+      }
+    }
+    const onVisible = () => { if (!document.hidden) void refresh() }
+    const onFocus = () => void refresh()
+    const timer = window.setInterval(() => void refresh(), 30000)
+    window.addEventListener('focus', onFocus)
+    document.addEventListener('visibilitychange', onVisible)
+    return () => {
+      mounted = false
+      window.clearInterval(timer)
+      window.removeEventListener('focus', onFocus)
+      document.removeEventListener('visibilitychange', onVisible)
+    }
+  }, [initialSyncDone, modalOpen, saving])
 
   function syncActivities(updated: AgendaItem[]) {
     const sorted = sortAgendaActivities(updated)
