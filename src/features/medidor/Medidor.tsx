@@ -5,7 +5,6 @@ import { Camera, Download, Ruler } from 'lucide-react'
 import { Button } from '@/components/ui/Button'
 import { Card, CardHeader } from '@/components/ui/Card'
 import { distanceBetween, startMeasurement, supportsAR, type Point3 } from '@/services/medidor/webxr'
-import { CameraFallback } from '@/features/medidor/CameraFallback'
 
 type Measurement = { id: string; label: string; value: number; unit: 'm' | 'm²'; method: string }
 const inputClass = 'mt-1 w-full rounded-xl border border-[var(--border)] bg-[var(--surface)] p-3 text-[var(--foreground)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-blue-500'
@@ -95,14 +94,11 @@ export function Medidor() {
       <Card className="p-5 space-y-4">
         <h2 className="font-semibold">Medir con cámara</h2>
         <p className="text-sm">Apunta al primer extremo, marca el punto y mueve el teléfono hacia el segundo extremo. Mueve la cámara lentamente para detectar la superficie.</p>
-        <p role="status" className="text-sm text-[var(--muted)]">{supported === null ? 'Comprobando compatibilidad…' : supported ? 'Dispositivo con soporte AR detectado. Al iniciar se comprobará la detección de superficies.' : 'La medición AR no está disponible en este dispositivo o navegador. Puedes utilizar la cámara normal con una referencia o registrar medidas manualmente.'}</p>
+        <p role="status" className="text-sm text-[var(--muted)]">{supported === null ? 'Comprobando compatibilidad…' : supported ? 'Dispositivo con soporte AR detectado. Al iniciar se comprobará la detección de superficies.' : 'La medición AR no está disponible en este dispositivo o navegador. Puedes registrar medidas manualmente.'}</p>
         <p className="text-sm text-[var(--muted)]">Las medidas por cámara son aproximadas: verifica con cinta o láser antes de cortar, comprar materiales o ejecutar obra.</p>
         <label className="block text-sm">Nombre de la medición (opcional)<input className={inputClass} maxLength={100} value={label} onChange={event => setLabel(event.target.value)} placeholder="Ej. Ancho de puerta" /></label>
         <Button disabled={!supported || busy || active} onClick={() => void start()}><Camera size={18} className="mr-2" />{busy ? 'Iniciando…' : 'Abrir medidor AR'}</Button>
         {error && <p role="alert" className="text-sm text-red-600 dark:text-red-400">{error}</p>}
-      </Card>
-      <Card className="space-y-4 p-5">
-        <CameraFallback onMeasure={value => addRecord(value, 'm', 'Foto con escala · aproximada')} />
       </Card>
       <Card>
         <CardHeader title="Captura manual y superficie" description="Introduce medidas tomadas con cinta o láser. El área corresponde a un rectángulo." />
