@@ -2,6 +2,7 @@
 
 import Link from 'next/link'
 import { useEffect, useState } from 'react'
+import { readAccessSession } from '@/features/access/services/accessStorage'
 import {
   CalendarClock,
   Check,
@@ -39,6 +40,11 @@ export function DashboardAgendaTasks() {
   const [activities, setActivities] = useState<AgendaItem[]>([])
   const [syncError, setSyncError] = useState('')
   const [completingId, setCompletingId] = useState<number | null>(null)
+  const [canEdit, setCanEdit] = useState(false)
+
+  useEffect(() => {
+    setCanEdit(Boolean(readAccessSession()?.permissions?.includes('agenda')))
+  }, [])
 
   useEffect(() => {
     let mounted = true
@@ -93,7 +99,7 @@ export function DashboardAgendaTasks() {
     .slice(0, MAX_VISIBLE_ACTIVITIES)
 
   const completeActivity = async (activityId: number) => {
-    if (completingId !== null) return
+    if (!canEdit || completingId !== null) return
     setCompletingId(activityId)
     setSyncError('')
     try {
@@ -130,16 +136,18 @@ export function DashboardAgendaTasks() {
               key={activity.id}
               className="flex gap-3 rounded-xl py-3"
             >
-              <button
-                type="button"
-                onClick={() => void completeActivity(activity.id)}
-                disabled={completingId !== null}
-                className="mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-md border border-white/[0.12] text-transparent transition hover:border-[#163DFF] hover:bg-[#163DFF] hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#163DFF]/40"
-                aria-label={`Marcar ${activity.title} como completada`}
-                title="Marcar como completada"
-              >
-                <Check size={12} strokeWidth={2.5} />
-              </button>
+              {canEdit ? (
+                <button
+                  type="button"
+                  onClick={() => void completeActivity(activity.id)}
+                  disabled={completingId !== null}
+                  className="mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-md border border-white/[0.12] text-transparent transition hover:border-[#163DFF] hover:bg-[#163DFF] hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#163DFF]/40"
+                  aria-label={`Marcar ${activity.title} como completada`}
+                  title="Marcar como completada"
+                >
+                  <Check size={12} strokeWidth={2.5} />
+                </button>
+              ) : null}
 
               <div className="min-w-0 flex-1">
                 <p className="truncate text-xs font-medium text-[#d5d7df]">
