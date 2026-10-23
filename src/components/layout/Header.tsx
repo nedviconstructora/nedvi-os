@@ -366,6 +366,20 @@ export function Header({ onOpenMenu, isDark, onToggleTheme, showCompanyLogo = fa
     } finally { setPushWorking(false) }
   }
 
+  async function sendTestPush() {
+    if (pushWorking) return
+    setPushWorking(true)
+    try {
+      const response = await fetch('/api/notifications/push-test', { method: 'POST' })
+      const body = await response.json().catch(() => null) as { error?: string; message?: string } | null
+      if (!response.ok) throw new Error(body?.error || 'No se pudo enviar la prueba.')
+      window.alert(body?.message || 'Prueba solicitada. Revisa tus notificaciones.')
+      window.dispatchEvent(new Event('nedvi-notifications-refresh'))
+    } catch (error) {
+      window.alert(error instanceof Error ? error.message : 'No se pudo enviar la prueba.')
+    } finally { setPushWorking(false) }
+  }
+
   async function disablePush() {
     if (pushWorking || !('serviceWorker' in navigator)) return
     setPushWorking(true)
@@ -699,11 +713,16 @@ export function Header({ onOpenMenu, isDark, onToggleTheme, showCompanyLogo = fa
                 </Link>
 
                 {user.role === 'Cliente' ? null : pushEnabled ? (
-                  <button type="button" onClick={() => void disablePush()} disabled={pushWorking}
-                    className="flex min-h-10 flex-1 items-center justify-center rounded-xl bg-emerald-500/10 px-3 text-xs font-semibold text-emerald-500 disabled:opacity-50"
-                    title="Desactivar las notificaciones Push en este dispositivo">
-                    <Bell size={15} className="mr-1" /> Push activo · Desactivar
-                  </button>
+                  <div className="flex flex-1 flex-wrap gap-1">
+                    <button type="button" onClick={() => void sendTestPush()} disabled={pushWorking}
+                      className="flex min-h-10 flex-1 items-center justify-center rounded-xl bg-emerald-500/10 px-2 text-xs font-semibold text-emerald-500 disabled:opacity-50"
+                      title="Probar una notificación Push en este dispositivo">
+                      <Bell size={15} className="mr-1" /> Push activo · Probar
+                    </button>
+                    <button type="button" onClick={() => void disablePush()} disabled={pushWorking}
+                      className="min-h-10 rounded-xl border border-[var(--border)] px-2 text-xs font-medium text-[var(--muted)] disabled:opacity-50"
+                      title="Desactivar notificaciones Push">Desactivar</button>
+                  </div>
                 ) : (
                   <button
                     type="button"
