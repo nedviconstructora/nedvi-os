@@ -53,10 +53,19 @@ export function CustomerWorkspace() {
   useEffect(() => {
     void loadCustomers()
 
-    const handleFocus = () => void loadCustomers()
-    window.addEventListener('focus', handleFocus)
+    const refreshIfVisible = () => {
+      if (!document.hidden) void loadCustomers()
+    }
+    const handleVisibility = () => refreshIfVisible()
+    const timer = window.setInterval(refreshIfVisible, 30000)
+    window.addEventListener('focus', refreshIfVisible)
+    document.addEventListener('visibilitychange', handleVisibility)
 
-    return () => window.removeEventListener('focus', handleFocus)
+    return () => {
+      window.clearInterval(timer)
+      window.removeEventListener('focus', refreshIfVisible)
+      document.removeEventListener('visibilitychange', handleVisibility)
+    }
   }, [loadCustomers])
 
   async function handleDelete(customer: Customer) {
