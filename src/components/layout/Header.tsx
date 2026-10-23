@@ -387,6 +387,36 @@ export function Header({ onOpenMenu, isDark, onToggleTheme, showCompanyLogo = fa
     } finally { setPushWorking(false) }
   }
 
+  async function logoutAndUnsubscribePush() {
+    // Leaving a shared phone must not leave behind an active subscription
+    // receiving internal messages for the previous account.
+    try {
+      if ('serviceWorker' in navigator) {
+        const registration = await navigator.serviceWorker.getRegistration()
+        const subscription = await registration?.pushManager.getSubscription()
+        if (subscription) {
+          try {
+            await fetch('/api/notifications/push-subscription', {
+              method: 'DELETE',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ endpoint: subscription.endpoint }),
+              signal: AbortSignal.timeout(3000),
+            })
+          } catch (error) {
+            console.warn('Remote push unregister failed; unsubscribing device locally:', error)
+          }
+          await subscription.unsubscribe()
+        }
+      }
+    } catch (error) {
+      console.warn('Could not fully revoke this device push subscription:', error)
+    } finally {
+      setPushEnabled(false)
+      clearAccessSession()
+      router.replace('/login')
+    }
+  }
+
   async function handleAvatarUpload(file?: File) {
     if (!file) return
 
@@ -753,7 +783,7 @@ export function Header({ onOpenMenu, isDark, onToggleTheme, showCompanyLogo = fa
           </div>
         </div>
 
-        <button type="button" onClick={() => { clearAccessSession(); router.replace('/login') }}
+        <button type="button" onClick={() => void logoutAndUnsubscribePush()}
           className="nedvi-header-action ml-0 inline-flex h-10 w-9 items-center justify-center gap-2 rounded-lg border border-white/15 px-1 text-xs font-semibold text-white/85 transition hover:border-white/25 hover:bg-white/10 hover:text-white sm:ml-1 sm:w-auto sm:px-3"
           aria-label="Cerrar sesión" title="Cerrar sesión">
           <LogOut size={20} strokeWidth={1.8} />
