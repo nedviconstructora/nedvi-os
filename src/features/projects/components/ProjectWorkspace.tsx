@@ -79,10 +79,19 @@ export function ProjectWorkspace() {
   useEffect(() => {
     void loadProjects()
 
-    const handleFocus = () => void loadProjects()
-    window.addEventListener('focus', handleFocus)
+    const refreshIfVisible = () => {
+      if (!document.hidden) void loadProjects()
+    }
+    const handleVisibility = () => refreshIfVisible()
+    const timer = window.setInterval(refreshIfVisible, 30000)
+    window.addEventListener('focus', refreshIfVisible)
+    document.addEventListener('visibilitychange', handleVisibility)
 
-    return () => window.removeEventListener('focus', handleFocus)
+    return () => {
+      window.clearInterval(timer)
+      window.removeEventListener('focus', refreshIfVisible)
+      document.removeEventListener('visibilitychange', handleVisibility)
+    }
   }, [loadProjects])
 
   const {
