@@ -21,6 +21,7 @@ import {
   AGENDA_STORAGE_KEY,
   AGENDA_UPDATED_EVENT,
   readAgendaActivities,
+  loadAgendaActivities,
   sortAgendaActivities,
   type AgendaItem,
 } from '@/features/agenda/services/agendaStorage'
@@ -94,23 +95,40 @@ export function Header({ onOpenMenu, isDark, onToggleTheme, showCompanyLogo = fa
   }, [])
 
   useEffect(() => {
-    const loadAgenda = () => setAgendaItems(readAgendaActivities())
-
-    loadAgenda()
-
-    const handleStorage = (event: StorageEvent) => {
-      if (event.key === AGENDA_STORAGE_KEY) loadAgenda()
+    let active = true
+    let fetching = false
+    const loadLocal = () => { if (active) setAgendaItems(readAgendaActivities()) }
+    const refreshSharedAgenda = async () => {
+      if (!active || fetching || document.hidden) return
+      fetching = true
+      try {
+        const shared = await loadAgendaActivities()
+        if (active) setAgendaItems(shared)
+      } catch (error) {
+        console.warn('Agenda temporalmente sin conexión:', error)
+        loadLocal()
+      } finally { fetching = false }
     }
+    const onStorage = (event: StorageEvent) => {
+      if (event.key === AGENDA_STORAGE_KEY) loadLocal()
+    }
+    const onFocus = () => { loadLocal(); void refreshSharedAgenda() }
+    const onVisibility = () => { if (!document.hidden) void refreshSharedAgenda() }
 
-    const handleFocus = () => loadAgenda()
-    window.addEventListener('storage', handleStorage)
-    window.addEventListener('focus', handleFocus)
-    window.addEventListener(AGENDA_UPDATED_EVENT, loadAgenda)
-
+    loadLocal()
+    void refreshSharedAgenda()
+    const interval = window.setInterval(() => void refreshSharedAgenda(), 60000)
+    window.addEventListener('storage', onStorage)
+    window.addEventListener('focus', onFocus)
+    window.addEventListener(AGENDA_UPDATED_EVENT, loadLocal)
+    document.addEventListener('visibilitychange', onVisibility)
     return () => {
-      window.removeEventListener('storage', handleStorage)
-      window.removeEventListener('focus', handleFocus)
-      window.removeEventListener(AGENDA_UPDATED_EVENT, loadAgenda)
+      active = false
+      window.clearInterval(interval)
+      window.removeEventListener('storage', onStorage)
+      window.removeEventListener('focus', onFocus)
+      window.removeEventListener(AGENDA_UPDATED_EVENT, loadLocal)
+      document.removeEventListener('visibilitychange', onVisibility)
     }
   }, [])
 
