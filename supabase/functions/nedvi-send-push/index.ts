@@ -1,5 +1,5 @@
 // NEDVI OS — trusted, server-to-server Web Push sender.
-// The service-role token is required; VAPID credentials live in Supabase Vault.
+// Privileged callers are verified via a service_role-only RPC; VAPID keys remain in Vault.
 import { createClient } from 'npm:@supabase/supabase-js@2.57.0'
 import webpush from 'npm:web-push@3.6.7'
 
@@ -17,7 +17,23 @@ Deno.serve(async (req) => {
   const serviceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')
   const url = Deno.env.get('SUPABASE_URL')
   if (!serviceKey || !url) return json({ error: 'Server configuration unavailable' }, 503)
-  if (req.headers.get('authorization') !== 'Bearer ' + serviceKey) return json({ error: 'Unauthorized' }, 401)
+  // Vercel uses Supabase's sb_secret_* API keys, while the Edge runtime may
+  // supply a legacy JWT service key. Validate the caller against PostgREST's
+  // service_role-only RPC rather than comparing unlike key formats.
+  const bearer = req.headers.get('authorization')
+  const supplied = bearer?.startsWith('Bearer ') ? bearer.slice(7) : ''
+  if (!supplied || supplied.length > 512 || req.headers.get('apikey') !== supplied)
+    return json({ error: 'Unauthorized' }, 401)
+  try {
+    const verifier = createClient(url, supplied, {
+      auth: { persistSession: false, autoRefreshToken: false },
+    })
+    const { data, error } = await verifier.rpc('nedvi_webpush_public_key')
+    if (error || typeof data !== 'string' || !data.length)
+      return json({ error: 'Unauthorized' }, 401)
+  } catch {
+    return json({ error: 'Unauthorized' }, 401)
+  }
   const payload = await req.json().catch(() => null) as { event_type?: unknown; entity_id?: unknown } | null
   if (!allowedEvents.has(String(payload?.event_type)) ||
       typeof payload?.entity_id !== 'string' || !uuidPattern.test(payload.entity_id))
