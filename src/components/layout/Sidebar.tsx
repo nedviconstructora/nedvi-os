@@ -68,6 +68,7 @@ const navigationGroups: NavigationGroup[] = [
     icon: BriefcaseBusiness,
     permission: 'commercial',
     items: [
+      { label: 'Prospección', href: '/prospecting', icon: UsersRound },
       { label: 'Clientes', href: '/crm', icon: UsersRound },
       { label: 'Buscar folio', href: '/folio-search', icon: Search },
       { label: 'Oportunidades', href: '/opportunities', icon: ClipboardList },
