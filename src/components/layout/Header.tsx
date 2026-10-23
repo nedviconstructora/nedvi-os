@@ -5,7 +5,6 @@ import { useRouter } from 'next/navigation'
 import { useEffect, useMemo, useRef, useState } from 'react'
 import {
   Bell,
-  BellRing,
   Camera,
   LoaderCircle,
   LogOut,
@@ -51,6 +50,8 @@ export function Header({ onOpenMenu, isDark, onToggleTheme, showCompanyLogo = fa
   const [notificationsOpen, setNotificationsOpen] = useState(false)
   const [internalNotifications, setInternalNotifications] = useState<Array<{ id: string; title: string; body: string; target_path: string; created_at: string; read_at: string | null }>>([])
   const [internalUserId, setInternalUserId] = useState<string | null>(null)
+  const [notificationError, setNotificationError] = useState<string | null>(null)
+  const [loadingNotifications, setLoadingNotifications] = useState(false)
   const [agendaItems, setAgendaItems] = useState<AgendaItem[]>([])
   const [refreshing, setRefreshing] = useState(false)
   const avatarInputRef = useRef<HTMLInputElement | null>(null)
@@ -132,24 +133,81 @@ export function Header({ onOpenMenu, isDark, onToggleTheme, showCompanyLogo = fa
 
   useEffect(() => {
     if (user.role === 'Cliente') return
-    let alive = true
+    let active = true
+    let fetching = false
+    let uid: string | null = null
+    let ready = false
+    let seen = new Set<string>()
     const supabase = createClient()
-    let timer: ReturnType<typeof setInterval> | undefined
-
-    const fetchNotifications = async (uid: string) => {
-      const { data, error } = await supabase.from('internal_notifications')
-        .select('id,title,body,target_path,created_at,read_at')
-        .eq('recipient_id', uid).order('created_at', { ascending: false }).limit(50)
-      if (alive && !error) setInternalNotifications(data ?? [])
+    const refresh = async () => {
+      if (!active || !uid || fetching || document.hidden) return
+      fetching = true
+      setLoadingNotifications(true)
+      try {
+        const { data, error } = await supabase.from('internal_notifications')
+          .select('id,title,body,target_path,created_at,read_at')
+          .eq('recipient_id', uid)
+          .order('created_at', { ascending: false }).limit(50)
+        if (error) throw error
+        if (!active) return
+        const rows = data ?? []
+        setInternalNotifications(rows)
+        setNotificationError(null)
+        // New messages only: do not show desktop banners for the old backlog.
+        if (ready && typeof Notification !== 'undefined' && Notification.permission === 'granted') {
+          const fresh = rows.filter(item => !item.read_at && !seen.has(item.id)).slice(0, 2)
+          for (const notice of fresh) {
+            try {
+              if ('serviceWorker' in navigator) {
+                const sw = await navigator.serviceWorker.getRegistration()
+                if (sw) {
+                  await sw.showNotification(notice.title, {
+                    body: notice.body, icon: '/icon.png',
+                    tag: 'nedvi-internal-' + notice.id,
+                  })
+                  continue
+                }
+              }
+              new Notification(notice.title, { body: notice.body, icon: '/icon.png' })
+            } catch (e) { console.warn('No se pudo presentar un aviso del sistema:', e) }
+          }
+        }
+        ready = true
+        seen = new Set(rows.map(item => item.id))
+      } catch (error) {
+        console.error('Error al leer notificaciones:', error)
+        if (active) setNotificationError('No se pudieron consultar los avisos. Comprueba tu conexión.')
+      } finally {
+        fetching = false
+        if (active) setLoadingNotifications(false)
+      }
     }
-
-    void supabase.auth.getUser().then(({ data }) => {
-      if (!alive || !data.user) return
-      setInternalUserId(data.user.id)
-      void fetchNotifications(data.user.id)
-      timer = setInterval(() => { if (document.visibilityState === 'visible') void fetchNotifications(data.user!.id) }, 15000)
+    const onRefresh = () => void refresh()
+    const onVisible = () => { if (!document.hidden) void refresh() }
+    const timer = window.setInterval(onRefresh, 15000)
+    window.addEventListener('nedvi-notifications-refresh', onRefresh)
+    window.addEventListener('focus', onRefresh)
+    document.addEventListener('visibilitychange', onVisible)
+    void supabase.auth.getUser().then(({ data, error }) => {
+      if (!active) return
+      if (error || !data.user) {
+        setNotificationError('Inicia sesión nuevamente para ver los avisos.')
+        return
+      }
+      uid = data.user.id
+      setInternalUserId(uid)
+      void refresh()
+    }).catch(error => {
+      console.error('Error de sesión:', error)
+      if (active) setNotificationError('No se pudo comprobar tu sesión de notificaciones.')
     })
-    return () => { alive = false; if (timer) clearInterval(timer) }
+    return () => {
+      active = false
+      window.clearInterval(timer)
+      window.removeEventListener('nedvi-notifications-refresh', onRefresh)
+      window.removeEventListener('focus', onRefresh)
+      document.removeEventListener('visibilitychange', onVisible)
+    }
   }, [user.role])
 
   async function markInternalRead(id: string) {
@@ -179,7 +237,8 @@ export function Header({ onOpenMenu, isDark, onToggleTheme, showCompanyLogo = fa
   )
 
   const unreadInternal = internalNotifications.filter((item) => !item.read_at).length
-  const notificationCount = pendingAgenda.length + alerts.length + unreadInternal
+  // Badge: only unread personal notifications, not unacknowledgeable agenda tasks.
+  const notificationCount = unreadInternal
 
   function formatAgendaDate(item: AgendaItem) {
     const value = new Date(`${item.date}T${item.time}:00`)
@@ -229,7 +288,7 @@ export function Header({ onOpenMenu, isDark, onToggleTheme, showCompanyLogo = fa
     }
   }
 
-    async function enableNotifications() {
+  async function enableNotifications() {
     if (typeof Notification === 'undefined') {
       window.alert('Este navegador no admite notificaciones.')
       return
@@ -253,7 +312,7 @@ export function Header({ onOpenMenu, isDark, onToggleTheme, showCompanyLogo = fa
     if ('serviceWorker' in navigator) {
       const registration = await navigator.serviceWorker.ready
       await registration.showNotification('NEDVI OS', {
-        body: 'Notificaciones activadas correctamente.',
+        body: 'Recibirás avisos mientras NEDVI OS esté abierto y conectado.',
         icon: '/icon.png',
         badge: '/icon.png',
         tag: 'nedvi-notifications-enabled',
@@ -402,7 +461,10 @@ export function Header({ onOpenMenu, isDark, onToggleTheme, showCompanyLogo = fa
         <div ref={notificationsRef} className="relative">
           <button
             type="button"
-            onClick={() => setNotificationsOpen((current) => !current)}
+            onClick={() => {
+              if (!notificationsOpen) window.dispatchEvent(new Event('nedvi-notifications-refresh'))
+              setNotificationsOpen(current => !current)
+            }
             className={`nedvi-header-action relative flex h-10 w-10 items-center justify-center rounded-xl transition sm:h-auto sm:w-auto sm:p-2.5 ${
               notificationsOpen
                 ? 'bg-white/10 text-[#9ED2F8]'
@@ -429,15 +491,21 @@ export function Header({ onOpenMenu, isDark, onToggleTheme, showCompanyLogo = fa
                   <p className="text-sm font-semibold text-[var(--foreground)]">Notificaciones</p>
                   <p className="mt-0.5 text-[10px] text-[var(--muted)]">
                     {notificationCount > 0
-                      ? `${notificationCount} pendiente${notificationCount === 1 ? '' : 's'}`
+                      ? `${notificationCount} sin leer`
                       : 'Todo al día'}
                   </p>
                 </div>
-                <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-[#5496CC]/10 text-[#5496CC]">
-                  <BellRing size={19} />
-                </span>
+                <button type="button"
+                  onClick={() => window.dispatchEvent(new Event('nedvi-notifications-refresh'))}
+                  disabled={loadingNotifications}
+                  title="Actualizar notificaciones"
+                  aria-label="Actualizar notificaciones"
+                  className="flex h-8 w-8 items-center justify-center rounded-lg bg-[#5496CC]/10 text-[#5496CC] disabled:opacity-50">
+                  <RefreshCw size={17} className={loadingNotifications ? 'animate-spin' : ''} />
+                </button>
               </div>
 
+              {notificationError ? <p role="alert" className="border-b border-[var(--border)] px-4 py-3 text-xs text-amber-600">{notificationError}</p> : null}
               {internalNotifications.some((item) => !item.read_at) ? (
                 <button type="button" onClick={() => void markAllInternalRead()} className="w-full border-b border-[var(--border)] px-4 py-2 text-right text-xs font-medium text-[#5496CC] hover:bg-[var(--surface-soft)]">
                   Marcar todas como leídas
@@ -543,7 +611,7 @@ export function Header({ onOpenMenu, isDark, onToggleTheme, showCompanyLogo = fa
                   </button>
                 ) : (
                   <span className="flex min-h-10 flex-1 items-center justify-center rounded-xl bg-emerald-500/10 px-3 text-xs font-semibold text-emerald-500">
-                    Avisos activados
+                    Avisos con app abierta
                   </span>
                 )}
               </div>
