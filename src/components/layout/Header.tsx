@@ -317,7 +317,10 @@ export function Header({ onOpenMenu, isDark, onToggleTheme, showCompanyLogo = fa
   async function enableNotifications() {
     if (pushWorking || user.role === 'Cliente') return
     if (typeof Notification === 'undefined' || !('serviceWorker' in navigator) || !('PushManager' in window)) {
-      window.alert('Este dispositivo o navegador no admite notificaciones Push.')
+      const android = /Android/i.test(navigator.userAgent)
+      window.alert(android
+        ? 'Esta versión de NEDVI OS no ofrece Push web dentro de la APK Android. Para recibir avisos con la app cerrada: abre https://nedvi-os.vercel.app en Chrome, pulsa los tres puntos y elige "Instalar aplicación" o "Agregar a pantalla de inicio". Entra desde el nuevo icono y activa Push en la campana. La APK necesita integración nativa con Firebase para usar notificaciones.'
+        : 'Este navegador no admite Web Push. Abre NEDVI OS desde Chrome, Edge o un navegador compatible, verifica los permisos de notificaciones y vuelve a intentar.')
       return
     }
     if (Notification.permission === 'denied') {
