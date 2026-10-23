@@ -37,7 +37,8 @@ export async function GET() {
       Date.now() - new Date(latest.last_seen_at).getTime() > 10 * 60 * 1000
     if (driveReportsConfigured() && stale) {
       try {
-        await syncDriveReportIndex()
+        const syncResult = await syncDriveReportIndex()
+        if (syncResult.warning) warning = syncResult.warning
       } catch (error) {
         console.error('Google Drive report sync unavailable', error)
         warning = 'No se pudo actualizar Drive. Se muestra el último índice disponible.'
