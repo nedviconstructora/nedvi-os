@@ -69,7 +69,7 @@ Deno.serve(async (req) => {
           }, JSON.stringify({
             id: notice.id, title: notice.title, body: notice.body,
             path: notice.target_path || '/dashboard',
-          }), { TTL: 3600 })
+          }), { TTL: 259200 })
           sent++
           const { error } = await admin.from('nedvi_push_deliveries').upsert({
             notification_id: notice.id,
