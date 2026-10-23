@@ -49,6 +49,8 @@ export function Header({ onOpenMenu, isDark, onToggleTheme, showCompanyLogo = fa
   const [uploadingAvatar, setUploadingAvatar] = useState(false)
   const [notificationPermission, setNotificationPermission] = useState<NotificationPermission | 'unsupported'>('default')
   const [notificationsOpen, setNotificationsOpen] = useState(false)
+  const [pushEnabled, setPushEnabled] = useState(false)
+  const [pushWorking, setPushWorking] = useState(false)
   const [internalNotifications, setInternalNotifications] = useState<Array<{ id: string; title: string; body: string; target_path: string; created_at: string; read_at: string | null }>>([])
   const [internalUserId, setInternalUserId] = useState<string | null>(null)
   const [notificationError, setNotificationError] = useState<string | null>(null)
@@ -92,6 +94,12 @@ export function Header({ onOpenMenu, isDark, onToggleTheme, showCompanyLogo = fa
     }
 
     setNotificationPermission(Notification.permission)
+    if ('serviceWorker' in navigator && 'PushManager' in window) {
+      void navigator.serviceWorker.ready.then(async registration => {
+        const subscription = await registration.pushManager.getSubscription()
+        setPushEnabled(Boolean(subscription && Notification.permission === 'granted'))
+      }).catch(error => console.warn('Push registration status unavailable:', error))
+    }
   }, [])
 
   useEffect(() => {
@@ -307,35 +315,76 @@ export function Header({ onOpenMenu, isDark, onToggleTheme, showCompanyLogo = fa
   }
 
   async function enableNotifications() {
-    if (typeof Notification === 'undefined') {
-      window.alert('Este navegador no admite notificaciones.')
+    if (pushWorking || user.role === 'Cliente') return
+    if (typeof Notification === 'undefined' || !('serviceWorker' in navigator) || !('PushManager' in window)) {
+      window.alert('Este dispositivo o navegador no admite notificaciones Push.')
       return
     }
-
     if (Notification.permission === 'denied') {
-      window.alert('Las notificaciones están bloqueadas. Actívalas desde la configuración del navegador.')
+      window.alert('Los avisos están bloqueados. Habilítalos desde los permisos del navegador o del teléfono.')
       setNotificationPermission('denied')
       return
     }
+    setPushWorking(true)
+    try {
+      // Permission must be requested directly from the user's click (iOS).
+      const permission = Notification.permission === 'granted'
+        ? 'granted' : await Notification.requestPermission()
+      setNotificationPermission(permission)
+      if (permission !== 'granted') return
 
-    const permission =
-      Notification.permission === 'granted'
-        ? 'granted'
-        : await Notification.requestPermission()
+      const response = await fetch('/api/notifications/push-subscription', { cache: 'no-store' })
+      const config = await response.json() as { configured?: boolean; publicKey?: string; error?: string }
+      if (!response.ok || !config.configured || !config.publicKey)
+        throw new Error(config.error || 'El servicio Push aún no está configurado.')
 
-    setNotificationPermission(permission)
-
-    if (permission !== 'granted') return
-
-    if ('serviceWorker' in navigator) {
+      const key = config.publicKey.replace(/-/g, '+').replace(/_/g, '/')
+      const padded = key.padEnd(Math.ceil(key.length / 4) * 4, '=')
+      const bytes = Uint8Array.from(atob(padded), char => char.charCodeAt(0))
       const registration = await navigator.serviceWorker.ready
-      await registration.showNotification('NEDVI OS', {
-        body: 'Recibirás avisos mientras NEDVI OS esté abierto y conectado.',
-        icon: '/icon.png',
-        badge: '/icon.png',
-        tag: 'nedvi-notifications-enabled',
+      const existing = await registration.pushManager.getSubscription()
+      const subscription = existing || await registration.pushManager.subscribe({
+        userVisibleOnly: true,
+        applicationServerKey: bytes,
       })
-    }
+      const saved = await fetch('/api/notifications/push-subscription', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        cache: 'no-store', body: JSON.stringify(subscription.toJSON()),
+      })
+      if (!saved.ok) {
+        const data = await saved.json().catch(() => null) as { error?: string } | null
+        throw new Error(data?.error || 'No fue posible guardar este teléfono.')
+      }
+      setPushEnabled(true)
+      await registration.showNotification('NEDVI OS · Push activado', {
+        body: 'Este dispositivo ya puede recibir avisos con la aplicación cerrada.',
+        icon: '/icon.png', badge: '/icon.png', tag: 'nedvi-push-enabled',
+      })
+    } catch (error) {
+      console.error('No se pudieron activar las notificaciones Push:', error)
+      window.alert(error instanceof Error ? error.message : 'No fue posible activar Push.')
+    } finally { setPushWorking(false) }
+  }
+
+  async function disablePush() {
+    if (pushWorking || !('serviceWorker' in navigator)) return
+    setPushWorking(true)
+    try {
+      const registration = await navigator.serviceWorker.ready
+      const subscription = await registration.pushManager.getSubscription()
+      if (subscription) {
+        const response = await fetch('/api/notifications/push-subscription', {
+          method: 'DELETE', headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ endpoint: subscription.endpoint }),
+        })
+        if (!response.ok) throw new Error('No se pudo eliminar el registro del dispositivo.')
+        await subscription.unsubscribe()
+      }
+      setPushEnabled(false)
+    } catch (error) {
+      console.error('Error desactivando notificaciones Push:', error)
+      window.alert(error instanceof Error ? error.message : 'No fue posible desactivar Push.')
+    } finally { setPushWorking(false) }
   }
 
   async function handleAvatarUpload(file?: File) {
@@ -619,18 +668,21 @@ export function Header({ onOpenMenu, isDark, onToggleTheme, showCompanyLogo = fa
                   Ver agenda
                 </Link>
 
-                {notificationPermission !== 'granted' ? (
+                {user.role === 'Cliente' ? null : pushEnabled ? (
+                  <button type="button" onClick={() => void disablePush()} disabled={pushWorking}
+                    className="flex min-h-10 flex-1 items-center justify-center rounded-xl bg-emerald-500/10 px-3 text-xs font-semibold text-emerald-500 disabled:opacity-50"
+                    title="Desactivar las notificaciones Push en este dispositivo">
+                    <Bell size={15} className="mr-1" /> Push activo · Desactivar
+                  </button>
+                ) : (
                   <button
                     type="button"
                     onClick={() => void enableNotifications()}
-                    className="flex min-h-10 flex-1 items-center justify-center rounded-xl bg-[#5496CC] px-3 text-xs font-semibold text-white transition hover:brightness-105"
+                    disabled={pushWorking}
+                    className="flex min-h-10 flex-1 items-center justify-center rounded-xl bg-[#5496CC] px-3 text-xs font-semibold text-white transition hover:brightness-105 disabled:opacity-50"
                   >
-                    {notificationPermission === 'denied' ? 'Revisar permiso' : 'Activar avisos'}
+                    {pushWorking ? 'Configurando…' : notificationPermission === 'denied' ? 'Revisar permiso' : 'Activar Push'}
                   </button>
-                ) : (
-                  <span className="flex min-h-10 flex-1 items-center justify-center rounded-xl bg-emerald-500/10 px-3 text-xs font-semibold text-emerald-500">
-                    Avisos con app abierta
-                  </span>
                 )}
               </div>
             </div>
