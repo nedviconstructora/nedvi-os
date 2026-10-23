@@ -3,7 +3,7 @@
 import { createClient } from 'npm:@supabase/supabase-js@2.57.0'
 import webpush from 'npm:web-push@3.6.7'
 
-const allowedEvents = new Set(['customers_insert', 'attendance_entrada', 'attendance_salida'])
+const allowedEvents = new Set(['customers_insert', 'attendance_entrada', 'attendance_salida', 'push_test'])
 const uuidPattern = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i
 
 function json(payload: unknown, status = 200) {
