@@ -131,6 +131,10 @@ export function permissionForPath(pathname: string): ModulePermission | undefine
 }
 
 export function canAccessPath(role: AppRole, pathname: string) {
+  // Shared team agenda: read-only access is available even without edit permissions.
+  if (pathname === '/agenda' || pathname.startsWith('/agenda/')) {
+    return role !== 'Cliente'
+  }
   if (pathname === '/drive-reports' || pathname.startsWith('/drive-reports/')) {
     return role !== 'Cliente'
   }
