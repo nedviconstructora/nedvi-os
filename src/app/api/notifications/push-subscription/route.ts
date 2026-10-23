@@ -81,7 +81,13 @@ export async function POST(request: Request) {
       user_agent: (request.headers.get('user-agent') || '').slice(0, 256),
       updated_at: new Date().toISOString(),
     }, { onConflict: 'endpoint' })
-    if (error) throw error
+    if (error) {
+      console.error('Device Push subscription rejected:', { code: error.code, message: error.message })
+      return NextResponse.json({
+        error: 'El servidor no pudo guardar este dispositivo. Intenta actualizar la aplicación y vuelve a activar Push.',
+        code: error.code || 'PUSH_SAVE_ERROR',
+      }, { status: 503 })
+    }
     return NextResponse.json({ ok: true })
   } catch (error) {
     console.error('Error al registrar Web Push:', error)
