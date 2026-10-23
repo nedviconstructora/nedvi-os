@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server'
 import { getTimeClockContext } from '@/features/time-clock/services/server'
+import { dispatchWebPush } from '@/lib/dispatchWebPush'
 
 const bucket = 'nedvi-time-clock'
 
@@ -58,7 +59,7 @@ export async function POST(request: Request) {
     const path = `${ctx.user.id}/${crypto.randomUUID()}.${photo.type === 'image/png' ? 'png' : photo.type === 'image/webp' ? 'webp' : 'jpg'}`
     const {error:uploadError} = await ctx.admin.storage.from(bucket).upload(path,photo,{contentType:photo.type,upsert:false})
     if (uploadError) throw uploadError
-    const {error:entryError} = await ctx.admin.rpc('nedvi_clock_register',{
+    const {data:entryId,error:entryError} = await ctx.admin.rpc('nedvi_clock_register',{
       p_user_id:ctx.user.id,
       p_employee_name:String(ctx.profile.full_name || ctx.user.email || 'Personal NEDVI'),
       p_event_type:type,
@@ -71,6 +72,7 @@ export async function POST(request: Request) {
       await ctx.admin.storage.from(bucket).remove([path])
       return NextResponse.json({error:entryError.message},{status:409})
     }
+    if(typeof entryId==='string') await dispatchWebPush(type==='entrada'?'attendance_entrada':'attendance_salida',entryId)
     return NextResponse.json({ok:true},{status:201})
   } catch (error) {
     console.error('Time clock registration failed',error)
